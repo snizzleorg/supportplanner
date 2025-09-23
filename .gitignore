@@ -1,0 +1,34 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Builds & caches
+build/
+dist/
+coverage/
+.cache/
+.tmp/
+
+# Logs
+*.log
+logs/
+
+# Local data
+public/dynamic-styles.css
+
+# Misc
+*.local.*

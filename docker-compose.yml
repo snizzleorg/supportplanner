@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+  support-planner:
+    build: .
+    container_name: support-planner
+    env_file:
+      - .env
+    ports:
+      - "5174:5173"  # Changed external port to 5174 to avoid conflict
+    restart: unless-stopped

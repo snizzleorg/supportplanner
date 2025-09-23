@@ -1,0 +1,21 @@
+{
+  "name": "supportplanner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "NODE_ENV=production node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.13",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "ical-expander": "^3.1.0",
+    "node-cache": "^5.1.2",
+    "node-fetch": "^3.3.2",
+    "tsdav": "^2.1.2",
+    "yaml": "^2.4.2"
+  }
+}

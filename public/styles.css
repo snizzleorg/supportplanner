@@ -1,0 +1,478 @@
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; color: #1f2937; }
+body { min-height: 100vh; display: flex; flex-direction: column; }
+
+header { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; flex: 0 0 auto; }
+header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+.controls { display: flex; gap: 16px; align-items: end; flex-wrap: wrap; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.field input, .field select { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; min-width: 200px; }
+.buttons { display: flex; gap: 8px; }
+button { padding: 8px 12px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer; }
+button:hover { background: #f3f4f6; }
+
+main { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+#timeline { flex: 0 0 420px; height: 420px; position: relative; }
+/* Map container below timeline fills remaining space */
+.map-container { flex: 1 1 auto; min-height: 200px; border-top: 1px solid #e5e7eb; }
+#map { height: 100%; width: 100%; }
+footer { height: 40px; display: flex; align-items: center; padding: 0 16px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; flex: 0 0 auto; }
+
+/* Custom styles for the app */
+html, body { height: 100%; }
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Inline helper text (e.g., location validation) */
+.help-text {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+  min-height: 18px; /* keep layout stable while loading */
+}
+.help-text.ok { color: #065f46; }
+.help-text.error { color: #b91c1c; }
+
+/* Weekend background bands (Saturday/Sunday) */
+.vis-item.weekend-bg {
+  background: rgba(255, 221, 170, 0.35);
+  border: none;
+}
+
+/* Remove tiny white squares rendered by the default content box on background items */
+.vis-item.vis-background .vis-item-content {
+  display: none;
+}
+
+/* Hide resize/drag handles for background helper items */
+.vis-item.vis-background .vis-drag-left,
+.vis-item.vis-background .vis-drag-right {
+  display: none !important;
+}
+
+/* Remove white content box styling from normal items (use transparent content) */
+.vis-timeline .vis-item .vis-item-content {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 2px 8px !important; /* tighter horizontal padding */
+}
+
+/* Make event text readable on dark bars */
+.vis-timeline .vis-item:not(.vis-background) .vis-item-content {
+  color: #ffffff;
+}
+
+/* Keep week number chips subtle */
+.week-chip-item .vis-item-content {
+  color: #6b7280 !important;
+}
+
+/* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 9999; /* Ensure it's above everything else */
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.modal.show {
+  display: flex;
+  opacity: 1;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  position: relative;
+}
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.close-btn {
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.close-btn:hover {
+  color: #1f2937;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+/* Form Styles */
+#eventForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.form-group input[type="text"],
+.form-group input[type="date"],
+.form-group select,
+.form-group textarea {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.form-group input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+  border: 1px solid #3b82f6;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.btn-secondary:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-danger {
+  background-color: #ef4444;
+  color: white;
+  border: 1px solid #ef4444;
+  margin-right: auto;
+}
+
+.btn-danger:hover {
+  background-color: #dc2626;
+  border-color: #dc2626;
+}
+
+/* Make events look clickable */
+.events-clickable .vis-item {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.events-clickable .vis-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+  z-index: 10;
+}
+
+/* Modal animations */
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-content {
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+/* Modal loading state */
+.modal-content.loading .modal-body {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.modal-content.loading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.5);
+  border-radius: 8px;
+}
+.modal-content.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 3px solid #93c5fd; /* blue-300 */
+  border-top-color: #2563eb;  /* blue-600 */
+  border-radius: 50%;
+  animation: spinner 0.8s linear infinite;
+}
+@keyframes spinner {
+  to { transform: rotate(360deg); }
+}
+
+/* Form field focus states */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Responsive adjustments */
+@media (min-width: 640px) {
+  .form-row {
+    display: flex;
+    gap: 16px;
+  }
+  
+  .form-row .form-group {
+    flex: 1;
+  }
+}
+
+/* Week header row styling */
+.week-label {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Avoid axis labels being cut off */
+.vis-time-axis {
+  height: 56px !important;
+}
+.vis-time-axis .vis-text { white-space: nowrap; }
+
+/* Emphasize grid lines for readability */
+/* Hide minor grid to prevent offset with Monday-based custom dividers */
+.vis-panel.vis-background .vis-grid.vis-vertical:not(.vis-major) { display: none; }
+.vis-panel.vis-background .vis-grid.vis-vertical.vis-major {
+  border-left-color: #9ca3af; /* slightly lighter than before */
+  border-left-width: 2px;
+  border-left-style: solid;
+  opacity: 0.9;
+}
+
+/* In condensed mode (week scale), keep labels but reduce clutter via smaller font */
+body.axis-condensed .vis-time-axis .vis-text { font-size: 11px; }
+
+/* Slight transparency for items so grid lines remain perceptible through them */
+.vis-item .vis-item-content {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+.vis-item.vis-selected .vis-item-content {
+  background-color: rgba(219, 234, 254, 0.9);
+}
+
+/* Vertical divider background items (drawn behind events) */
+.vis-item.vis-background.week-divider,
+.vis-item.vis-background.day-divider {
+  background: none !important;
+  pointer-events: none;
+}
+.vis-item.vis-background.week-divider .vis-item-content,
+.vis-item.vis-background.day-divider .vis-item-content {
+  background: none !important;
+  width: 1px !important; /* ensure visible line */
+  border-left: 1px dashed #d1d5db; /* dashed light grey */
+  height: 100% !important;
+}
+
+/* Overlay week numbers aligned to Monday */
+.week-bar {
+  position: absolute;
+  left: 0;
+  top: 22px; /* roughly aligns with minor axis row */
+  width: 100%;
+  height: 0;
+  pointer-events: none;
+  z-index: 10; /* above timeline content */
+}
+.week-chip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: #6b7280; /* gray-500 */
+  background: transparent;
+  padding: 0 2px;
+  line-height: 1;
+  user-select: none;
+}
+
+/* Dedicated 'Weeks' band styling (Option C) */
+.vis-group[data-groupid="weeks"] {
+  height: 20px !important;
+}
+.vis-group[data-groupid="weeks"] .vis-label .vis-inner {
+  font-size: 11px;
+  color: #6b7280;
+}
+.vis-item.week-chip-item {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  pointer-events: none;
+}
+.vis-item.week-chip-item .vis-item-content {
+  background: transparent !important;
+  border: none !important;
+  color: #6b7280;
+  font-size: 11px;
+  text-align: center;
+}
+
+/* Enhanced tooltip styling */
+.vis-tooltip {
+  max-width: 400px !important;
+  width: max-content !important;
+  min-width: 200px;
+  max-width: 500px !important;
+  padding: 12px !important;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #1f2937;
+  background-color: white !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  pointer-events: none;
+  z-index: 1000;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.vis-tooltip h3 {
+  margin: 0 0 8px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.vis-tooltip .date-range {
+  display: block;
+  margin-bottom: 8px;
+  color: #4b5563;
+  font-size: 12px;
+}
+
+.vis-tooltip .location {
+  display: block;
+  margin: 8px 0;
+  color: #374151;
+  font-weight: 500;
+}
+
+.vis-tooltip * {
+  max-width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.vis-tooltip .description {
+  display: block;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+  white-space: pre-line;
+  max-width: 100%;
+  max-height: 300px;
+  overflow-y: auto;
+  line-height: 1.5;
+  font-family: inherit;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Force text to respect container width */
+.vis-tooltip h3,
+.vis-tooltip .date-range,
+.vis-tooltip .location {
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Ensure tooltip doesn't exceed viewport */
+.vis-tooltip {
+  max-width: min(90vw, 500px) !important;
+}
+
+/* Event styles are now loaded dynamically from /dynamic-styles.css */

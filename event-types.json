@@ -1,0 +1,47 @@
+{
+  "eventTypes": {
+    "Install": {
+      "color": "#3b82f6",       
+      "borderColor": "#2563eb",
+      "patterns": ["install", "installation"]
+    },
+    "Service": {
+      "color": "#f59e0b",       
+      "borderColor": "#d97706",
+      "patterns": ["service", "maintenance", "maint", "srv"]
+    },
+    "Support1": {
+      "color": "#8b5cf6",       
+      "borderColor": "#7c3aed",
+      "patterns": ["support1", "support 1", "sup1"]
+    },
+    "SUPPORT2": {
+      "color": "#10b981",       
+      "borderColor": "#059669",
+      "patterns": ["support2", "support 2", "sup2"]
+    },
+    "Demo": {
+      "color": "#06b6d4",       
+      "borderColor": "#0891b2",
+      "patterns": ["demo", "demonstration", "poc", "proof of concept"]
+    },
+    "Vacation": {
+      "color": "#9CA3AF",       
+      "borderColor": "#6B7280", 
+      "textColor": "#111827",
+      "patterns": ["vacation", "holiday", "urlaub", "ferien", "time off", "pto"]
+    },
+    "Sick": {
+      "color": "#6B7280",       
+      "borderColor": "#374151", 
+      "textColor": "#F9FAFB",
+      "patterns": ["sick", "ill", "krank"]
+    },
+ 
+    "_default": {
+      "color": "#64748B",
+      "borderColor": "#475569",
+      "textColor": "#F8FAFC"
+    }
+  }
+}
