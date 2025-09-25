@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load event types configuration
-let eventTypes = {
+const BASE_EVENT_TYPES = {
   _default: {
     color: '#e0e0e0',  // Light gray
     borderColor: '#bdbdbd',
@@ -61,14 +61,15 @@ let eventTypes = {
     patterns: ['business', 'travel', 'dienstreise']
   }
 };
+let eventTypes = { ...BASE_EVENT_TYPES };
 
 function loadEventTypesConfig() {
   try {
     const p = path.join(__dirname, 'event-types.json');
     const raw = fs.readFileSync(p, 'utf8');
     const cfg = JSON.parse(raw);
-    // Merge into defaults so missing fields inherit sane values
-    eventTypes = { ...eventTypes, ...(cfg && cfg.eventTypes ? cfg.eventTypes : {}) };
+    // Rebuild from immutable base defaults on each load
+    eventTypes = { ...BASE_EVENT_TYPES, ...(cfg && cfg.eventTypes ? cfg.eventTypes : {}) };
     console.log('Loaded event types configuration');
   } catch (err) {
     console.error('Failed to load event-types.json, using default colors', err.message);
