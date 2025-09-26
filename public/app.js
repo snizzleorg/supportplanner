@@ -31,6 +31,8 @@ let currentEvent = null;
 const statusEl = document.getElementById('status');
 const fromEl = document.getElementById('fromDate');
 const toEl = document.getElementById('toDate');
+const fromDateDisplay = document.getElementById('fromDateDisplay');
+const toDateDisplay = document.getElementById('toDateDisplay');
 const refreshBtn = document.getElementById('refreshBtn');
 const fitBtn = document.getElementById('fitBtn');
 const todayBtn = document.getElementById('todayBtn');
@@ -41,6 +43,9 @@ const timelineEl = document.getElementById('timeline');
 let timeline;
 let groups = new DataSet([]);
 let items = new DataSet([]);
+// Suppress click-after-drag: track user panning state
+let isPanning = false;
+let lastPanEnd = 0;
 let labelObserver = null;
 let refreshGen = 0; // generation guard for in-flight refreshes
 // Map timeline group IDs (cal-1, cal-2, ...) back to original server group IDs (calendar URLs)
@@ -597,6 +602,21 @@ function initTimeline() {
       labelObserver.observe(labelSet, { childList: true, subtree: true });
     }
   } catch (_) {}
+
+  // Track user-initiated panning to suppress subsequent click
+  try {
+    timeline.on('rangechange', (props) => {
+      if (props && props.byUser) {
+        isPanning = true;
+      }
+    });
+    timeline.on('rangechanged', (props) => {
+      if (props && props.byUser) {
+        isPanning = false;
+        lastPanEnd = Date.now();
+      }
+    });
+  } catch (_) {}
 }
 
 function parseDateInput(value) {
@@ -613,22 +633,74 @@ function parseDateInput(value) {
   return d;
 }
 
+// --- Date window constraints: -3 months .. +12 months relative to now ---
+const WINDOW_PAST_MONTHS = 3;
+const WINDOW_FUTURE_MONTHS = 12;
+function getWindowBounds() {
+  const minDay = dayjs().subtract(WINDOW_PAST_MONTHS, 'month').startOf('day');
+  const maxDay = dayjs().add(WINDOW_FUTURE_MONTHS, 'month').endOf('day');
+  return { minDay, maxDay };
+}
+function setDateInputBounds() {
+  const { minDay, maxDay } = getWindowBounds();
+  const min = minDay.format('YYYY-MM-DD');
+  const max = maxDay.format('YYYY-MM-DD');
+  if (fromEl) { fromEl.min = min; fromEl.max = max; }
+  if (toEl) { toEl.min = min; toEl.max = max; }
+}
+function clampToWindow(dateStr) {
+  const d = parseDateInput(dateStr);
+  if (!d || !d.isValid()) return null;
+  const { minDay, maxDay } = getWindowBounds();
+  let x = d;
+  if (x.isBefore(minDay)) x = minDay;
+  if (x.isAfter(maxDay)) x = maxDay;
+  return x.format('YYYY-MM-DD');
+}
+
+function formatForDisplay(value) {
+  // Accept YYYY-MM-DD or DD.MM.YYYY inputs; output fixed dd.mm.yyyy
+  const d = parseDateInput(value);
+  if (!d || !d.isValid()) return value || '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.date())}.${pad(d.month() + 1)}.${d.year()}`;
+}
+
+function updateDateDisplays() {
+  if (fromDateDisplay) fromDateDisplay.textContent = formatForDisplay(fromEl.value);
+  if (toDateDisplay) toDateDisplay.textContent = formatForDisplay(toEl.value);
+}
+
 function applyWindow(from, to) {
   if (!timeline) return;
   const fromDay = parseDateInput(from);
   const toDay = parseDateInput(to);
   if (!fromDay.isValid() || !toDay.isValid()) {
-    setStatus('Invalid date input. Please use YYYY-MM-DD');
+    setStatus('Invalid date input. Please use YYYY-MM-DD or DD.MM.YYYY');
     return;
   }
-  const fromDate = fromDay.startOf('day').toDate();
-  const toDate = toDay.endOf('day').toDate();
+  // Clamp to allowed window
+  const { minDay, maxDay } = getWindowBounds();
+  let f = fromDay;
+  let t = toDay;
+  if (f.isBefore(minDay)) f = minDay;
+  if (t.isAfter(maxDay)) t = maxDay;
+  // Ensure ordering
+  if (t.isBefore(f)) t = f;
+  // Reflect any clamping back to inputs
+  const fStr = f.format('YYYY-MM-DD');
+  const tStr = t.format('YYYY-MM-DD');
+  if (fromEl && fromEl.value !== fStr) fromEl.value = fStr;
+  if (toEl && toEl.value !== tStr) toEl.value = tStr;
+
+  const fromDate = f.startOf('day').toDate();
+  const toDate = t.endOf('day').toDate();
   const minDate = dayjs(fromDate).subtract(7, 'day').toDate();
   const maxDate = dayjs(toDate).add(7, 'day').toDate();
   timeline.setOptions({ start: fromDate, end: toDate, min: minDate, max: maxDate });
   timeline.setWindow(fromDate, toDate, { animation: false });
   timeline.redraw();
-  updateAxisDensity(from, to);
+  updateAxisDensity(fStr, tStr);
 }
 
 async function fetchCalendars() {
@@ -1073,8 +1145,15 @@ async function refresh() {
   const allItems = [];
   const allGroups = [];
 
-  const from = fromEl.value || dayjs().startOf('month').format('YYYY-MM-DD');
-  const to = toEl.value || dayjs().add(3, 'month').endOf('month').format('YYYY-MM-DD');
+  // Fallbacks within allowed window
+  let from = fromEl.value || dayjs().startOf('month').format('YYYY-MM-DD');
+  let to = toEl.value || dayjs().add(3, 'month').endOf('month').format('YYYY-MM-DD');
+  const fClamped = clampToWindow(from);
+  const tClamped = clampToWindow(to);
+  from = fClamped || from;
+  to = tClamped || to;
+  // Ensure ordering
+  if (dayjs(to).isBefore(dayjs(from))) to = from;
   
   try {
     // Prepare timeline window immediately
@@ -1352,10 +1431,18 @@ async function refresh() {
 }
 
 function setDefaults() {
-  const start = dayjs().startOf('month').format('YYYY-MM-DD');
-  const end = dayjs().add(5, 'month').endOf('month').format('YYYY-MM-DD'); // default 6-month span
-  fromEl.value = start;
-  toEl.value = end;
+  setDateInputBounds();
+  const { minDay, maxDay } = getWindowBounds();
+  // Use current month window but clamp to allowed bounds
+  let start = dayjs().startOf('month');
+  let end = dayjs().add(5, 'month').endOf('month'); // default ~6-month span
+  if (start.isBefore(minDay)) start = minDay;
+  if (end.isAfter(maxDay)) end = maxDay;
+  const startStr = start.format('YYYY-MM-DD');
+  const endStr = end.format('YYYY-MM-DD');
+  fromEl.value = startStr;
+  toEl.value = endStr;
+  updateDateDisplays();
 }
 
 function wireEvents() {
@@ -1385,8 +1472,23 @@ function wireEvents() {
     requestAnimationFrame(() => updateAxisDensity(fromEl.value, toEl.value));
   });
   
-  fromEl.addEventListener('change', refresh);
-  toEl.addEventListener('change', refresh);
+  // Clamp then refresh on changes
+  fromEl.addEventListener('change', () => {
+    const v = clampToWindow(fromEl.value);
+    if (v) fromEl.value = v;
+    // keep ordering
+    if (dayjs(toEl.value).isBefore(dayjs(fromEl.value))) toEl.value = fromEl.value;
+    refresh();
+  });
+  toEl.addEventListener('change', () => {
+    const v = clampToWindow(toEl.value);
+    if (v) toEl.value = v;
+    // keep ordering
+    if (dayjs(toEl.value).isBefore(dayjs(fromEl.value))) fromEl.value = toEl.value;
+    refresh();
+  });
+  fromEl.addEventListener('input', updateDateDisplays);
+  toEl.addEventListener('input', updateDateDisplays);
 }
 
 // Initialize timeline event handlers after the timeline is created
@@ -1395,6 +1497,10 @@ function initTimelineEvents() {
   
   // Timeline event click handler
   timeline.on('click', async (properties) => {
+    // Ignore clicks right after a user drag/pan
+    if (isPanning || (Date.now() - lastPanEnd) < 250) {
+      return;
+    }
     console.log('Timeline click event:', properties);
     if (properties.item) {
       console.log('Item clicked, item ID:', properties.item);
@@ -1466,6 +1572,8 @@ function initTimelineEvents() {
   initTimelineEvents();
   // Auto-refresh once on load
   await refresh();
+  // Ensure displays are in sync after initial refresh
+  updateDateDisplays();
 })();
 
 function updateAxisDensity(from, to) {

@@ -219,11 +219,12 @@ app.post('/api/events', async (req, res) => {
       return res.status(400).json({ error: 'calendarUrls must be a non-empty array' });
     }
 
-    // Validate date range (max 6 months)
+    // Validate date range (max ~15 months total: -3 to +12)
     const fromDate = new Date(from);
     const toDate = new Date(to);
-    const sixMonthsFromNow = new Date();
-    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+    // Note: not used below, but keep for potential sanity checks/logging if needed
+    const twelveMonthsFromNow = new Date();
+    twelveMonthsFromNow.setMonth(twelveMonthsFromNow.getMonth() + 12);
     
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
       return res.status(400).json({ 
@@ -233,7 +234,7 @@ app.post('/api/events', async (req, res) => {
     }
     
     // Ensure the date range is not too large
-    const maxDays = 180; // 6 months
+    const maxDays = 460; // ~15 months (~30.67 days/month * 15)
     const diffTime = Math.abs(toDate - fromDate);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     

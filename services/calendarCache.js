@@ -223,7 +223,7 @@ export class CalendarCache {
     const cacheKey = `calendar:${calendar.url}`;
     const now = dayjs();
     const threeMonthsAgo = now.subtract(3, 'month');
-    const threeMonthsFromNow = now.add(6, 'month'); // Cache 6 months ahead
+    const threeMonthsFromNow = now.add(12, 'month'); // Cache 12 months ahead
     
     // Convert to JavaScript Date objects for ical-expander
     const threeMonthsAgoDate = threeMonthsAgo.toDate();
