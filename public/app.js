@@ -1334,7 +1334,8 @@ function initTimelineEvents() {
       // day(): 0=Sun..6=Sat, so shift to Monday-based
       const offsetToMonday = (clicked.day() + 6) % 7; // 0 if Monday
       const weekStart = clicked.subtract(offsetToMonday, 'day').startOf('day');
-      const weekEnd = weekStart.add(6, 'day').startOf('day'); // inclusive date
+      // Set end date to Friday (4 days after Monday)
+      const weekEnd = weekStart.add(4, 'day').startOf('day'); // Monday to Friday
 
       const startStr = weekStart.format('YYYY-MM-DD');
       const endStr = weekEnd.format('YYYY-MM-DD');
