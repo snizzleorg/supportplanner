@@ -54,6 +54,25 @@ export class CalendarCache {
   }
 
   /**
+   * Extract firstname from calendar display name
+   * Converts "Travel (firstname lastname)" to "firstname"
+   * @param {string} displayName - The original calendar display name
+   * @returns {string} - The extracted firstname or original name if pattern doesn't match
+   */
+  extractFirstname(displayName) {
+    if (!displayName) return displayName;
+    
+    // Match pattern: "Calendar Name (firstname lastname)"
+    const match = displayName.match(/^.*\(([^)\s]+)\s+[^)]+\)$/);
+    if (match) {
+      return match[1]; // Return just the firstname
+    }
+    
+    // If pattern doesn't match, return original name
+    return displayName;
+  }
+
+  /**
    * Create a new all-day event in the given calendar.
    * Expects start and end as inclusive DATE strings (YYYY-MM-DD).
    * In iCal, DTEND for all-day is exclusive, so we will send end + 1 day.
@@ -210,7 +229,8 @@ export class CalendarCache {
     const threeMonthsAgoDate = threeMonthsAgo.toDate();
     const threeMonthsFromNowDate = threeMonthsFromNow.toDate();
     
-    console.log(`[${calendar.displayName || calendar.url}] Fetching events from ${threeMonthsAgo.format('YYYY-MM-DD')} to ${threeMonthsFromNow.format('YYYY-MM-DD')}`);
+    const displayName = this.extractFirstname(calendar.displayName) || calendar.url;
+    console.log(`[${displayName}] Fetching events from ${threeMonthsAgo.format('YYYY-MM-DD')} to ${threeMonthsFromNow.format('YYYY-MM-DD')}`);
     
     // Store the calendar client for later use in updates
     if (!this.calendarClients[calendar.url]) {
@@ -218,7 +238,7 @@ export class CalendarCache {
         client: this.client,
         calendar: calendar
       };
-      console.log(`[${calendar.displayName || calendar.url}] Stored calendar client for updates`);
+      console.log(`[${displayName}] Stored calendar client for updates`);
     }
     
     try {
@@ -230,7 +250,7 @@ export class CalendarCache {
         },
       });
       
-      console.log(`[${calendar.displayName || calendar.url}] Found ${objects.length} calendar objects`);
+      console.log(`[${displayName}] Found ${objects.length} calendar objects`);
       
       const events = [];
       let eventCount = 0;
@@ -239,7 +259,7 @@ export class CalendarCache {
       // Process all calendar objects in parallel
       await Promise.all(objects.map(async (obj, index) => {
         try {
-          console.log(`[${calendar.displayName || calendar.url}] Processing object ${index + 1}/${objects.length}`);
+          console.log(`[${displayName}] Processing object ${index + 1}/${objects.length}`);
           const icalExpander = new IcalExpander({ ics: obj.data, maxIterations: 1000 });
           const expanded = icalExpander.between(threeMonthsAgoDate, threeMonthsFromNowDate);
           
@@ -265,17 +285,17 @@ export class CalendarCache {
               end: isAllDay ? endDisplayDate : endIso.toISOString(),
               allDay: isAllDay,
               calendar: calendar.url,
-              calendarName: calendar.displayName || 'Unnamed Calendar'
+              calendarName: this.extractFirstname(calendar.displayName) || 'Unnamed Calendar'
             };
             
             // Log details of event for debugging
-            console.log(`[${calendar.displayName || calendar.url}] Processing event: ${eventData.uid} - ${eventData.summary} (${eventData.start} - ${eventData.end})`);
+            console.log(`[${displayName}] Processing event: ${eventData.uid} - ${eventData.summary} (${eventData.start} - ${eventData.end})`);
             
             events.push(eventData);
             eventCount++;
             
             if (eventCount <= 3) { // Log first few events for debugging
-              console.log(`[${calendar.displayName || calendar.url}] Event: ${eventData.summary} (${eventData.start} - ${eventData.end})`);
+              console.log(`[${displayName}] Event: ${eventData.summary} (${eventData.start} - ${eventData.end})`);
             }
           });
           
@@ -299,7 +319,7 @@ export class CalendarCache {
               end: isAllDayOcc ? occEndDisplayDate : occEndIso.toISOString(),
               allDay: isAllDayOcc,
               calendar: calendar.url,
-              calendarName: calendar.displayName || 'Unnamed Calendar',
+              calendarName: this.extractFirstname(calendar.displayName) || 'Unnamed Calendar',
               isRecurring: true,
               recurringEventId: occurrence.item.uid
             };
@@ -346,7 +366,7 @@ export class CalendarCache {
   getAllCalendars() {
     return this.calendars.map(calendar => ({
       url: calendar.url,
-      displayName: calendar.displayName,
+      displayName: this.extractFirstname(calendar.displayName),
       description: calendar.description,
       color: calendar.color,
       components: calendar.components || []
@@ -392,7 +412,7 @@ export class CalendarCache {
       // Add calendar info if not already added
       const calendarInfo = {
         id: `cal-${calendarData.length + 1}`,
-        content: data.calendar.displayName || 'Unnamed Calendar',
+        content: this.extractFirstname(data.calendar.displayName) || 'Unnamed Calendar',
         url: data.calendar.url,
         color: data.calendar.color || '#3a87ad'
       };
