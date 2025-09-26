@@ -1472,21 +1472,29 @@ function wireEvents() {
     requestAnimationFrame(() => updateAxisDensity(fromEl.value, toEl.value));
   });
   
-  // Clamp then refresh on changes
-  fromEl.addEventListener('change', () => {
-    const v = clampToWindow(fromEl.value);
-    if (v) fromEl.value = v;
+  // Only apply/clamp and refresh when input loses focus or Enter is pressed
+  function applyDateInputs() {
+    const fromClamped = clampToWindow(fromEl.value);
+    if (fromClamped) fromEl.value = fromClamped;
+    const toClamped = clampToWindow(toEl.value);
+    if (toClamped) toEl.value = toClamped;
     // keep ordering
     if (dayjs(toEl.value).isBefore(dayjs(fromEl.value))) toEl.value = fromEl.value;
     refresh();
+  }
+  fromEl.addEventListener('blur', applyDateInputs);
+  toEl.addEventListener('blur', applyDateInputs);
+  [fromEl, toEl].forEach(el => {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        // Trigger apply when user confirms with Enter
+        applyDateInputs();
+        el.blur();
+      }
+    });
   });
-  toEl.addEventListener('change', () => {
-    const v = clampToWindow(toEl.value);
-    if (v) toEl.value = v;
-    // keep ordering
-    if (dayjs(toEl.value).isBefore(dayjs(fromEl.value))) fromEl.value = toEl.value;
-    refresh();
-  });
+  // While typing, only update the human-friendly display text, do not refresh
   fromEl.addEventListener('input', updateDateDisplays);
   toEl.addEventListener('input', updateDateDisplays);
 }
