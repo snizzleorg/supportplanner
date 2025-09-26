@@ -68,18 +68,6 @@ body {
   padding: 0 4px;
 }
 
-/* Search highlighting */
-.vis-item.search-highlight {
-  border: 2px solid #3b82f6 !important;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-  z-index: 10 !important;
-}
-
-.vis-item.search-dimmed {
-  opacity: 0.3;
-  transition: opacity 0.3s;
-}
-
 /* Remove tiny white squares rendered by the default content box on background items */
 .vis-item.vis-background .vis-item-content {
   display: none;

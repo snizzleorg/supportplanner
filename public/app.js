@@ -13,18 +13,18 @@ const cancelBtn = document.getElementById('cancelEdit');
 const saveBtn = document.getElementById('saveEvent');
 const deleteBtn = document.getElementById('deleteEvent');
 const eventIdInput = document.getElementById('eventId');
+const eventTitleInput = document.getElementById('eventTitle');
 const eventStartDateInput = document.getElementById('eventStartDate');
 const eventEndDateInput = document.getElementById('eventEndDate');
+const eventAllDayInput = document.getElementById('eventAllDay');
 const eventDescriptionInput = document.getElementById('eventDescription');
 const eventLocationInput = document.getElementById('eventLocation');
-const eventLocationHelp = document.getElementById('eventLocationHelp');
-const searchInput = document.getElementById('searchInput');
-let allEvents = []; // Store all events for searching
-let currentSearchTerm = '';
+const eventCalendarSelect = document.getElementById('eventCalendar');
 // Structured metadata inputs
 const eventOrderNumberInput = document.getElementById('eventOrderNumber');
 const eventTicketLinkInput = document.getElementById('eventTicketLink');
 const eventSystemTypeInput = document.getElementById('eventSystemType');
+const eventLocationHelp = document.getElementById('eventLocationHelp');
 let lastGeocode = null;
 let currentEvent = null;
 
@@ -92,113 +92,40 @@ async function getHolidaysInRange(start, end) {
   const endYear = dayjs(end).year();
   const allHolidays = [];
   
-  // Get holidays for each year in the range
-  for (let year = startYear; year <= endYear; year++) {
-    const holidays = await getHolidaysForYear(year);
-    allHolidays.push(...holidays);
-  }
-  
-  // Convert to Date objects and filter to the requested range
-  return allHolidays
-    .map(h => ({
-      date: new Date(h.date),
-      name: h.localName,
-      global: !h.counties // National holiday (true) or state holiday (false)
-    }))
-    .filter(h => h.date >= new Date(start) && h.date <= new Date(end));
-}
-
-// --- Search Functionality ---
-function filterEvents(searchTerm) {
-  currentSearchTerm = searchTerm.toLowerCase().trim();
-  
-  if (!timeline || !allEvents.length) return;
-  
-  // Clear previous search highlights
-  document.querySelectorAll('.search-highlight').forEach(el => {
-    el.classList.remove('search-highlight');
-  });
-  
-  if (!currentSearchTerm) {
-    // If search is empty, show all events and markers
-    items.update(allEvents);
-    if (markersLayer) {
-      markersLayer.eachLayer(layer => {
-        if (layer._icon) layer._icon.style.opacity = '1';
-      });
-    }
-    return;
-  }
-  
-  // Filter events based on search term
-  const matchingEvents = allEvents.filter(event => {
-    if (!event) return false;
-    
-    // Check various fields for matches
-    const searchIn = [
-      event.content || '',
-      event.title || '',
-      event.description || '',
-      event.location || '',
-      event.meta?.orderNumber || '',
-      event.meta?.systemType || ''
-    ].join(' ').toLowerCase();
-    
-    return searchIn.includes(currentSearchTerm);
-  });
-  
-  // Get IDs of matching events
-  const matchingIds = new Set(matchingEvents.map(e => e.id));
-  
-  // Update timeline items - show only matching events
-  const updatedItems = allEvents.map(event => ({
-    ...event,
-    className: matchingIds.has(event.id) ? 'search-highlight' : 'search-dimmed'
-  }));
-  
-  items.update(updatedItems);
-  
-  // Update map markers
-  if (markersLayer) {
-    markersLayer.eachLayer(layer => {
-      const eventId = layer.options.eventId;
-      if (eventId) {
-        const isMatch = matchingIds.has(eventId);
-        if (layer._icon) {
-          layer._icon.style.opacity = isMatch ? '1' : '0.3';
-          layer._icon.style.transition = 'opacity 0.3s';
-        }
+  try {
+    // Get holidays for each year in the range
+    for (let year = startYear; year <= endYear; year++) {
+      console.log(`Fetching holidays for year: ${year}`);
+      const holidays = await getHolidaysForYear(year);
+      if (holidays && Array.isArray(holidays)) {
+        allHolidays.push(...holidays);
       }
-    });
-  }
-  
-  // If there's a match, fit the view to show all matching events
-  if (matchingEvents.length > 0) {
-    const matchingItems = matchingEvents.map(e => e.id);
-    timeline.focus(matchingItems, { animation: true });
-  }
-}
-
-// Initialize search input event listener
-function initSearch() {
-  if (!searchInput) return;
-  
-  // Debounce search to improve performance
-  let searchTimeout;
-  searchInput.addEventListener('input', (e) => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      filterEvents(e.target.value);
-    }, 300);
-  });
-  
-  // Add clear button functionality
-  searchInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      searchInput.value = '';
-      filterEvents('');
     }
-  });
+    
+    console.log('All holidays before filtering:', allHolidays);
+    
+    // Convert to Date objects and filter to the requested range
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    
+    const filteredHolidays = allHolidays
+      .filter(h => h && h.date && h.localName) // Filter out any invalid entries
+      .map(h => ({
+        date: new Date(h.date),
+        name: h.localName,
+        global: !h.counties // National holiday (true) or state holiday (false)
+      }))
+      .filter(h => {
+        const holidayDate = new Date(h.date);
+        return holidayDate >= startDate && holidayDate <= endDate;
+      });
+      
+    console.log('Filtered holidays:', filteredHolidays);
+    return filteredHolidays;
+  } catch (error) {
+    console.error('Error in getHolidaysInRange:', error);
+    return [];
+  }
 }
 
 // --- Map marker icon helpers ---
@@ -1317,24 +1244,15 @@ async function refresh() {
     }
     
     if (gen !== refreshGen) return; // aborted
-    // Store all events for searching
-    allEvents = [...allItems, ...stagedItems];
     
-    // Clear existing items and groups
+    // Clear datasets now that new data is ready, then add all groups/items
     groups.clear({ removeFromGroups: false });
     items.clear({ removeFromGroups: false });
-    
-    // Initialize search if not already done
-    if (searchInput && !searchInput._searchInitialized) {
-      initSearch();
-      searchInput._searchInitialized = true;
-    }
 
     // Add all groups (fetched + staged) and items in batches to prevent UI freeze
     if (allGroups.length > 0) {
       groups.add(allGroups);
     }
-    
     if (stagedGroups.length > 0) {
       groups.add(stagedGroups);
     }
@@ -1390,23 +1308,36 @@ async function refresh() {
 
     // Add holiday highlights
     try {
+      console.log('Fetching holidays...');
       const holidays = await getHolidaysInRange(from, to);
-      const holidayItems = holidays.map(holiday => ({
-        id: `holiday-${holiday.date.toISOString().split('T')[0]}`,
-        start: dayjs(holiday.date).startOf('day').toDate(),
-        end: dayjs(holiday.date).add(1, 'day').startOf('day').toDate(),
-        type: 'background',
-        className: 'holiday-bg',
-        title: holiday.name,
-        editable: false,
-        selectable: false
-      }));
+      console.log('Holidays found:', holidays);
+      
+      const holidayItems = [];
+      
+      holidays.forEach(holiday => {
+        const startDate = dayjs(holiday.date).startOf('day');
+        const endDate = startDate.add(1, 'day');
+        
+        holidayItems.push({
+          id: `holiday-${startDate.format('YYYY-MM-DD')}`,
+          start: startDate.toDate(),
+          end: endDate.toDate(),
+          type: 'background',
+          className: 'holiday-bg',
+          title: holiday.name,
+          editable: false,
+          selectable: false
+        });
+      });
       
       if (holidayItems.length > 0) {
+        console.log('Adding holiday items:', holidayItems);
         items.add(holidayItems);
+      } else {
+        console.log('No holiday items to add');
       }
     } catch (e) {
-      console.warn('Failed to add holiday highlights', e);
+      console.error('Failed to add holiday highlights:', e);
     }
 
     if (gen !== refreshGen) return; // aborted
