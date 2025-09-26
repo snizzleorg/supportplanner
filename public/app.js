@@ -13,18 +13,18 @@ const cancelBtn = document.getElementById('cancelEdit');
 const saveBtn = document.getElementById('saveEvent');
 const deleteBtn = document.getElementById('deleteEvent');
 const eventIdInput = document.getElementById('eventId');
-const eventTitleInput = document.getElementById('eventTitle');
 const eventStartDateInput = document.getElementById('eventStartDate');
 const eventEndDateInput = document.getElementById('eventEndDate');
-const eventAllDayInput = document.getElementById('eventAllDay');
 const eventDescriptionInput = document.getElementById('eventDescription');
 const eventLocationInput = document.getElementById('eventLocation');
-const eventCalendarSelect = document.getElementById('eventCalendar');
+const eventLocationHelp = document.getElementById('eventLocationHelp');
+const searchInput = document.getElementById('searchInput');
+let allEvents = []; // Store all events for searching
+let currentSearchTerm = '';
 // Structured metadata inputs
 const eventOrderNumberInput = document.getElementById('eventOrderNumber');
 const eventTicketLinkInput = document.getElementById('eventTicketLink');
 const eventSystemTypeInput = document.getElementById('eventSystemType');
-const eventLocationHelp = document.getElementById('eventLocationHelp');
 let lastGeocode = null;
 let currentEvent = null;
 
@@ -106,6 +106,99 @@ async function getHolidaysInRange(start, end) {
       global: !h.counties // National holiday (true) or state holiday (false)
     }))
     .filter(h => h.date >= new Date(start) && h.date <= new Date(end));
+}
+
+// --- Search Functionality ---
+function filterEvents(searchTerm) {
+  currentSearchTerm = searchTerm.toLowerCase().trim();
+  
+  if (!timeline || !allEvents.length) return;
+  
+  // Clear previous search highlights
+  document.querySelectorAll('.search-highlight').forEach(el => {
+    el.classList.remove('search-highlight');
+  });
+  
+  if (!currentSearchTerm) {
+    // If search is empty, show all events and markers
+    items.update(allEvents);
+    if (markersLayer) {
+      markersLayer.eachLayer(layer => {
+        if (layer._icon) layer._icon.style.opacity = '1';
+      });
+    }
+    return;
+  }
+  
+  // Filter events based on search term
+  const matchingEvents = allEvents.filter(event => {
+    if (!event) return false;
+    
+    // Check various fields for matches
+    const searchIn = [
+      event.content || '',
+      event.title || '',
+      event.description || '',
+      event.location || '',
+      event.meta?.orderNumber || '',
+      event.meta?.systemType || ''
+    ].join(' ').toLowerCase();
+    
+    return searchIn.includes(currentSearchTerm);
+  });
+  
+  // Get IDs of matching events
+  const matchingIds = new Set(matchingEvents.map(e => e.id));
+  
+  // Update timeline items - show only matching events
+  const updatedItems = allEvents.map(event => ({
+    ...event,
+    className: matchingIds.has(event.id) ? 'search-highlight' : 'search-dimmed'
+  }));
+  
+  items.update(updatedItems);
+  
+  // Update map markers
+  if (markersLayer) {
+    markersLayer.eachLayer(layer => {
+      const eventId = layer.options.eventId;
+      if (eventId) {
+        const isMatch = matchingIds.has(eventId);
+        if (layer._icon) {
+          layer._icon.style.opacity = isMatch ? '1' : '0.3';
+          layer._icon.style.transition = 'opacity 0.3s';
+        }
+      }
+    });
+  }
+  
+  // If there's a match, fit the view to show all matching events
+  if (matchingEvents.length > 0) {
+    const matchingItems = matchingEvents.map(e => e.id);
+    timeline.focus(matchingItems, { animation: true });
+  }
+}
+
+// Initialize search input event listener
+function initSearch() {
+  if (!searchInput) return;
+  
+  // Debounce search to improve performance
+  let searchTimeout;
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      filterEvents(e.target.value);
+    }, 300);
+  });
+  
+  // Add clear button functionality
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      searchInput.value = '';
+      filterEvents('');
+    }
+  });
 }
 
 // --- Map marker icon helpers ---
@@ -1224,15 +1317,24 @@ async function refresh() {
     }
     
     if (gen !== refreshGen) return; // aborted
+    // Store all events for searching
+    allEvents = [...allItems, ...stagedItems];
     
-    // Clear datasets now that new data is ready, then add all groups/items
+    // Clear existing items and groups
     groups.clear({ removeFromGroups: false });
     items.clear({ removeFromGroups: false });
+    
+    // Initialize search if not already done
+    if (searchInput && !searchInput._searchInitialized) {
+      initSearch();
+      searchInput._searchInitialized = true;
+    }
 
     // Add all groups (fetched + staged) and items in batches to prevent UI freeze
     if (allGroups.length > 0) {
       groups.add(allGroups);
     }
+    
     if (stagedGroups.length > 0) {
       groups.add(stagedGroups);
     }
