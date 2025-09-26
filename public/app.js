@@ -1350,31 +1350,6 @@ function initTimelineEvents() {
   todayBtn.addEventListener('click', () => {
     timeline.moveTo(dayjs().valueOf());
   });
-  zoomInBtn.addEventListener('click', () => {
-    const range = timeline.getWindow();
-    const interval = range.end - range.start;
-    timeline.setWindow({
-      start: range.start + interval * 0.2,
-      end: range.end - interval * 0.2
-    });
-  });
-  
-  zoomOutBtn.addEventListener('click', () => {
-    const range = timeline.getWindow();
-    const interval = range.end - range.start;
-    timeline.setWindow({
-      start: range.start - interval * 0.25,
-      end: range.end + interval * 0.25
-    });
-  });
-  
-  showRangeBtn.addEventListener('click', () => {
-    const range = timeline.getWindow();
-    console.log('Current view range:', {
-      start: new Date(range.start).toISOString(),
-      end: new Date(range.end).toISOString()
-    });
-  });
 }
 
 (async function main() {
