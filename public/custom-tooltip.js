@@ -43,13 +43,25 @@ class CustomTooltip {
       if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
         const [y, m, d] = value.split('-').map(Number);
         return new Date(y, m - 1, d);
-        
       }
       return new Date(value);
     };
 
     const start = safeParse(item.start);
-    const end = safeParse(item.end);
+    let end = safeParse(item.end);
+    
+    // For all-day events, the end date in the timeline is already adjusted to be exclusive
+    // So we need to subtract one day for display in the tooltip
+    const isDateOnly = (date) => {
+      const d = new Date(date);
+      return d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0 && d.getMilliseconds() === 0;
+    };
+    
+    if (isDateOnly(start) && isDateOnly(end)) {
+      // Create a new date object to avoid modifying the original
+      end = new Date(end);
+      end.setDate(end.getDate() - 1);
+    }
     
     const pad2 = (n) => String(n).padStart(2, '0');
     const formatDMY = (date) => `${pad2(date.getDate())}.${pad2(date.getMonth() + 1)}.${date.getFullYear()}`;
