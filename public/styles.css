@@ -39,10 +39,33 @@ body {
 .help-text.ok { color: #065f46; }
 .help-text.error { color: #b91c1c; }
 
-/* Weekend background bands (Saturday/Sunday) */
-.vis-item.weekend-bg {
+/* Weekend and holiday background bands */
+.vis-item.weekend-bg,
+.vis-item.holiday-bg {
   background: rgba(255, 221, 170, 0.35);
   border: none;
+}
+
+/* Slightly darker for holidays to distinguish from weekends */
+.vis-item.holiday-bg {
+  background: rgba(255, 200, 150, 0.45);
+  position: relative;
+}
+
+/* Add a subtle indicator for holidays */
+.vis-item.holiday-bg::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 10px;
+  color: #9c6b2c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
 }
 
 /* Remove tiny white squares rendered by the default content box on background items */

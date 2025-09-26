@@ -56,6 +56,58 @@ function setStatus(msg) {
   statusEl.textContent = msg || '';
 }
 
+// --- Holidays and Special Dates ---
+const holidaysCache = new Map();
+
+async function getHolidaysForYear(year) {
+  // Check cache first
+  if (holidaysCache.has(year)) {
+    return holidaysCache.get(year);
+  }
+
+  try {
+    // Using Nager.Date API for German public holidays
+    const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/DE`);
+    if (!response.ok) throw new Error('Failed to fetch holidays');
+    
+    const holidays = await response.json();
+    
+    // Filter for Berlin-specific holidays (Germany + Berlin state holidays)
+    const berlinHolidays = holidays.filter(h => 
+      !h.counties || // National holidays
+      h.counties.includes('DE-BE') // Berlin state holidays
+    );
+    
+    // Cache the results
+    holidaysCache.set(year, berlinHolidays);
+    return berlinHolidays;
+  } catch (error) {
+    console.error('Error fetching holidays:', error);
+    return [];
+  }
+}
+
+async function getHolidaysInRange(start, end) {
+  const startYear = dayjs(start).year();
+  const endYear = dayjs(end).year();
+  const allHolidays = [];
+  
+  // Get holidays for each year in the range
+  for (let year = startYear; year <= endYear; year++) {
+    const holidays = await getHolidaysForYear(year);
+    allHolidays.push(...holidays);
+  }
+  
+  // Convert to Date objects and filter to the requested range
+  return allHolidays
+    .map(h => ({
+      date: new Date(h.date),
+      name: h.localName,
+      global: !h.counties // National holiday (true) or state holiday (false)
+    }))
+    .filter(h => h.date >= new Date(start) && h.date <= new Date(end));
+}
+
 // --- Map marker icon helpers ---
 function parseHex(color) {
   const m = String(color).trim().match(/^#?([a-fA-F0-9]{6})$/);
@@ -1232,6 +1284,27 @@ async function refresh() {
       await renderMapMarkers(locItems);
     } catch (e) {
       console.warn('Map marker render failed', e);
+    }
+
+    // Add holiday highlights
+    try {
+      const holidays = await getHolidaysInRange(from, to);
+      const holidayItems = holidays.map(holiday => ({
+        id: `holiday-${holiday.date.toISOString().split('T')[0]}`,
+        start: dayjs(holiday.date).startOf('day').toDate(),
+        end: dayjs(holiday.date).add(1, 'day').startOf('day').toDate(),
+        type: 'background',
+        className: 'holiday-bg',
+        title: holiday.name,
+        editable: false,
+        selectable: false
+      }));
+      
+      if (holidayItems.length > 0) {
+        items.add(holidayItems);
+      }
+    } catch (e) {
+      console.warn('Failed to add holiday highlights', e);
     }
 
     if (gen !== refreshGen) return; // aborted
