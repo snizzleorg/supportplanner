@@ -1132,6 +1132,84 @@ function initModal() {
       closeModal();
     }
   });
+
+  // Gentle zoom using Ctrl+wheel to reduce overly aggressive touchpad zoom
+  // We intercept the wheel event, prevent the default vis zoom, and apply a smaller zoom step.
+  const wheelHandler = (e) => {
+    try {
+      if (!e || !e.ctrlKey) return; // only intercept Ctrl+scroll zooms
+      // Prevent the default zoom handling by the library
+      e.preventDefault();
+      e.stopPropagation();
+      // Compute a gentle zoom factor; smaller multiplier => slower zoom
+      // Positive deltaY should zoom out, negative zoom in.
+      const sensitivity = 0.0006; // adjust to taste (smaller = slower zoom)
+      const factor = Math.exp(e.deltaY * sensitivity);
+      const w = timeline.getWindow();
+      const startMs = (w.start instanceof Date) ? w.start.getTime() : new Date(w.start).getTime();
+      const endMs = (w.end instanceof Date) ? w.end.getTime() : new Date(w.end).getTime();
+      const center = (startMs + endMs) / 2;
+      const currentRange = endMs - startMs;
+      const newRange = Math.max(24*60*60*1000, Math.min(currentRange * factor, 2*365*24*60*60*1000)); // clamp between 1 day and ~2 years
+      const newStart = center - newRange / 2;
+      const newEnd = center + newRange / 2;
+      timeline.setWindow(newStart, newEnd, { animation: false });
+    } catch (_) {
+      // ignore
+    }
+  };
+  // Add non-passive to allow preventDefault on wheel
+  timelineEl.addEventListener('wheel', wheelHandler, { passive: false });
+
+  // Gentle pinch-to-zoom (two-finger) without requiring CTRL
+  // We compute touch distance changes and translate them to a reduced zoom factor.
+  let pinchActive = false;
+  let pinchInitialDist = 0;
+  let pinchStartCenter = 0;
+  let pinchStartRange = 0;
+  function getTouchDistance(t1, t2) {
+    const dx = t2.clientX - t1.clientX;
+    const dy = t2.clientY - t1.clientY;
+    return Math.hypot(dx, dy);
+  }
+  function getWindowMs() {
+    const w = timeline.getWindow();
+    const startMs = (w.start instanceof Date) ? w.start.getTime() : new Date(w.start).getTime();
+    const endMs = (w.end instanceof Date) ? w.end.getTime() : new Date(w.end).getTime();
+    return { startMs, endMs };
+  }
+  timelineEl.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches.length === 2) {
+      pinchActive = true;
+      pinchInitialDist = getTouchDistance(e.touches[0], e.touches[1]);
+      const { startMs, endMs } = getWindowMs();
+      pinchStartCenter = (startMs + endMs) / 2;
+      pinchStartRange = endMs - startMs;
+      // Prevent native page pinch
+      e.preventDefault();
+    }
+  }, { passive: false });
+  timelineEl.addEventListener('touchmove', (e) => {
+    if (!pinchActive || !timeline) return;
+    if (!(e.touches && e.touches.length === 2)) return;
+    e.preventDefault();
+    const dist = getTouchDistance(e.touches[0], e.touches[1]);
+    if (pinchInitialDist <= 0) return;
+    let scale = dist / pinchInitialDist;
+    // Reduce sensitivity: map scale via exponent < 1
+    const sensitivityExponent = 0.4; // smaller -> slower zoom
+    scale = Math.pow(scale, sensitivityExponent);
+    // Compute new range with clamps
+    const minRange = 24*60*60*1000; // 1 day
+    const maxRange = 2*365*24*60*60*1000; // ~2 years
+    const newRange = Math.max(minRange, Math.min(pinchStartRange / scale, maxRange));
+    const newStart = pinchStartCenter - newRange / 2;
+    const newEnd = pinchStartCenter + newRange / 2;
+    timeline.setWindow(newStart, newEnd, { animation: false });
+  }, { passive: false });
+  const endPinch = () => { pinchActive = false; pinchInitialDist = 0; };
+  timelineEl.addEventListener('touchend', endPinch);
+  timelineEl.addEventListener('touchcancel', endPinch);
 }
 
 async function refresh() {
