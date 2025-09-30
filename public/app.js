@@ -674,7 +674,7 @@ function initTimeline() {
     stack: true,
     stackSubgroups: false,
     height: 'auto',
-    minHeight: '500px',
+    minHeight: '400px',
     //maxHeight: '600px',
     verticalScroll: true,
     horizontalScroll: false,
