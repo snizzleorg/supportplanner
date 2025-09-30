@@ -12,7 +12,7 @@ button { padding: 8px 12px; border: 1px solid #d1d5db; background: #fff; border-
 button:hover { background: #f3f4f6; }
 
 main { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-#timeline { flex: 0 0 420px; height: 420px; position: relative; }
+#timeline { flex: 0 0 auto; height: auto; min-height: 280px; position: relative; }
 /* Map container below timeline fills remaining space */
 .map-container { flex: 1 1 auto; min-height: 200px; border-top: 1px solid #e5e7eb; }
 #map { height: 100%; width: 100%; }
@@ -336,6 +336,10 @@ textarea:focus {
 .vis-time-axis {
   height: 56px !important;
 }
+/* Keep top axis at 56px but shrink bottom axis to fit week numbers */
+.vis-timeline .vis-panel.vis-top .vis-time-axis { height: 56px !important; }
+.vis-timeline .vis-panel.vis-bottom { height: 22px !important; }
+.vis-timeline .vis-panel.vis-bottom .vis-time-axis { height: 22px !important; }
 .vis-time-axis .vis-text { white-space: nowrap; }
 
 /* Emphasize grid lines for readability */
@@ -373,26 +377,49 @@ body.axis-condensed .vis-time-axis .vis-text { font-size: 11px; }
   height: 100% !important;
 }
 
-/* Overlay week numbers aligned to Monday */
+/* Make sure bottom axis can host our overlay */
+.vis-timeline .vis-panel.vis-bottom { position: relative; overflow: visible; }
+/* Hide bottom axis texts (days/months) but keep the row height/structure */
+.vis-timeline .vis-panel.vis-bottom .vis-time-axis .vis-text { visibility: hidden; }
+/* Optionally tone down bottom axis grid to reduce clutter */
+.vis-timeline .vis-panel.vis-bottom .vis-grid.vis-vertical:not(.vis-major) { opacity: 0.25; }
+
+/* Overlay week numbers container; exact size/position set in JS */
 .week-bar {
   position: absolute;
   left: 0;
-  top: 22px; /* roughly aligns with minor axis row */
-  width: 100%;
-  height: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
   pointer-events: none;
-  z-index: 10; /* above timeline content */
+  z-index: 2000; /* ensure above bottom axis ticks */
+  /* debug background removed */
+  background: transparent;
+  outline: none;
 }
 .week-chip {
   position: absolute;
-  top: 0;
+  bottom: 0;
   transform: translateX(-50%);
-  font-size: 11px;
-  color: #6b7280; /* gray-500 */
+  font-size: 12px;
+  font-weight: 400;
+  color: #374151; /* gray-700 */
   background: transparent;
+  border: none;
+  border-radius: 0;
   padding: 0 2px;
   line-height: 1;
   user-select: none;
+}
+
+/* Vertical lines for week boundaries inside the bottom bar */
+.week-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #9ca3af; /* gray-400 */
+  opacity: 0.5;
 }
 
 /* Dedicated 'Weeks' band styling (Option C) */

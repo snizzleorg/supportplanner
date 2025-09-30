@@ -48,6 +48,7 @@ let isPanning = false;
 let lastPanEnd = 0;
 let labelObserver = null;
 let refreshGen = 0; // generation guard for in-flight refreshes
+let weekBarEl = null; // overlay container for week numbers at bottom
 // Map timeline group IDs (cal-1, cal-2, ...) back to original server group IDs (calendar URLs)
 const groupReverseMap = new Map();
 // Map calendar URL -> timeline group id for quick lookup when adding items
@@ -59,6 +60,130 @@ const DEBUG_UI = false;
 
 function setStatus(msg) {
   statusEl.textContent = msg || '';
+}
+
+// --- Week bar overlay (bottom) ---
+function ensureWeekBar() {
+  if (weekBarEl && weekBarEl.parentElement) return weekBarEl;
+  weekBarEl = document.createElement('div');
+  weekBarEl.className = 'week-bar';
+  // Attach to the bottom panel so it overlays above the entire bottom axis
+  const bottomPanel = document.querySelector('.vis-timeline .vis-panel.vis-bottom');
+  if (bottomPanel && bottomPanel.appendChild) {
+    bottomPanel.style.position = bottomPanel.style.position || 'relative';
+    weekBarEl.style.zIndex = '3000';
+    bottomPanel.appendChild(weekBarEl);
+  } else if (timelineEl && timelineEl.appendChild) {
+    timelineEl.appendChild(weekBarEl);
+  }
+  return weekBarEl;
+}
+
+function renderWeekBar(from, to) {
+  try {
+    if (!timeline) return;
+    const bar = ensureWeekBar();
+    if (!bar) return;
+    // Clear existing chips
+    while (bar.firstChild) bar.removeChild(bar.firstChild);
+    const start = dayjs(from).startOf('day');
+    const end = dayjs(to).endOf('day');
+    // Find first Monday on/after start
+    let ws = start;
+    while (ws.day() !== 1) ws = ws.add(1, 'day');
+    // Compute left offsets relative to bottom panel
+    const bottomPanel = document.querySelector('.vis-timeline .vis-panel.vis-bottom');
+    const panelRect = bottomPanel ? bottomPanel.getBoundingClientRect() : null;
+    const centerContent = document.querySelector('.vis-timeline .vis-center .vis-content');
+    const centerRect = centerContent ? centerContent.getBoundingClientRect() : null;
+    // Map time -> X using current window and center content width
+    const win = timeline.getWindow ? timeline.getWindow() : { start: from, end: to };
+    const startMs = +new Date(win.start);
+    const endMs = +new Date(win.end);
+    const spanMs = Math.max(1, endMs - startMs);
+    const contentWidth = centerContent ? centerContent.clientWidth : (timelineEl ? timelineEl.clientWidth : 1);
+    // Span full width of axis panel
+    bar.style.top = '0px';
+    bar.style.bottom = '0px';
+    bar.style.height = '100%';
+    let count = 0;
+    // Draw vertical week boundary lines at each Monday boundary
+    let tickCursor = start.clone();
+    while (tickCursor.day() !== 1) tickCursor = tickCursor.add(1, 'day');
+    while (tickCursor.isBefore(end)) {
+      const tTick = +tickCursor.toDate();
+      const fracTick = (tTick - startMs) / spanMs;
+      const xTickAbs = (centerRect ? centerRect.left : 0) + (Math.max(0, Math.min(1, fracTick)) * contentWidth);
+      if (isFinite(xTickAbs)) {
+        const line = document.createElement('div');
+        line.className = 'week-tick';
+        const leftTick = (panelRect) ? (xTickAbs - panelRect.left) : xTickAbs;
+        line.style.left = `${leftTick}px`;
+        bar.appendChild(line);
+      }
+      tickCursor = tickCursor.add(7, 'day');
+    }
+    while (ws.isBefore(end)) {
+      const iso = isoWeekNumber(ws.toDate());
+      // place label roughly at week center (Mon + 3.5 days)
+      const mid = ws.add(3, 'day').add(12, 'hour').toDate();
+      const t = +mid;
+      const frac = (t - startMs) / spanMs;
+      const x = (centerRect ? centerRect.left : 0) + (Math.max(0, Math.min(1, frac)) * contentWidth);
+      if (isFinite(x)) {
+        const chip = document.createElement('div');
+        chip.className = 'week-chip';
+        chip.textContent = `W${String(iso).padStart(2, '0')}`;
+        chip.style.position = 'absolute';
+        const left = (panelRect) ? (x - panelRect.left) : x;
+        chip.style.left = `${left}px`;
+        chip.style.bottom = '2px';
+        bar.appendChild(chip);
+        count++;
+      }
+      ws = ws.add(7, 'day');
+    }
+    // Fallback: if none created (DOM differences), create labels stepping weekly from window start
+    if (count === 0) {
+      let cur = dayjs(win.start).startOf('day');
+      while (cur.isBefore(win.end)) {
+        const iso = isoWeekNumber(cur.toDate());
+        const mid = cur.add(3, 'day').add(12, 'hour').toDate();
+        const t = +mid;
+        const frac = (t - startMs) / spanMs;
+        const x = (centerRect ? centerRect.left : 0) + (Math.max(0, Math.min(1, frac)) * contentWidth);
+        if (isFinite(x)) {
+          const chip = document.createElement('div');
+          chip.className = 'week-chip';
+          chip.textContent = `W${String(iso).padStart(2, '0')}`;
+          chip.style.position = 'absolute';
+          const left = (panelRect) ? (x - panelRect.left) : x;
+          chip.style.left = `${left}px`;
+          chip.style.bottom = '2px';
+          bar.appendChild(chip);
+          count++;
+        }
+        cur = cur.add(7, 'day');
+      }
+      // Add a center debug chip to verify visibility
+      const centerT = new Date((startMs + endMs) / 2);
+      const fracC = (centerT - startMs) / spanMs;
+      const xC = (centerRect ? centerRect.left : 0) + (Math.max(0, Math.min(1, fracC)) * contentWidth);
+      if (isFinite(xC)) {
+        const chip = document.createElement('div');
+        chip.className = 'week-chip';
+        chip.textContent = 'W?';
+        chip.style.position = 'absolute';
+        const left = (panelRect) ? (xC - panelRect.left) : xC;
+        chip.style.left = `${left}px`;
+        chip.style.bottom = '2px';
+        bar.appendChild(chip);
+      }
+    }
+    try { console.debug('[weekbar] rendered chips:', count); } catch (_) {}
+  } catch (e) {
+    try { console.warn('[weekbar] render failed', e); } catch (_) {}
+  }
 }
 
 // --- Holidays and Special Dates ---
@@ -546,9 +671,12 @@ function initTimeline() {
   // Configuration for the Timeline
   const options = {
     groupOrder: 'order',
-    stack: false,
+    stack: true,
     stackSubgroups: false,
-    verticalScroll: false,
+    height: 'auto',
+    minHeight: '500px',
+    //maxHeight: '600px',
+    verticalScroll: true,
     horizontalScroll: false,
     zoomable: true,
     zoomKey: 'ctrlKey', // Use Ctrl+wheel to zoom
@@ -557,7 +685,8 @@ function initTimeline() {
     orientation: 'both',
     selectable: false,
     autoResize: true,
-    margin: { item: 6, axis: 12 },
+    // Tighter vertical spacing between stacked items
+    margin: { item: 0, axis: 10 },
     timeAxis: { scale: 'day', step: 1 },
     showTooltips: false, // We'll handle tooltips manually
     template: function(item, element) {
@@ -585,13 +714,21 @@ function initTimeline() {
   
   // Initialize the Timeline
   timeline = new Timeline(timelineEl, items, groups, options);
+  // Initial week bar render
+  try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
+  // Let vis size to content (capped by maxHeight) to avoid stretching groups
   
   // Set up custom tooltip handlers
   setupTooltipHandlers(timeline);
 
   // Re-apply group label colors whenever timeline updates
   ['changed','rangechanged','rangechange','redraw'].forEach(evt => {
-    try { timeline.on(evt, () => requestAnimationFrame(applyGroupLabelColors)); } catch (_) {}
+    try {
+      timeline.on(evt, () => {
+        requestAnimationFrame(applyGroupLabelColors);
+        try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
+      });
+    } catch (_) {}
   });
 
   // Observe label DOM for changes and recolor
@@ -615,8 +752,38 @@ function initTimeline() {
         isPanning = false;
         lastPanEnd = Date.now();
       }
+      // Repaint week bar on any range change
+      try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
     });
+    timeline.on('redraw', () => {
+      try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
+    });
+    // No dynamic resize; fixed height
   } catch (_) {}
+}
+
+// Dynamically size the timeline to its content while leaving room for the map
+function adjustTimelineHeight() {
+  try {
+    if (!timelineEl) return;
+    // measure items area height + axes; then cap at 600px
+    const centerContent = document.querySelector('.vis-timeline .vis-center .vis-content');
+    const topAxis = document.querySelector('.vis-timeline .vis-panel.vis-top .vis-time-axis');
+    const bottomAxis = document.querySelector('.vis-timeline .vis-panel.vis-bottom .vis-time-axis');
+    const centerH = centerContent ? centerContent.scrollHeight : 0;
+    const topH = topAxis ? topAxis.offsetHeight : 56;
+    const bottomH = bottomAxis ? bottomAxis.offsetHeight : 22;
+    const padding = 4;
+    const needed = Math.max(0, centerH) + topH + bottomH + padding;
+    const finalHeight = Math.min(600, Math.max(needed, topH + bottomH + 100));
+    if (timelineEl.style.height !== `${finalHeight}px`) {
+      timelineEl.style.height = `${finalHeight}px`;
+    }
+    try { timeline.setOptions({ height: `${finalHeight}px` }); } catch (_) {}
+
+    // Resize map to new space
+    try { if (map && map.invalidateSize) setTimeout(() => map.invalidateSize(false), 0); } catch (_) {}
+  } catch (_) { /* ignore */ }
 }
 
 function parseDateInput(value) {
@@ -1252,33 +1419,11 @@ async function refresh() {
     const spanDays = dayjs(to).diff(dayjs(from), 'day') + 1;
     const toBound = dayjs(to).endOf('day');
     
-    // Generate week numbers and dividers
+    // Generate week (or day) dividers only; week labels are rendered by overlay
     if (spanDays > 45) {
-      // Stage week numbers group (added later after clearing)
-      const weeksGroup = { id: 'weeks', content: 'Weeks', className: 'weeks-group' };
-      stagedGroups.push(weeksGroup);
-      
-      // Generate week numbers in a single batch
-      const weekItems = [];
       let ws = dayjs(from).startOf('day');
       while (ws.day() !== 1) ws = ws.add(1, 'day');
-      
       while (ws.isBefore(toBound)) {
-        const we = ws.add(7, 'day');
-        const y = ws.year();
-        const iso = isoWeekNumber(ws.toDate());
-        weekItems.push({
-          id: `weeks-${y}-W${String(iso).padStart(2, '0')}`,
-          group: 'weeks',
-          content: `W${String(iso).padStart(2, '0')}`,
-          start: ws.toDate(),
-          end: we.toDate(),
-          className: 'week-chip-item',
-          editable: false,
-          selectable: false
-        });
-        
-        // Add week divider
         dividerItems.push({
           id: `weekline-${ws.format('YYYY-MM-DD')}`,
           start: ws.toDate(),
@@ -1288,13 +1433,7 @@ async function refresh() {
           editable: false,
           selectable: false
         });
-        
-        ws = we;
-      }
-      
-      // Stage all week items to add later
-      if (weekItems.length > 0) {
-        stagedItems.push(...weekItems);
+        ws = ws.add(7, 'day');
       }
     } else {
       // Daily lines
@@ -1501,6 +1640,9 @@ async function refresh() {
     const w = timeline.getWindow();
     clientLog('info', 'window-after-set', { start: w.start, end: w.end });
     setStatus(`Loaded ${allItems.length} items in ${allGroups.length} calendars | Window: ${w.start.toISOString().slice(0,10)} → ${w.end.toISOString().slice(0,10)}`);
+    // Repaint week bar after data load
+    try { renderWeekBar(w.start, w.end); } catch (_) {}
+    // Fixed height; nothing to adjust
   } catch (e) {
     if (gen !== refreshGen) return;
     console.error('Events fetch error', e);
@@ -1548,6 +1690,14 @@ function wireEvents() {
     // Re-apply window after resize to prevent drift
     requestAnimationFrame(() => applyWindow(fromEl.value, toEl.value));
     requestAnimationFrame(() => updateAxisDensity(fromEl.value, toEl.value));
+    // Repaint week labels to current positions
+    try { const w = timeline.getWindow(); requestAnimationFrame(() => renderWeekBar(w.start, w.end)); } catch (_) {}
+    // Ensure Leaflet map resizes to new container dimensions
+    try {
+      if (typeof map !== 'undefined' && map && map.invalidateSize) {
+        setTimeout(() => map.invalidateSize(false), 0);
+      }
+    } catch (_) {}
   });
   
   // Only apply/clamp and refresh when input loses focus or Enter is pressed
