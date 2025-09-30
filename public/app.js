@@ -696,6 +696,20 @@ function initTimeline() {
       const div = document.createElement('div');
       div.className = 'vis-item-content';
       div.textContent = item.content || '';
+      // If the title/content contains '???', render more transparent to indicate unconfirmed
+      try {
+        const text = `${item.title || ''} ${item.content || ''}`;
+        if (/\?\?\?/.test(text)) {
+          div.style.opacity = '0.5';
+          // Optional enhancements: mark item element and tooltip
+          if (element && element.classList) {
+            element.classList.add('unconfirmed');
+          }
+          // If native title tooltip is used anywhere, append an indicator
+          const baseTitle = item.title || item.content || '';
+          element && element.setAttribute && element.setAttribute('title', `${baseTitle} (unconfirmed)`);
+        }
+      } catch (_) {}
       
       // Add data attributes for tooltip
       if (item.dataAttributes) {

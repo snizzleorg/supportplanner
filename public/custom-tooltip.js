@@ -85,27 +85,35 @@ class CustomTooltip {
         </div>
     `;
 
-    // Meta badges (order number, system type) and details (ticket link, customer address)
+    // Meta badges (order number, system type, unconfirmed) and details (ticket link)
     const meta = item.meta || null;
-    if (meta && (meta.orderNumber || meta.systemType || meta.ticketLink)) {
-      content += '<div class="tooltip-meta">';
-      if (meta.orderNumber) {
-        content += `<span class="meta-badge">Order: ${escapeHtml(String(meta.orderNumber))}</span>`;
+    const badges = [];
+    if (meta && meta.orderNumber) {
+      badges.push(`<span class="meta-badge">Order: ${escapeHtml(String(meta.orderNumber))}</span>`);
+    }
+    if (meta && meta.systemType) {
+      badges.push(`<span class="meta-badge">System: ${escapeHtml(String(meta.systemType))}</span>`);
+    }
+    // Unconfirmed badge when title/content contains '???'
+    try {
+      const txt = `${item.content || ''} ${item.title || ''}`;
+      if (/\?\?\?/.test(txt)) {
+        badges.push('<span class="meta-badge unconfirmed">Unconfirmed</span>');
       }
-      if (meta.systemType) {
-        content += `<span class="meta-badge">System: ${escapeHtml(String(meta.systemType))}</span>`;
-      }
-      content += '</div>';
+    } catch (_) {}
 
-      if (meta.ticketLink) {
-        const url = escapeHtml(String(meta.ticketLink));
-        content += `
-          <div class="tooltip-link">
-            <span class="icon">🔗</span>
-            <a href="${url}" target="_blank" rel="noopener">Ticket</a>
-          </div>
-        `;
-      }
+    if (badges.length > 0) {
+      content += `<div class="tooltip-meta">${badges.join('')}</div>`;
+    }
+
+    if (meta && meta.ticketLink) {
+      const url = escapeHtml(String(meta.ticketLink));
+      content += `
+        <div class="tooltip-link">
+          <span class="icon">🔗</span>
+          <a href="${url}" target="_blank" rel="noopener">Ticket</a>
+        </div>
+      `;
     }
 
     if (item.location) {
