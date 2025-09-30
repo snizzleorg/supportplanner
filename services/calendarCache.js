@@ -743,23 +743,21 @@ export class CalendarCache {
       const currentEtag = eventObject.etag; // only send If-Match when present
 
       // 6. Create iCal data for the updated event
-      // Preserve the original event's all-day status if it exists, otherwise determine from the time
-      const isAllDay = event.allDay !== undefined ? event.allDay : 
-                     (updatedEvent.start && updatedEvent.start.endsWith('T00:00:00.000Z') && 
-                      updatedEvent.end && updatedEvent.end.endsWith('T00:00:00.000Z'));
+      // Preserve the original event's all-day status if it exists. Otherwise detect from date-only input.
+      const isDateOnly = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+      const isAllDay = event.allDay !== undefined ? event.allDay : (isDateOnly(updatedEvent.start) && isDateOnly(updatedEvent.end));
       
       console.log(`[updateEvent] Generating iCal data for ${isAllDay ? 'all-day' : 'timed'} event (preserved from original: ${event.allDay !== undefined ? 'yes' : 'no'})`);
       
       // Format dates for iCal
-      const formatDate = (dateStr) => {
-        const date = new Date(dateStr);
-        if (isAllDay) {
-          // For all-day events, use DATE format (YYYYMMDD)
-          return date.toISOString().replace(/[-:T.]/g, '').substring(0, 8);
-        } else {
-          // For timed events, use UTC format
-          return date.toISOString().replace(/[-:.]/g, '').replace('Z', 'Z');
-        }
+      const formatTimedUTC = (dateStr) => new Date(dateStr).toISOString().replace(/[-:.]/g, '').replace('Z', 'Z');
+      const toYYYYMMDD = (dateStr) => {
+        if (isDateOnly(dateStr)) return dateStr.replace(/-/g, '');
+        const d = new Date(dateStr);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}${m}${day}`;
       };
       
       const icalLines = [
@@ -773,23 +771,24 @@ export class CalendarCache {
       
       // Add DTSTART and DTEND with proper format for all-day vs timed events
       if (isAllDay) {
-        // For all-day events, client sends inclusive end date.
-        // In iCal, DTEND (DATE) must be exclusive, so add 1 day to the inclusive end.
-        const inclusiveEnd = new Date(updatedEvent.end);
-        const exclusiveEnd = new Date(Date.UTC(inclusiveEnd.getUTCFullYear(), inclusiveEnd.getUTCMonth(), inclusiveEnd.getUTCDate() + 1));
+        // All-day: updatedEvent.start/end should be inclusive YYYY-MM-DD
+        const startYmd = toYYYYMMDD(updatedEvent.start);
+        const endExclusiveYmd = isDateOnly(updatedEvent.end)
+          ? dayjs(updatedEvent.end).add(1, 'day').format('YYYYMMDD')
+          : dayjs(new Date(updatedEvent.end)).add(1, 'day').format('YYYYMMDD');
         icalLines.push(
-          `DTSTART;VALUE=DATE:${formatDate(updatedEvent.start)}`,
-          `DTEND;VALUE=DATE:${formatDate(exclusiveEnd.toISOString())}`,
+          `DTSTART;VALUE=DATE:${startYmd}`,
+          `DTEND;VALUE=DATE:${endExclusiveYmd}`,
           'X-MICROSOFT-CDO-ALLDAYEVENT:TRUE',
           'X-MICROSOFT-CDO-INTENDEDSTATUS:BUSY',
-          'TRANSP:OPAQUE'  // Blocks time on calendar
+          'TRANSP:OPAQUE'
         );
       } else {
         icalLines.push(
-          `DTSTART:${formatDate(updatedEvent.start)}`,
-          `DTEND:${formatDate(updatedEvent.end)}`,
+          `DTSTART:${formatTimedUTC(updatedEvent.start)}`,
+          `DTEND:${formatTimedUTC(updatedEvent.end)}`,
           'X-MICROSOFT-CDO-INTENDEDSTATUS:BUSY',
-          'TRANSP:OPAQUE'  // Blocks time on calendar
+          'TRANSP:OPAQUE'
         );
       }
       

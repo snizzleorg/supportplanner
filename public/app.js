@@ -45,9 +45,12 @@ const timelineEl = document.getElementById('timeline');
 let timeline;
 let groups = new DataSet([]);
 let items = new DataSet([]);
-// Suppress click-after-drag: track user panning state
+// Suppress click-after-drag/pan
 let isPanning = false;
 let lastPanEnd = 0;
+let isItemDragging = false;
+let lastItemDragEnd = 0;
+const dragState = new Map(); // key: item.id -> {origStart, origEnd, durationMs}
 let labelObserver = null;
 let refreshGen = 0; // generation guard for in-flight refreshes
 let weekBarEl = null; // overlay container for week numbers at bottom
@@ -57,6 +60,84 @@ const groupReverseMap = new Map();
 const urlToGroupId = new Map();
 // Track the group id used for the current create flow (for optimistic insert)
 let currentCreateGroupId = null;
+
+// Editing activation handling
+// Edit is allowed ONLY after a 2s long-press on the item before dragging (no quick edit via Cmd/Ctrl)
+let editModifierDown = false; // ctrlKey || metaKey at drag start (tracked but not granting edit)
+let dragStartedOnItem = false; // whether pointerdown started on an item (or its handles)
+let pointerIsDown = false;
+let pointerDownAt = 0;
+let longPressTimer = null;
+let longPressActive = false; // becomes true after 2s hold on item
+let pointerStartX = 0;
+let pointerStartY = 0;
+const LONG_PRESS_MS = 1000;
+const MOVE_TOLERANCE_PX = 5; // cancel long-press if user moves too much before 2s
+let editingSessionActive = false; // once true during a drag, remains until drop
+let pressedItemEl = null; // DOM element of the item under pointerdown
+let pressedItemId = null; // vis item id under pointerdown
+
+// Track modifier state at drag start inside the timeline container
+if (timelineEl) {
+  timelineEl.addEventListener('pointerdown', (e) => {
+    pointerIsDown = true;
+    pointerDownAt = Date.now();
+    pointerStartX = e.clientX || 0;
+    pointerStartY = e.clientY || 0;
+    // Record whether Ctrl or Command was held (does not enable quick edit) and if pointer is on an item element
+    editModifierDown = !!(e.ctrlKey || e.metaKey);
+    const target = e.target;
+    dragStartedOnItem = !!(target && (target.closest && target.closest('.vis-item')));
+    pressedItemEl = dragStartedOnItem ? target.closest('.vis-item') : null;
+    pressedItemId = pressedItemEl ? pressedItemEl.getAttribute('data-id') : null;
+
+    // Start long-press timer whenever starting on an item (modifiers don't bypass the long-press requirement)
+    clearTimeout(longPressTimer);
+    longPressActive = false;
+    editingSessionActive = false;
+    if (dragStartedOnItem) {
+      longPressTimer = setTimeout(() => {
+        if (pointerIsDown) {
+          longPressActive = true;
+          try {
+            if (pressedItemEl) pressedItemEl.classList.add('drag-ready');
+          } catch (_) {}
+        }
+        // Once activated, clear timer so subsequent pointermove won't cancel it
+        longPressTimer = null;
+      }, LONG_PRESS_MS);
+    }
+  }, { capture: true });
+  timelineEl.addEventListener('pointermove', (e) => {
+    // If already active or no timer running, nothing to cancel
+    if (!pointerIsDown || longPressActive || !longPressTimer) return;
+    const dx = Math.abs((e.clientX || 0) - pointerStartX);
+    const dy = Math.abs((e.clientY || 0) - pointerStartY);
+    if (dx > MOVE_TOLERANCE_PX || dy > MOVE_TOLERANCE_PX) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+      // Do not flip longPressActive here; it's still false pre-activation
+      try { if (pressedItemEl) pressedItemEl.classList.remove('drag-ready'); } catch (_) {}
+    }
+  }, { capture: true });
+}
+window.addEventListener('pointerup', () => {
+  pointerIsDown = false;
+  editModifierDown = false;
+  dragStartedOnItem = false;
+  clearTimeout(longPressTimer);
+  longPressTimer = null;
+  longPressActive = false;
+  // Do not clear editingSessionActive here; let onMove finalize it
+  try {
+    if (pressedItemEl) {
+      pressedItemEl.classList.remove('drag-ready');
+      pressedItemEl.classList.remove('dragging');
+    }
+  } catch (_) {}
+  pressedItemEl = null;
+  pressedItemId = null;
+});
 // Toggle to show/hide extra UI debug messages
 const DEBUG_UI = false;
 
@@ -721,6 +802,33 @@ function initTimeline() {
     type: { start: 'ISODate', end: 'ISODate' }
   });
 
+  // Helpers for visual edit persistence
+  function extractUidFromItemId(id) {
+    if (!id) return null;
+    const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+    const m = String(id).match(uuidRegex);
+    return m ? m[0] : null;
+  }
+  function getGroupCalendarUrl(groupId) {
+    try {
+      const group = timeline && timeline.groupsData && timeline.groupsData.get(groupId);
+      if (group && group.url) return group.url;
+    } catch (_) {}
+    try { return (groupId && groupIdToUrl && groupIdToUrl.get(groupId)) || null; } catch (_) { return null; }
+  }
+  async function putUpdate(uid, payload) {
+    const res = await fetch(`/api/events/${encodeURIComponent(uid)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`Update failed: ${res.status} ${res.statusText} ${t}`);
+    }
+    return res.json().catch(() => ({}));
+  }
+
   // Configuration for the Timeline
   const options = {
     groupOrder: 'order',
@@ -731,15 +839,30 @@ function initTimeline() {
     //maxHeight: '600px',
     verticalScroll: true,
     horizontalScroll: false,
-    zoomable: true,
-    zoomKey: 'ctrlKey', // Use Ctrl+wheel to zoom
+    // Disable built-in zoom so we can enforce Shift+Wheel manually
+    zoomable: false,
     zoomMin: 1000 * 60 * 60 * 24, // 1 day
     zoomMax: 1000 * 60 * 60 * 24 * 365 * 2, // 2 years
     orientation: 'both',
-    selectable: false,
+    selectable: true,
     autoResize: true,
     // Tighter vertical spacing between stacked items
     margin: { item: 0, axis: 10 },
+    // Enable visual editing of items
+    editable: {
+      add: false,
+      remove: false,
+      updateTime: true,   // drag/resize horizontally
+      updateGroup: true,  // drag vertically between groups
+      overrideItems: true
+    },
+    // Snap edits to day boundaries
+    snap: function(date) {
+      try {
+        const d = dayjs(date);
+        return d.startOf('day').toDate();
+      } catch (_) { return date; }
+    },
     timeAxis: { scale: 'day', step: 1 },
     showTooltips: false, // We'll handle tooltips manually
     template: function(item, element) {
@@ -777,6 +900,124 @@ function initTimeline() {
       followMouse: true,
       overflowMethod: 'cap'
     },
+    // Editing callbacks
+    onMoving: function(item, callback) {
+      // Require long-press to start editing; once started, keep session active
+      if (dragStartedOnItem && longPressActive) {
+        editingSessionActive = true;
+      }
+      if (!editingSessionActive) {
+        callback(null);
+        return;
+      }
+      try {
+        // Mark that a drag/resize is in progress
+        isItemDragging = true;
+        // Add dragging visual cue to the active vis item
+        try {
+          if (!pressedItemEl || (pressedItemId && pressedItemId !== String(item.id))) {
+            pressedItemEl = document.querySelector(`.vis-item[data-id="${CSS.escape(String(item.id))}"]`);
+          }
+          if (pressedItemEl) {
+            pressedItemEl.classList.add('dragging');
+            pressedItemEl.classList.remove('drag-ready');
+          }
+        } catch (_) {}
+        // Initialize drag state on first move for this item
+        if (!dragState.has(item.id)) {
+          const src = items.get(item.id) || {};
+          const s0 = item.start instanceof Date ? new Date(item.start) : new Date(item.start);
+          const e0 = item.end ? (item.end instanceof Date ? new Date(item.end) : new Date(item.end)) : null;
+          const wasAllDay = !!(src && (src.allDay === true));
+          let durationMs = e0 && s0 ? (e0.getTime() - s0.getTime()) : 0;
+          let durationDays = null;
+          if (wasAllDay && src.start && src.end) {
+            // For all-day items in vis, end is exclusive; preserve exact diff in days
+            durationDays = Math.max(1, dayjs(src.end).startOf('day').diff(dayjs(src.start).startOf('day'), 'day'));
+          }
+          dragState.set(item.id, { origStart: s0, origEnd: e0, durationMs, wasAllDay, durationDays });
+        }
+        const st = dragState.get(item.id);
+        const prevStart = st.origStart;
+        const prevEnd = st.origEnd;
+
+        // Snap the moving edge(s) to whole days
+        const snappedStart = item.start ? dayjs(item.start).startOf('day').toDate() : null;
+        // For all-day ranges, vis treats end as exclusive; snap to startOf('day')
+        const snappedEnd = item.end ? dayjs(item.end).startOf('day').toDate() : null;
+
+        // Detect whether this is a move (both edges change) vs a resize
+        const startChanged = snappedStart && prevStart && (snappedStart.getTime() !== prevStart.getTime());
+        const endChanged = snappedEnd && prevEnd && (snappedEnd.getTime() !== prevEnd.getTime());
+        // Track intent for payload computation (move keeps original duration, resize uses new diff)
+        st.intent = (startChanged && endChanged) ? 'move' : 'resize';
+
+        if (startChanged && endChanged && (st.durationMs || st.durationDays)) {
+          // Treat as move: preserve original duration (prefer days for all-day)
+          item.start = snappedStart;
+          if (st.wasAllDay && st.durationDays) {
+            // use exclusive end for all-day to keep visual length exact
+            item.end = dayjs(item.start).add(st.durationDays, 'day').startOf('day').toDate();
+          } else if (st.durationMs) {
+            item.end = new Date(snappedStart.getTime() + st.durationMs);
+          }
+        } else {
+          // Resize or single-edge move: apply snapped values individually
+          if (snappedStart) item.start = snappedStart;
+          if (snappedEnd) item.end = snappedEnd;
+        }
+      } catch (_) {}
+      callback(item);
+    },
+    onMove: async function(item, callback) {
+      // Only proceed if an editing session is active (set in onMoving)
+      if (!editingSessionActive) {
+        callback(null);
+        return;
+      }
+      try {
+        const uid = extractUidFromItemId(item.id);
+        if (!uid) throw new Error('Cannot determine event UID');
+        const st = dragState.get(item.id) || {};
+        let payload;
+        if (st.wasAllDay) {
+          // Move vs resize: on move keep original day count; on resize use current diff
+          let days;
+          if (st.intent === 'move' && st.durationDays) {
+            days = st.durationDays;
+          } else {
+            days = (item.end && item.start) ? (dayjs(item.end).startOf('day').diff(dayjs(item.start).startOf('day'), 'day') + 1) : 1;
+          }
+          const startStr = dayjs(item.start).format('YYYY-MM-DD');
+          const endStr = dayjs(item.start).add(Math.max(1, days) - 1, 'day').format('YYYY-MM-DD');
+          payload = { start: startStr, end: endStr };
+        } else {
+          payload = { start: new Date(item.start).toISOString(), end: item.end ? new Date(item.end).toISOString() : undefined };
+        }
+        const targetCal = getGroupCalendarUrl(item.group);
+        if (targetCal) payload.targetCalendarUrl = targetCal;
+        await putUpdate(uid, payload);
+        callback(item);
+        setStatus('Event updated');
+        fetch('/api/refresh-caldav', { method: 'POST' }).catch(() => {});
+      } catch (e) {
+        setStatus('Failed to update event');
+        callback(null);
+      }
+      // Clear drag state and suppress click right after drop
+      try { dragState.delete(item.id); } catch (_) {}
+      isItemDragging = false;
+      lastItemDragEnd = Date.now();
+      editingSessionActive = false;
+      // Remove dragging cue after drop
+      try {
+        if (!pressedItemEl && item && item.id) {
+          pressedItemEl = document.querySelector(`.vis-item[data-id="${CSS.escape(String(item.id))}"]`);
+        }
+        if (pressedItemEl) pressedItemEl.classList.remove('dragging');
+      } catch (_) {}
+    },
+    // Note: vis-timeline v7 uses onMoving/onMove for both drag and resize
   };
   
   // Initialize the Timeline
@@ -787,6 +1028,21 @@ function initTimeline() {
   
   // Set up custom tooltip handlers
   setupTooltipHandlers(timeline);
+
+  // Custom Shift+Wheel zoom handler (without modifiers, allow natural page scroll)
+  if (timelineEl) {
+    timelineEl.addEventListener('wheel', (e) => {
+      if (!e.shiftKey) return; // only zoom when Shift is held
+      e.preventDefault();
+      try {
+        const { start, end } = timeline.getWindow();
+        const center = (start.valueOf() + end.valueOf()) / 2;
+        const factor = e.deltaY < 0 ? 0.9 : 1.1; // up = zoom in, down = zoom out
+        timeline.zoom(factor, center);
+      } catch (_) {}
+    }, { passive: false });
+  }
+
 
   // Re-apply group label colors whenever timeline updates
   ['changed','rangechanged','rangechange','redraw'].forEach(evt => {
@@ -1802,8 +2058,9 @@ function initTimelineEvents() {
   
   // Timeline event click handler
   timeline.on('click', async (properties) => {
-    // Ignore clicks right after a user drag/pan
-    if (isPanning || (Date.now() - lastPanEnd) < 250) {
+    // Ignore clicks right after a user drag/pan or item drag
+    const now = Date.now();
+    if (isPanning || (now - lastPanEnd) < 250 || isItemDragging || (now - lastItemDragEnd) < 300) {
       return;
     }
     console.log('Timeline click event:', properties);

@@ -569,4 +569,31 @@ body.axis-condensed .vis-time-axis .vis-text { font-size: 11px; }
   max-width: min(90vw, 500px) !important;
 }
 
-/* Event styles are now loaded dynamically from /dynamic-styles.css */
+/* Visual cues for long-press editing */
+.vis-item.drag-ready {
+  outline: 2px dashed #0ea5e9; /* sky-500 */
+  outline-offset: 2px;
+  cursor: grab;
+}
+.vis-item.dragging {
+  outline: 2px solid #0ea5e9;
+  outline-offset: 2px;
+  cursor: grabbing !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Default: do NOT show move/resize cursor until long-press is active */
+.vis-item,
+.vis-item.vis-editable,
+.vis-item .vis-drag-left,
+.vis-item .vis-drag-right,
+.vis-item .vis-drag-center,
+.vis-item .vis-resizable {
+  cursor: default !important;
+}
+
+/* When long-press ready: show resize handles and grab cursor on body */
+.vis-item.drag-ready .vis-drag-left,
+.vis-item.drag-ready .vis-drag-right {
+  cursor: ew-resize !important;
+}

@@ -370,6 +370,8 @@ app.post('/api/events', async (req, res) => {
           content: event.summary || 'No title',
           start: event.start,
           end: event.end,
+          allDay: !!event.allDay,
+          editable: { updateTime: true, updateGroup: true },
           className: `event-type-${eventType}${isRecurring ? ' recurring' : ''}`,
           title: event.summary || 'No title', // Simple title for the native tooltip
           description: event.description || '', // Plain text description (YAML removed)
