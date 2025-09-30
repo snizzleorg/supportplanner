@@ -13,7 +13,6 @@
 - [ ] Implement proper error handling for calendar connections
 
 
-
 ## Phase 2: User Experience
 - [ ] Better error messages and user feedback
 - [ ] Responsive design improvements
