@@ -421,14 +421,18 @@ app.post('/api/events', async (req, res) => {
     const eventCount = items.filter(i => i.type === 'event').length;
     const occurrenceCount = items.filter(i => i.type === 'occurrence').length;
 
-    // Deterministic palette for calendar group backgrounds (more saturated)
+    // Deterministic palette for calendar group backgrounds (fallback only)
     const CAL_GROUP_COLORS = ['#3b82f6','#f97316','#22c55e','#ef4444','#a855f7','#14b8a6','#eab308','#fb7185','#06b6d4','#84cc16'];
-    const pickGroupColor = (_url, idx) => CAL_GROUP_COLORS[idx % CAL_GROUP_COLORS.length];
+    const pickGroupColor = (g, idx) => {
+      // Prefer the per-calendar color computed in calendarCache (e.g., based on displayName)
+      if (g && g.color) return g.color;
+      return CAL_GROUP_COLORS[idx % CAL_GROUP_COLORS.length];
+    };
 
     // Format groups for vis-timeline
     const formattedGroups = groups.map((g, i) => {
       const groupId = `cal-${i + 1}`;
-      const bg = pickGroupColor(g.url, i);
+      const bg = pickGroupColor(g, i);
       return {
         id: groupId,
         content: g.content,

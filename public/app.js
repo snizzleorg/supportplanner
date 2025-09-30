@@ -337,8 +337,10 @@ function strengthenColor(color) {
   return toHex({ r: darken(boost(rgb.r)), g: darken(boost(rgb.g)), b: darken(boost(rgb.b)) });
 }
 function makePinIcon(color) {
-  const base = strengthenColor(color || '#2563eb');
+  // Use the color directly for the pin body
+  const base = color || '#3b82f6'; // Default blue to match the server's default
   const stroke = '#1f2937'; // dark outline for contrast
+  
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="30" height="44" viewBox="0 0 30 44">
   <defs>
@@ -347,22 +349,70 @@ function makePinIcon(color) {
     </filter>
   </defs>
   <g filter="url(#shadow)">
-    <path d="M15 1 C8 1 2.5 6.6 2.5 13.5 c0 9.6 10.7 18.4 11.5 19.0a1.6 1.6 0 0 0 2.0 0C16.8 31.9 27.5 23.1 27.5 13.5 27.5 6.6 22 1 15 1z" fill="${base}" stroke="${stroke}" stroke-width="1.7"/>
-    <circle cx="15" cy="13.5" r="5.2" fill="#ffffff" fill-opacity="0.98" stroke="${stroke}" stroke-width="1"/>
+    <!-- Pin body with the exact calendar color -->
+    <path d="M15 1 C8 1 2.5 6.6 2.5 13.5 c0 9.6 10.7 18.4 11.5 19.0a1.6 1.6 0 0 0 2.0 0C16.8 31.9 27.5 23.1 27.5 13.5 27.5 6.6 22 1 15 1z" 
+          fill="${base}" 
+          stroke="${stroke}" 
+          stroke-width="1.7" 
+          fill-opacity="0.9"/>
+    <!-- White center circle -->
+    <circle cx="15" cy="13.5" r="5.2" 
+            fill="#ffffff" 
+            fill-opacity="0.98" 
+            stroke="${stroke}" 
+            stroke-width="1"/>
   </g>
 </svg>`;
   const url = 'data:image/svg+xml;base64,' + btoa(svg);
   return L.icon({ iconUrl: url, iconSize: [30, 44], iconAnchor: [15, 43], popupAnchor: [0, -34]});
 }
 
-// Apply distinct background colors to calendar label rows (left column)
+// Generate a consistent color based on a string (matching backend logic)
+function getColorForString(str) {
+  if (!str) return '#2563eb';
+  
+  // Simple hash function to match the backend
+  const hash = str.split('').reduce((acc, char) => {
+    return ((acc << 5) - acc) + char.charCodeAt(0);
+  }, 0);
+  
+  // More vibrant color palette for better visibility
+  const colors = [
+    '#3b82f6', // blue
+    '#ec4899', // pink
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#8b5cf6', // violet
+    '#06b6d4', // cyan
+    '#f97316', // orange
+    '#ef4444', // red
+    '#a855f7', // purple
+    '#14b8a6'  // teal
+  ];
+  
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+}
+
+// Apply calendar group color to label rows so labels match map pin colors
 const LABEL_PALETTE = ['#e0f2fe','#fce7f3','#dcfce7','#fff7ed','#ede9fe','#f1f5f9','#fef9c3','#fee2e2','#e9d5ff','#cffafe'];
 function applyGroupLabelColors() {
   try {
     const labelNodes = document.querySelectorAll('.vis-timeline .vis-labelset .vis-label');
     if (!labelNodes || labelNodes.length === 0) return;
+    // Get groups in current visual order as a fallback mapping
+    const gs = (typeof groups?.get === 'function') ? groups.get() : [];
     labelNodes.forEach((node, idx) => {
-      const color = LABEL_PALETTE[idx % LABEL_PALETTE.length];
+      let color = '';
+      const g = gs[idx];
+      if (g) {
+        color = g.bg || '';
+        if (!color && g.style) {
+          const m = String(g.style).match(/background-color:\s*([^;]+)/i);
+          if (m && m[1]) color = m[1].trim();
+        }
+      }
+      if (!color) color = LABEL_PALETTE[idx % LABEL_PALETTE.length];
       node.style.backgroundColor = color;
       const inner = node.querySelector('.vis-inner');
       if (inner) inner.style.backgroundColor = color;
@@ -449,41 +499,64 @@ async function renderMapMarkers(allServerItems) {
   if (!map || !markersLayer) return;
   markersLayer.clearLayers();
   const bounds = [];
-  const uniqueLocations = new Map(); // location string -> array of items
-  // Build group color map from vis groups (prefer bg, fallback to inline style, then palette)
-  const groupColorMap = new Map();
-  try {
-    const gs = groups.get();
-    gs.forEach((g, idx) => {
-      let color = g.bg || '';
-      if (!color && g.style) {
-        const m = String(g.style).match(/background-color:\s*([^;]+);?/i);
-        if (m) color = m[1].trim();
-      }
-      if (!color) color = LABEL_PALETTE[idx % LABEL_PALETTE.length];
-      groupColorMap.set(g.id, color);
-    });
-  } catch (_) {}
-  allServerItems.forEach(it => {
+
+  // Helper: resolve exact calendar color from the event's group
+  const getGroupColor = (groupId) => {
+    const g = groups.get(groupId);
+    if (!g) return '#3b82f6';
+    if (g.bg) return g.bg;
+    if (g.style) {
+      const m = String(g.style).match(/background-color:\s*([^;]+)/i);
+      if (m && m[1]) return m[1].trim();
+    }
+    return '#3b82f6';
+  };
+
+  // Group by location, then by group id, so we can render one pin per calendar per location
+  const byLocThenGroup = new Map(); // loc -> Map(groupId -> items[])
+  for (const it of allServerItems) {
     const loc = (it.location || '').trim();
-    if (!loc) return;
-    if (!uniqueLocations.has(loc)) uniqueLocations.set(loc, []);
-    uniqueLocations.get(loc).push(it);
-  });
-  for (const [loc, linked] of uniqueLocations.entries()) {
+    if (!loc) continue;
+    if (!byLocThenGroup.has(loc)) byLocThenGroup.set(loc, new Map());
+    const inner = byLocThenGroup.get(loc);
+    const gid = it.group || '__nogroup__';
+    if (!inner.has(gid)) inner.set(gid, []);
+    inner.get(gid).push(it);
+  }
+
+  // Utility: compute a small offset in degrees for separating markers around a location
+  const addOffset = (lat, lon, index, total) => {
+    // Arrange in a circle around the center
+    if (total <= 1) return { lat, lon };
+    const radiusMeters = 12; // ~12m spread
+    const angle = (2 * Math.PI * index) / total;
+    const dLat = (radiusMeters * Math.sin(angle)) / 111111; // meters -> degrees
+    const dLon = (radiusMeters * Math.cos(angle)) / (111111 * Math.max(0.1, Math.cos(lat * Math.PI / 180)));
+    return { lat: lat + dLat, lon: lon + dLon };
+  };
+
+  // For each location, render one pin per calendar group with slight offsets
+  for (const [loc, inner] of byLocThenGroup.entries()) {
     const coords = await geocodeLocation(loc);
     if (!coords) continue;
-    // Choose a color: if multiple groups share this location, pick the first group's color
-    let color = '#2563eb';
-    for (const e of linked) {
-      if (e.group && groupColorMap.has(e.group)) { color = groupColorMap.get(e.group); break; }
-    }
-    const marker = L.marker([coords.lat, coords.lon], { icon: makePinIcon(color) }).addTo(markersLayer);
-    bounds.push([coords.lat, coords.lon]);
-    const list = linked.slice(0, 5).map(e => `<li>${escapeHtml(e.content || e.summary || 'Untitled')} (${escapeHtml(e.start)} → ${escapeHtml(e.end)})</li>`).join('');
-    const more = linked.length > 5 ? `<div>…and ${linked.length - 5} more</div>` : '';
-    marker.bindPopup(`<div><strong>${escapeHtml(loc)}</strong><ul>${list}</ul>${more}</div>`);
+    const entries = Array.from(inner.entries()); // [groupId, items[]]
+    const total = entries.length;
+    entries.forEach(([gid, evs], idx) => {
+      const color = getGroupColor(gid);
+      const { lat, lon } = addOffset(coords.lat, coords.lon, idx, total);
+      const marker = L.marker([lat, lon], { icon: makePinIcon(color) }).addTo(markersLayer);
+      bounds.push([lat, lon]);
+      // Build a compact popup listing up to 5 events for this calendar at this location
+      const list = evs.slice(0, 5)
+        .map(e => `<li>${escapeHtml(e.content || e.summary || 'Untitled')} (${escapeHtml(e.start)} → ${escapeHtml(e.end)})</li>`)
+        .join('');
+      const more = evs.length > 5 ? `<div>…and ${evs.length - 5} more</div>` : '';
+      const groupObj = groups.get(gid);
+      const who = groupObj ? (groupObj.content || groupObj.title || '') : '';
+      marker.bindPopup(`<div><strong>${escapeHtml(loc)}</strong><div>${escapeHtml(who)}</div><ul>${list}</ul>${more}</div>`);
+    });
   }
+
   if (bounds.length) {
     map.fitBounds(bounds, { padding: [20, 20] });
   }
@@ -720,6 +793,8 @@ function initTimeline() {
   items = new DataSet({
     type: { start: 'ISODate', end: 'ISODate' }
   });
+  // Expose for console debugging
+  try { window.groups = groups; window.items = items; } catch (_) {}
 
   // Configuration for the Timeline
   const options = {
@@ -727,7 +802,7 @@ function initTimeline() {
     stack: true,
     stackSubgroups: false,
     height: 'auto',
-    minHeight: '400px',
+    minHeight: '500px',
     //maxHeight: '600px',
     verticalScroll: true,
     horizontalScroll: false,
@@ -781,6 +856,8 @@ function initTimeline() {
   
   // Initialize the Timeline
   timeline = new Timeline(timelineEl, items, groups, options);
+  // Expose timeline for console debugging
+  try { window.timeline = timeline; } catch (_) {}
   // Initial week bar render
   try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
   // Let vis size to content (capped by maxHeight) to avoid stretching groups

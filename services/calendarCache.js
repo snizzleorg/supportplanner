@@ -4,6 +4,8 @@ import dayjs from 'dayjs';
 import NodeCache from 'node-cache';
 import { randomUUID } from 'crypto';
 import YAML from 'yaml';
+import { calendarOrder } from '../config/calendar-order.js';
+import { calendarColorOverrides } from '../config/calendar-colors.js';
 
 export class CalendarCache {
   constructor() {
@@ -363,14 +365,64 @@ export class CalendarCache {
     return this.cache.get(cacheKey);
   }
 
+  // Generate a consistent color based on the display name
+  getCalendarColor(displayName) {
+    if (!displayName) return '#3b82f6'; // Default blue if no name
+
+    // Hash to a stable integer
+    const hash = displayName.split('').reduce((acc, ch) => ((acc << 5) - acc) + ch.charCodeAt(0), 0);
+
+    // Golden-angle step over the hue wheel for maximal distinction
+    const golden = 137.508; // degrees
+    const hue = ((Math.abs(hash) * golden) % 360);
+    const sat = 85; // vibrant
+    const light = 55; // mid-lightness for readability
+
+    const hslToHex = (h, s, l) => {
+      s /= 100; l /= 100;
+      const k = n => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      const toHex = x => Math.round(255 * x).toString(16).padStart(2, '0');
+      return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+    };
+
+    return hslToHex(hue, sat, light);
+  }
+
   getAllCalendars() {
-    return this.calendars.map(calendar => ({
-      url: calendar.url,
-      displayName: this.extractFirstname(calendar.displayName),
-      description: calendar.description,
-      color: calendar.color,
-      components: calendar.components || []
-    }));
+    // Create a map of calendar URLs to their configured order
+    const orderMap = new Map();
+    calendarOrder.forEach((url, index) => {
+      orderMap.set(url, index);
+    });
+
+    // Sort calendars: first by configured order, then alphabetically by display name
+    const sortedCalendars = [...this.calendars].sort((a, b) => {
+      const orderA = orderMap.has(a.url) ? orderMap.get(a.url) : Number.MAX_SAFE_INTEGER;
+      const orderB = orderMap.has(b.url) ? orderMap.get(b.url) : Number.MAX_SAFE_INTEGER;
+      
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      
+      // If not in the order config or same order, sort alphabetically by display name
+      const nameA = this.extractFirstname(a.displayName) || '';
+      const nameB = this.extractFirstname(b.displayName) || '';
+      return nameA.localeCompare(nameB);
+    });
+
+    return sortedCalendars.map(calendar => {
+      const displayName = this.extractFirstname(calendar.displayName);
+      const override = calendarColorOverrides[displayName] || calendarColorOverrides[calendar.url];
+      return {
+        url: calendar.url,
+        displayName: displayName,
+        description: calendar.description,
+        color: override || this.getCalendarColor(displayName),
+        components: calendar.components || []
+      };
+    });
   }
 
   getEvents(calendarUrls, start, end) {
@@ -410,11 +462,17 @@ export class CalendarCache {
       }
       
       // Add calendar info if not already added
+      const dispName = this.extractFirstname(data.calendar.displayName) || data.calendar.displayName || 'Unnamed Calendar';
+      const override = calendarColorOverrides[dispName] || calendarColorOverrides[data.calendar.url];
+      // Pick a distinct color for this calendar based on its order among the requested set
+      const DISTINCT12 = ['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf','#fb9a99','#a6cee3'];
+      const paletteIdx = calendarData.length % DISTINCT12.length;
       const calendarInfo = {
         id: `cal-${calendarData.length + 1}`,
-        content: this.extractFirstname(data.calendar.displayName) || 'Unnamed Calendar',
+        content: dispName,
         url: data.calendar.url,
-        color: data.calendar.color || '#3a87ad'
+        // Prefer override, then native server color, otherwise distinct palette by index
+        color: override || data.calendar.color || DISTINCT12[paletteIdx]
       };
       
       if (!calendarData.some(c => c.url === calendarInfo.url)) {

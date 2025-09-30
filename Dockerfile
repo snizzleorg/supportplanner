@@ -8,6 +8,9 @@ WORKDIR /usr/src/support-planner
 COPY package.json ./
 RUN npm install --production=false
 
+# Copy config files first
+COPY config/ ./config/
+
 # Copy the rest of the app
 COPY . .
 
