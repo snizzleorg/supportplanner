@@ -39,6 +39,8 @@ const todayBtn = document.getElementById('todayBtn');
 const zoomInBtn = document.getElementById('zoomInBtn');
 const zoomOutBtn = document.getElementById('zoomOutBtn');
 const showRangeBtn = document.getElementById('showRangeBtn');
+const searchBox = document.getElementById('searchBox');
+const clearSearchBtn = document.getElementById('clearSearch');
 const timelineEl = document.getElementById('timeline');
 let timeline;
 let groups = new DataSet([]);
@@ -60,6 +62,57 @@ const DEBUG_UI = false;
 
 function setStatus(msg) {
   statusEl.textContent = msg || '';
+}
+
+// --- Search input wiring ---
+if (searchBox) {
+  searchBox.addEventListener('input', () => {
+    currentSearch = searchBox.value || '';
+    applySearchFilter();
+  });
+}
+if (clearSearchBtn) {
+  clearSearchBtn.addEventListener('click', () => {
+    if (searchBox) searchBox.value = '';
+    currentSearch = '';
+    applySearchFilter();
+  });
+}
+
+// --- Search / filter ---
+let currentSearch = '';
+function itemMatchesQuery(item, q) {
+  if (!q) return true;
+  const hay = [item.content, item.title, item.description, item.location];
+  const meta = item.meta || {};
+  hay.push(meta.orderNumber, meta.systemType, meta.ticketLink);
+  return hay.filter(Boolean).some(v => String(v).toLowerCase().includes(q));
+}
+function applySearchFilter() {
+  const q = (currentSearch || '').trim().toLowerCase();
+  try {
+    const els = document.querySelectorAll('.vis-timeline .vis-item');
+    els.forEach(el => {
+      const id = el.getAttribute('data-id');
+      let it = null;
+      if (id && items) {
+        it = items.get(id);
+        if (!it && !Number.isNaN(Number(id))) {
+          it = items.get(Number(id));
+        }
+      }
+      let match = false;
+      if (it) {
+        match = itemMatchesQuery(it, q);
+      } else {
+        // Fallback: use DOM text when item not found (e.g., id type mismatch during redraw)
+        const txt = (el.textContent || '').toLowerCase();
+        match = txt.includes(q);
+      }
+      el.classList.toggle('dimmed', !!q && !match);
+      el.classList.toggle('search-match', !!q && match);
+    });
+  } catch (_) {}
 }
 
 // --- Week bar overlay (bottom) ---
@@ -741,6 +794,8 @@ function initTimeline() {
       timeline.on(evt, () => {
         requestAnimationFrame(applyGroupLabelColors);
         try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
+        // Re-apply search filter to DOM on redraws
+        requestAnimationFrame(applySearchFilter);
       });
     } catch (_) {}
   });
