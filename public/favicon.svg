@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="32" height="32" rx="4" fill="#f8fafc"/>
+  
+  <!-- Grid lines -->
+  <line x1="6" y1="8" x2="26" y2="8" stroke="#e2e8f0" stroke-width="1"/>
+  <line x1="6" y1="14" x2="26" y2="14" stroke="#e2e8f0" stroke-width="1"/>
+  <line x1="6" y1="20" x2="26" y2="20" stroke="#e2e8f0" stroke-width="1"/>
+  <line x1="6" y1="26" x2="26" y2="26" stroke="#e2e8f0" stroke-width="1"/>
+  
+  <!-- Gantt bars -->
+  <rect x="8" y="10" width="12" height="2" rx="1" fill="#4f46e5"/>
+  <rect x="14" y="16" width="8" height="2" rx="1" fill="#f59e0b"/>
+  <rect x="10" y="22" width="10" height="2" rx="1" fill="#10b981"/>
+  
+  <!-- Current time indicator -->
+  <line x1="16" y1="6" x2="16" y2="28" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="2,2"/>
+  <circle cx="16" cy="6" r="2" fill="#ef4444"/>
+  
+  <!-- Decorative elements -->
+  <circle cx="8" cy="11" r="0.75" fill="#4f46e5" opacity="0.8"/>
+  <circle cx="14" cy="17" r="0.75" fill="#f59e0b" opacity="0.8"/>
+  <circle cx="10" cy="23" r="0.75" fill="#10b981" opacity="0.8"/>
+</svg>
