@@ -1,11 +1,17 @@
 import { DAVClient } from 'tsdav';
 import IcalExpander from 'ical-expander';
 import dayjs from 'dayjs';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore.js';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter.js';
 import NodeCache from 'node-cache';
 import { randomUUID } from 'crypto';
 import YAML from 'yaml';
-import { calendarOrder } from '../config/calendar-order.js';
+import { calendarOrder, calendarExclude } from '../config/calendar-order.js';
 import { calendarColorOverrides } from '../config/calendar-colors.js';
+
+// Enable required Dayjs plugins for comparison helpers used below
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
 
 export class CalendarCache {
   constructor() {
@@ -391,6 +397,15 @@ export class CalendarCache {
   }
 
   getAllCalendars() {
+    // Apply exclusion rules first (by exact display name, extracted firstname, or URL; case-insensitive)
+    const excluded = new Set((calendarExclude || []).map(x => String(x || '').toLowerCase()));
+    const sourceCalendars = this.calendars.filter(c => {
+      const url = (c.url || '').toLowerCase();
+      const disp = String(c.displayName || '').toLowerCase();
+      const first = String(this.extractFirstname(c.displayName || '') || '').toLowerCase();
+      return !(excluded.has(url) || excluded.has(disp) || excluded.has(first));
+    });
+
     // Create a map of calendar URLs to their configured order
     const orderMap = new Map();
     calendarOrder.forEach((url, index) => {
@@ -398,7 +413,7 @@ export class CalendarCache {
     });
 
     // Sort calendars: first by configured order, then alphabetically by display name
-    const sortedCalendars = [...this.calendars].sort((a, b) => {
+    const sortedCalendars = [...sourceCalendars].sort((a, b) => {
       const orderA = orderMap.has(a.url) ? orderMap.get(a.url) : Number.MAX_SAFE_INTEGER;
       const orderB = orderMap.has(b.url) ? orderMap.get(b.url) : Number.MAX_SAFE_INTEGER;
       

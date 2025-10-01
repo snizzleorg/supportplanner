@@ -4,6 +4,9 @@
  * This file defines the order in which calendars should be displayed in the UI.
  * The order is determined by the position of calendar URLs in the array.
  * Calendars not listed here will appear after the configured ones in alphabetical order.
+ * 
+ * You can also exclude calendars from the UI using the `calendarExclude` list below.
+ * Add either the exact calendar display name (e.g., 'Persönlich') or the full calendar URL.
  */
 
 // Array of calendar URLs in the desired display order
@@ -42,4 +45,10 @@ const calendarNames = {
   'https://nc.picoquant.com/remote.php/dav/calendars/support/travel_shared_by_buschmann/': 'Volker Buschmann'
 };
 
-export { calendarOrder, calendarNames };
+// Exclude calendars from the UI by exact display name or URL
+// Example: to hide the default personal calendar, keep 'Persönlich' here
+const calendarExclude = [
+  'Persönlich'
+];
+
+export { calendarOrder, calendarNames, calendarExclude };
