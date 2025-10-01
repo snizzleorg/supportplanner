@@ -5,7 +5,8 @@
 - [x] Event display with color-coding
 - [x] Basic tooltip functionality
 - [ ] Implement proper error handling for calendar connections
-- [ ] Add event filtering by type (vacation, support, etc.)
+- [x] Add event filtering 
+- [x] Fix date overlap comparisons by enabling Dayjs plugins (`isSameOrBefore`, `isSameOrAfter`)
 
 
 ## Phase 2: User Experience
@@ -14,14 +15,14 @@
 - [ ] Mobile-friendly interface
 - [ ] Dark/light theme support
 - [ ] Loading states and progress indicators
+- [x] Show only firstname for calendar display names (e.g., `Travel (Firstname Lastname)` -> `Firstname`)
 
 
 ## Phase 3: Advanced Features
 - [ ] User authentication and authorization
-- [ ] Multiple views (day/week/month)
-- [ ] Event search functionality
-- [ ] Export/import calendar data
+- [x] Event search functionality
 - [ ] Recurring events support
+- [x] Exclude calendars from UI via configuration (`calendarExclude` in `config/calendar-order.js`)
 
 ## Phase 4: Performance & Optimization
 - [ ] Implement proper caching strategy
@@ -40,6 +41,7 @@
 - [ ] Set up CI/CD pipeline (GitHub Actions/GitLab CI)
 - [ ] Monitoring and alerting
 - [ ] Documentation
+- [x] Document configuration options: `calendarOrder`, `calendarExclude`, color overrides
 
 ## Technical Debt
 - [ ] Refactor server.js into smaller modules
