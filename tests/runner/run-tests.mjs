@@ -126,6 +126,25 @@ async function runModalBrowserHarness(page) {
     outputs.push({ name: 'api-smoke', ok: apiSmoke.code === 0, ms: apiSmoke.ms, out: apiSmoke.out, err: apiSmoke.err });
     const geocodeSmoke = await runNodeScript('node', ['public/tests/geocode-smoke.mjs']);
     outputs.push({ name: 'geocode-smoke', ok: geocodeSmoke.code === 0, ms: geocodeSmoke.ms, out: geocodeSmoke.out, err: geocodeSmoke.err });
+
+    // CSS audit (includes our CSS, vendor CSS, inline, dynamic)
+    const cssAudit = await runNodeScript('node', ['css-audit.mjs', APP_URL]);
+    let cssAuditOk = cssAudit.code === 0;
+    let cssAuditSummary = '';
+    try {
+      const report = JSON.parse(cssAudit.out.trim());
+      // Consider actionable failures only: unusedSelectors or missing in our/all CSS
+      const unused = report.unusedSelectors || [];
+      const missOur = report.usedClassesMissingInOurCss || [];
+      const missAll = report.usedClassesMissingInAllCss || [];
+      cssAuditOk = cssAuditOk && unused.length === 0 && missOur.length === 0 && missAll.length === 0;
+      cssAuditSummary = `unused=${unused.length}, missingInOur=${missOur.length}, missingInAll=${missAll.length}, vendorInfo=${(report.usedClassesVendorUnmatched||[]).length}`;
+      outputs.push({ name: 'css-audit', ok: cssAuditOk, ms: cssAudit.ms, summary: cssAuditSummary, report });
+    } catch (e) {
+      cssAuditOk = false;
+      cssAuditSummary = 'invalid JSON from css-audit';
+      outputs.push({ name: 'css-audit', ok: false, ms: cssAudit.ms, summary: cssAuditSummary, out: cssAudit.out, err: cssAudit.err });
+    }
   } finally {
     await browser.close();
   }
