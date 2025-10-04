@@ -62,6 +62,25 @@ async function runSearchBrowserHarness(page) {
   return { name: 'search-browser-harness', ok: /Passed/.test(summary), summary, triedAlt };
 }
 
+async function runTimelineBrowserHarness(page) {
+  let triedAlt = false;
+  try {
+    await page.goto(url('/tests/timeline-tests.html'));
+    await page.waitForSelector('#runTimelineTests', { timeout: 20000 });
+  } catch (e) {
+    triedAlt = true;
+    await page.goto(url('/public/tests/timeline-tests.html'));
+    await page.waitForSelector('#runTimelineTests', { timeout: 20000 });
+  }
+  await page.click('#runTimelineTests');
+  await page.waitForFunction(() => {
+    const s = document.querySelector('#summary');
+    return s && /Passed timeline tests/.test(s.textContent || '');
+  }, { timeout: 20000 });
+  const summary = await page.$eval('#summary', el => el.textContent);
+  return { name: 'timeline-browser-harness', ok: /Passed/.test(summary), summary, triedAlt };
+}
+
 (async function main() {
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
   const page = await browser.newPage();
@@ -69,6 +88,7 @@ async function runSearchBrowserHarness(page) {
   try {
     outputs.push(await runApiBrowserHarness(page));
     outputs.push(await runSearchBrowserHarness(page));
+    outputs.push(await runTimelineBrowserHarness(page));
     // Run headless Node tests as well
     const apiSmoke = await runNodeScript('node', ['public/tests/api-smoke.mjs', '--api', APP_URL]);
     outputs.push({ name: 'api-smoke', ok: apiSmoke.code === 0, ms: apiSmoke.ms, out: apiSmoke.out, err: apiSmoke.err });

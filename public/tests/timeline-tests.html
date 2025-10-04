@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SupportPlanner Timeline Tests</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 16px; }
+      .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+      #timeline { height: 420px; border: 1px solid #e5e7eb; border-radius: 6px; }
+      .week-bar { position: absolute; left: 0; right: 0; pointer-events: none; }
+      .week-tick { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(0,0,0,0.2); }
+      .week-chip { background: rgba(59,130,246,.15); padding: 2px 6px; border-radius: 10px; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <h1>Timeline + Week Bar Tests</h1>
+    <div class="row">
+      <button id="runTimelineTests">Run timeline tests</button>
+      <span id="summary"></span>
+    </div>
+    <div id="timeline"></div>
+
+    <script type="module" src="./timeline-tests.js"></script>
+  </body>
+</html>
