@@ -1139,7 +1139,7 @@ async function refresh() {
 
     if (gen !== refreshGen) return; // aborted
     const w = timeline.getWindow();
-    clientLog('info', 'window-after-set', { start: w.start, end: w.end });
+    apiClientLog('info', 'window-after-set', { start: w.start, end: w.end });
     setStatus(`Loaded ${allItems.length} items in ${allGroups.length} calendars | Window: ${w.start.toISOString().slice(0,10)} → ${w.end.toISOString().slice(0,10)}`);
     // Repaint week bar after data load
     try { renderWeekBar(w.start, w.end); } catch (_) {}
