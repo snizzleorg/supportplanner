@@ -4,6 +4,10 @@ import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1.11.13/+esm';
 import { DataSet, Timeline } from 'https://cdn.jsdelivr.net/npm/vis-timeline@7.7.3/standalone/esm/vis-timeline-graph2d.min.js';
 import { setupTooltipHandlers } from './custom-tooltip.js';
 import { getHolidaysInRange } from './js/holidays.js';
+import { geocodeLocation, tryParseLatLon, geocodeAddress } from './js/geocode.js';
+import { renderMapMarkers } from './js/map.js';
+import { initTimeline as initTimelineCore } from './js/timeline.js';
+import { renderWeekBar, applyGroupLabelColors } from './js/timeline-ui.js';
 
 // DOM Elements
 const modal = document.getElementById('eventModal');
@@ -116,129 +120,7 @@ function applySearchFilter() {
   } catch (_) {}
 }
 
-// --- Week bar overlay (bottom) ---
-function ensureWeekBar() {
-  if (weekBarEl && weekBarEl.parentElement) return weekBarEl;
-  weekBarEl = document.createElement('div');
-  weekBarEl.className = 'week-bar';
-  // Attach to the bottom panel so it overlays above the entire bottom axis
-  const bottomPanel = document.querySelector('.vis-timeline .vis-panel.vis-bottom');
-  if (bottomPanel && bottomPanel.appendChild) {
-    bottomPanel.style.position = bottomPanel.style.position || 'relative';
-    weekBarEl.style.zIndex = '3000';
-    bottomPanel.appendChild(weekBarEl);
-  } else if (timelineEl && timelineEl.appendChild) {
-    timelineEl.appendChild(weekBarEl);
-  }
-  return weekBarEl;
-}
-
-function renderWeekBar(from, to) {
-  try {
-    if (!timeline) return;
-    const bar = ensureWeekBar();
-    if (!bar) return;
-    // Clear existing chips
-    while (bar.firstChild) bar.removeChild(bar.firstChild);
-    const start = dayjs(from).startOf('day');
-    const end = dayjs(to).endOf('day');
-    // Find first Monday on/after start
-    let ws = start;
-    while (ws.day() !== 1) ws = ws.add(1, 'day');
-    // Compute left offsets relative to bottom panel
-    const bottomPanel = document.querySelector('.vis-timeline .vis-panel.vis-bottom');
-    const panelRect = bottomPanel ? bottomPanel.getBoundingClientRect() : null;
-    const centerContent = document.querySelector('.vis-timeline .vis-center .vis-content');
-    const centerRect = centerContent ? centerContent.getBoundingClientRect() : null;
-    // Map time -> X using current window and center content width
-    const win = timeline.getWindow ? timeline.getWindow() : { start: from, end: to };
-    const startMs = +new Date(win.start);
-    const endMs = +new Date(win.end);
-    const spanMs = Math.max(1, endMs - startMs);
-    const contentWidth = centerContent ? centerContent.clientWidth : (timelineEl ? timelineEl.clientWidth : 1);
-    // Span full width of axis panel
-    bar.style.top = '0px';
-    bar.style.bottom = '0px';
-    bar.style.height = '100%';
-    let count = 0;
-    // Draw vertical week boundary lines at each Monday boundary
-    let tickCursor = start.clone();
-    while (tickCursor.day() !== 1) tickCursor = tickCursor.add(1, 'day');
-    while (tickCursor.isBefore(end)) {
-      const tTick = +tickCursor.toDate();
-      const fracTick = (tTick - startMs) / spanMs;
-      const xTickAbs = (centerRect ? centerRect.left : 0) + (Math.max(0, Math.min(1, fracTick)) * contentWidth);
-      if (isFinite(xTickAbs)) {
-        const line = document.createElement('div');
-        line.className = 'week-tick';
-        const leftTick = (panelRect) ? (xTickAbs - panelRect.left) : xTickAbs;
-        line.style.left = `${leftTick}px`;
-        bar.appendChild(line);
-      }
-      tickCursor = tickCursor.add(7, 'day');
-    }
-    while (ws.isBefore(end)) {
-      const iso = isoWeekNumber(ws.toDate());
-      // place label roughly at week center (Mon + 3.5 days)
-      const mid = ws.add(3, 'day').add(12, 'hour').toDate();
-      const t = +mid;
-      const frac = (t - startMs) / spanMs;
-      const x = (centerRect ? centerRect.left : 0) + (Math.max(0, Math.min(1, frac)) * contentWidth);
-      if (isFinite(x)) {
-        const chip = document.createElement('div');
-        chip.className = 'week-chip';
-        chip.textContent = `W${String(iso).padStart(2, '0')}`;
-        chip.style.position = 'absolute';
-        const left = (panelRect) ? (x - panelRect.left) : x;
-        chip.style.left = `${left}px`;
-        chip.style.bottom = '2px';
-        bar.appendChild(chip);
-        count++;
-      }
-      ws = ws.add(7, 'day');
-    }
-    // Fallback: if none created (DOM differences), create labels stepping weekly from window start
-    if (count === 0) {
-      let cur = dayjs(win.start).startOf('day');
-      while (cur.isBefore(win.end)) {
-        const iso = isoWeekNumber(cur.toDate());
-        const mid = cur.add(3, 'day').add(12, 'hour').toDate();
-        const t = +mid;
-        const frac = (t - startMs) / spanMs;
-        const x = (centerRect ? centerRect.left : 0) + (Math.max(0, Math.min(1, frac)) * contentWidth);
-        if (isFinite(x)) {
-          const chip = document.createElement('div');
-          chip.className = 'week-chip';
-          chip.textContent = `W${String(iso).padStart(2, '0')}`;
-          chip.style.position = 'absolute';
-          const left = (panelRect) ? (x - panelRect.left) : x;
-          chip.style.left = `${left}px`;
-          chip.style.bottom = '2px';
-          bar.appendChild(chip);
-          count++;
-        }
-        cur = cur.add(7, 'day');
-      }
-      // Add a center debug chip to verify visibility
-      const centerT = new Date((startMs + endMs) / 2);
-      const fracC = (centerT - startMs) / spanMs;
-      const xC = (centerRect ? centerRect.left : 0) + (Math.max(0, Math.min(1, fracC)) * contentWidth);
-      if (isFinite(xC)) {
-        const chip = document.createElement('div');
-        chip.className = 'week-chip';
-        chip.textContent = 'W?';
-        chip.style.position = 'absolute';
-        const left = (panelRect) ? (xC - panelRect.left) : xC;
-        chip.style.left = `${left}px`;
-        chip.style.bottom = '2px';
-        bar.appendChild(chip);
-      }
-    }
-    try { console.debug('[weekbar] rendered chips:', count); } catch (_) {}
-  } catch (e) {
-    try { console.warn('[weekbar] render failed', e); } catch (_) {}
-  }
-}
+// Week bar helpers moved to './js/timeline-ui.js'
 
 // --- Holidays and Special Dates ---
 // getHolidaysInRange is now imported from './js/holidays.js'
@@ -326,41 +208,9 @@ function getColorForString(str) {
   return colors[index];
 }
 
-// Apply calendar group color to label rows so labels match map pin colors
-const LABEL_PALETTE = ['#e0f2fe','#fce7f3','#dcfce7','#fff7ed','#ede9fe','#f1f5f9','#fef9c3','#fee2e2','#e9d5ff','#cffafe'];
-function applyGroupLabelColors() {
-  try {
-    const labelNodes = document.querySelectorAll('.vis-timeline .vis-labelset .vis-label');
-    if (!labelNodes || labelNodes.length === 0) return;
-    // Get groups in current visual order as a fallback mapping
-    const gs = (typeof groups?.get === 'function') ? groups.get() : [];
-    labelNodes.forEach((node, idx) => {
-      let color = '';
-      const g = gs[idx];
-      if (g) {
-        color = g.bg || '';
-        if (!color && g.style) {
-          const m = String(g.style).match(/background-color:\s*([^;]+)/i);
-          if (m && m[1]) color = m[1].trim();
-        }
-      }
-      if (!color) color = LABEL_PALETTE[idx % LABEL_PALETTE.length];
-      node.style.backgroundColor = color;
-      const inner = node.querySelector('.vis-inner');
-      if (inner) inner.style.backgroundColor = color;
-    });
-  } catch (e) {
-    // ignore
-  }
-}
+// Group label color helpers moved to './js/timeline-ui.js'
 
-// --- Map: Leaflet setup and marker rendering ---
-let map; // Leaflet map instance
-let markersLayer; // Layer group for markers
-const geocodeCache = new Map(); // location string -> {lat, lon}
-let geocodeQueue = [];
-let geocodeTimer = null;
-
+// --- Map: Leaflet rendering moved to './js/map.js' ---
 function escapeHtml(unsafe) {
   if (unsafe === undefined || unsafe === null) return '';
   return String(unsafe)
@@ -369,129 +219,6 @@ function escapeHtml(unsafe) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
-}
-
-function initMapOnce() {
-  if (map) return;
-  const mapEl = document.getElementById('map');
-  if (!mapEl) return;
-  map = L.map('map');
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
-  markersLayer = L.layerGroup().addTo(map);
-  map.setView([51.1657, 10.4515], 5); // default: Germany
-}
-
-function enqueueGeocode(query, resolve) {
-  geocodeQueue.push({ query, resolve });
-  if (!geocodeTimer) {
-    geocodeTimer = setInterval(processGeocodeQueue, 350); // ~3 req/sec
-  }
-}
-
-async function processGeocodeQueue() {
-  if (geocodeQueue.length === 0) {
-    clearInterval(geocodeTimer);
-    geocodeTimer = null;
-    return;
-  }
-  // Process up to 3 per tick
-  const batch = geocodeQueue.splice(0, 3);
-  await Promise.all(batch.map(async ({ query, resolve }) => {
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`, { headers: { 'Accept': 'application/json' } });
-      if (!res.ok) throw new Error('geocode http');
-      const data = await res.json();
-      if (data && data[0]) {
-        const lat = parseFloat(data[0].lat);
-        const lon = parseFloat(data[0].lon);
-        geocodeCache.set(query, { lat, lon });
-        resolve({ lat, lon });
-      } else {
-        resolve(null);
-      }
-    } catch (_) {
-      resolve(null);
-    }
-  }));
-}
-
-async function geocodeLocation(locationStr) {
-  // If coordinates, parse directly
-  const coords = tryParseLatLon(locationStr);
-  if (coords) return coords;
-  const key = String(locationStr).trim().toLowerCase();
-  if (geocodeCache.has(key)) return geocodeCache.get(key);
-  return new Promise((resolve) => enqueueGeocode(key, resolve));
-}
-
-async function renderMapMarkers(allServerItems) {
-  initMapOnce();
-  if (!map || !markersLayer) return;
-  markersLayer.clearLayers();
-  const bounds = [];
-
-  // Helper: resolve exact calendar color from the event's group
-  const getGroupColor = (groupId) => {
-    const g = groups.get(groupId);
-    if (!g) return '#3b82f6';
-    if (g.bg) return g.bg;
-    if (g.style) {
-      const m = String(g.style).match(/background-color:\s*([^;]+)/i);
-      if (m && m[1]) return m[1].trim();
-    }
-    return '#3b82f6';
-  };
-
-  // Group by location, then by group id, so we can render one pin per calendar per location
-  const byLocThenGroup = new Map(); // loc -> Map(groupId -> items[])
-  for (const it of allServerItems) {
-    const loc = (it.location || '').trim();
-    if (!loc) continue;
-    if (!byLocThenGroup.has(loc)) byLocThenGroup.set(loc, new Map());
-    const inner = byLocThenGroup.get(loc);
-    const gid = it.group || '__nogroup__';
-    if (!inner.has(gid)) inner.set(gid, []);
-    inner.get(gid).push(it);
-  }
-
-  // Utility: compute a small offset in degrees for separating markers around a location
-  const addOffset = (lat, lon, index, total) => {
-    // Arrange in a circle around the center
-    if (total <= 1) return { lat, lon };
-    const radiusMeters = 12; // ~12m spread
-    const angle = (2 * Math.PI * index) / total;
-    const dLat = (radiusMeters * Math.sin(angle)) / 111111; // meters -> degrees
-    const dLon = (radiusMeters * Math.cos(angle)) / (111111 * Math.max(0.1, Math.cos(lat * Math.PI / 180)));
-    return { lat: lat + dLat, lon: lon + dLon };
-  };
-
-  // For each location, render one pin per calendar group with slight offsets
-  for (const [loc, inner] of byLocThenGroup.entries()) {
-    const coords = await geocodeLocation(loc);
-    if (!coords) continue;
-    const entries = Array.from(inner.entries()); // [groupId, items[]]
-    const total = entries.length;
-    entries.forEach(([gid, evs], idx) => {
-      const color = getGroupColor(gid);
-      const { lat, lon } = addOffset(coords.lat, coords.lon, idx, total);
-      const marker = L.marker([lat, lon], { icon: makePinIcon(color) }).addTo(markersLayer);
-      bounds.push([lat, lon]);
-      // Build a compact popup listing up to 5 events for this calendar at this location
-      const list = evs.slice(0, 5)
-        .map(e => `<li>${escapeHtml(e.content || e.summary || 'Untitled')} (${escapeHtml(e.start)} → ${escapeHtml(e.end)})</li>`)
-        .join('');
-      const more = evs.length > 5 ? `<div>…and ${evs.length - 5} more</div>` : '';
-      const groupObj = groups.get(gid);
-      const who = groupObj ? (groupObj.content || groupObj.title || '') : '';
-      marker.bindPopup(`<div><strong>${escapeHtml(loc)}</strong><div>${escapeHtml(who)}</div><ul>${list}</ul>${more}</div>`);
-    });
-  }
-
-  if (bounds.length) {
-    map.fitBounds(bounds, { padding: [20, 20] });
-  }
 }
 
 // Location validation and map preview helpers
@@ -503,25 +230,7 @@ function debounce(fn, ms) {
   };
 }
 
-function tryParseLatLon(text) {
-  const m = String(text).trim().match(/^\s*([+-]?\d{1,2}(?:\.\d+)?)\s*,\s*([+-]?\d{1,3}(?:\.\d+)?)\s*$/);
-  if (!m) return null;
-  const lat = parseFloat(m[1]);
-  const lon = parseFloat(m[2]);
-  if (isNaN(lat) || isNaN(lon)) return null;
-  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
-  return { lat, lon };
-}
-
-async function geocodeAddress(q) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
-  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-  if (!res.ok) throw new Error(`Geocode failed: ${res.status}`);
-  const data = await res.json();
-  if (!Array.isArray(data) || data.length === 0) return null;
-  const hit = data[0];
-  return { lat: parseFloat(hit.lat), lon: parseFloat(hit.lon), displayName: hit.display_name, osmId: hit.osm_id, osmType: hit.osm_type };
-}
+// tryParseLatLon and geocodeAddress now imported from ./js/geocode.js
 
 function renderLocationHelp(state) {
   if (!eventLocationHelp) return;
@@ -719,125 +428,12 @@ function addPassiveEventListener(element, event, handler) {
 
 function initTimeline() {
   if (timeline) return;
-  
-  // Create groups and items DataSets
+  // Create datasets
   groups = new DataSet();
-  items = new DataSet({
-    type: { start: 'ISODate', end: 'ISODate' }
-  });
-  // Expose for console debugging
+  items = new DataSet({ type: { start: 'ISODate', end: 'ISODate' } });
   try { window.groups = groups; window.items = items; } catch (_) {}
-
-  // Configuration for the Timeline
-  const options = {
-    groupOrder: 'order',
-    stack: true,
-    stackSubgroups: false,
-    height: 'auto',
-    minHeight: '500px',
-    //maxHeight: '600px',
-    verticalScroll: true,
-    horizontalScroll: false,
-    zoomable: true,
-    zoomKey: 'ctrlKey', // Use Ctrl+wheel to zoom
-    zoomMin: 1000 * 60 * 60 * 24, // 1 day
-    zoomMax: 1000 * 60 * 60 * 24 * 365 * 2, // 2 years
-    orientation: 'both',
-    selectable: false,
-    autoResize: true,
-    // Tighter vertical spacing between stacked items
-    margin: { item: 0, axis: 10 },
-    timeAxis: { scale: 'day', step: 1 },
-    showTooltips: false, // We'll handle tooltips manually
-    template: function(item, element) {
-      if (!item) return '';
-      
-      // Create a simple div for the item content
-      const div = document.createElement('div');
-      div.className = 'vis-item-content';
-      div.textContent = item.content || '';
-      // If the title/content contains '???', render more transparent to indicate unconfirmed
-      try {
-        const text = `${item.title || ''} ${item.content || ''}`;
-        if (/\?\?\?/.test(text)) {
-          div.style.opacity = '0.5';
-          // Optional enhancements: mark item element and tooltip
-          if (element && element.classList) {
-            element.classList.add('unconfirmed');
-          }
-          // If native title tooltip is used anywhere, append an indicator
-          const baseTitle = item.title || item.content || '';
-          element && element.setAttribute && element.setAttribute('title', `${baseTitle} (unconfirmed)`);
-        }
-      } catch (_) {}
-      
-      // Add data attributes for tooltip
-      if (item.dataAttributes) {
-        Object.entries(item.dataAttributes).forEach(([key, value]) => {
-          div.setAttribute(key, value);
-        });
-      }
-      
-      return div;
-    },
-    tooltip: {
-      followMouse: true,
-      overflowMethod: 'cap'
-    },
-  };
-  
-  // Initialize the Timeline
-  timeline = new Timeline(timelineEl, items, groups, options);
-  // Expose timeline for console debugging
-  try { window.timeline = timeline; } catch (_) {}
-  // Initial week bar render
-  try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
-  // Let vis size to content (capped by maxHeight) to avoid stretching groups
-  
-  // Set up custom tooltip handlers
-  setupTooltipHandlers(timeline);
-
-  // Re-apply group label colors whenever timeline updates
-  ['changed','rangechanged','rangechange','redraw'].forEach(evt => {
-    try {
-      timeline.on(evt, () => {
-        requestAnimationFrame(applyGroupLabelColors);
-        try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
-        // Re-apply search filter to DOM on redraws
-        requestAnimationFrame(applySearchFilter);
-      });
-    } catch (_) {}
-  });
-
-  // Observe label DOM for changes and recolor
-  try {
-    const labelSet = document.querySelector('.vis-timeline .vis-labelset');
-    if (labelSet && !labelObserver) {
-      labelObserver = new MutationObserver(() => applyGroupLabelColors());
-      labelObserver.observe(labelSet, { childList: true, subtree: true });
-    }
-  } catch (_) {}
-
-  // Track user-initiated panning to suppress subsequent click
-  try {
-    timeline.on('rangechange', (props) => {
-      if (props && props.byUser) {
-        isPanning = true;
-      }
-    });
-    timeline.on('rangechanged', (props) => {
-      if (props && props.byUser) {
-        isPanning = false;
-        lastPanEnd = Date.now();
-      }
-      // Repaint week bar on any range change
-      try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
-    });
-    timeline.on('redraw', () => {
-      try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
-    });
-    // No dynamic resize; fixed height
-  } catch (_) {}
+  // Create timeline via module
+  timeline = initTimelineCore(timelineEl, items, groups);
 }
 
 // Dynamically size the timeline to its content while leaving room for the map
@@ -1675,7 +1271,7 @@ async function refresh() {
         }))
         .filter(it => it.location && String(it.location).trim().length > 0);
       console.debug('[map] unique input locations:', new Set(locItems.map(x => x.location.trim().toLowerCase())).size);
-      await renderMapMarkers(locItems);
+      await renderMapMarkers(locItems, groups);
     } catch (e) {
       console.warn('Map marker render failed', e);
     }
