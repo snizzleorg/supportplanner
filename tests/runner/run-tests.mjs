@@ -6,6 +6,7 @@ import puppeteer from 'puppeteer';
 import { spawn } from 'node:child_process';
 
 const APP_URL = process.env.APP_URL || process.argv[2] || '';
+const BRIEF = process.env.RUNNER_BRIEF === '1' || process.argv.includes('--brief');
 if (!APP_URL) {
   console.error('APP_URL env or first arg required, e.g. http://localhost:3000');
   process.exit(2);
@@ -81,6 +82,36 @@ async function runTimelineBrowserHarness(page) {
   return { name: 'timeline-browser-harness', ok: /Passed/.test(summary), summary, triedAlt };
 }
 
+async function runModalBrowserHarness(page) {
+  let triedAlt = false;
+  const logs = [];
+  const onConsole = (msg) => { try { logs.push(`[console] ${msg.type?.()} ${msg.text?.() || msg.text}`); } catch { logs.push(`[console] ${msg.type?.()} ${String(msg)}`); } };
+  page.on('console', onConsole);
+  try {
+    await page.goto(url('/tests/modal-tests.html'));
+    await page.waitForSelector('#runModalTests', { timeout: 20000 });
+  } catch (e) {
+    triedAlt = true;
+    await page.goto(url('/public/tests/modal-tests.html'));
+    await page.waitForSelector('#runModalTests', { timeout: 20000 });
+  }
+  await page.click('#runModalTests');
+  try {
+    await page.waitForFunction(() => {
+      const s = document.querySelector('#summary');
+      const txt = (s && s.textContent) ? s.textContent.trim() : '';
+      return /^Passed modal tests$/.test(txt) || /^Failed: /.test(txt);
+    }, { timeout: 30000 });
+  } catch (e) {
+    const html = await page.content();
+    return { name: 'modal-browser-harness', ok: false, summary: 'Timed out', triedAlt, logs, htmlSnippet: html.slice(0, 1000) };
+  } finally {
+    page.off('console', onConsole);
+  }
+  const summary = await page.$eval('#summary', el => el.textContent || '');
+  return { name: 'modal-browser-harness', ok: /Passed modal tests/.test(summary), summary, triedAlt, logs };
+}
+
 (async function main() {
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
   const page = await browser.newPage();
@@ -89,6 +120,7 @@ async function runTimelineBrowserHarness(page) {
     outputs.push(await runApiBrowserHarness(page));
     outputs.push(await runSearchBrowserHarness(page));
     outputs.push(await runTimelineBrowserHarness(page));
+    outputs.push(await runModalBrowserHarness(page));
     // Run headless Node tests as well
     const apiSmoke = await runNodeScript('node', ['public/tests/api-smoke.mjs', '--api', APP_URL]);
     outputs.push({ name: 'api-smoke', ok: apiSmoke.code === 0, ms: apiSmoke.ms, out: apiSmoke.out, err: apiSmoke.err });
@@ -98,6 +130,17 @@ async function runTimelineBrowserHarness(page) {
     await browser.close();
   }
   const ok = outputs.every(o => o.ok);
-  console.log(JSON.stringify({ ok, outputs }, null, 2));
+  const passed = outputs.filter(o => o.ok).length;
+  const total = outputs.length;
+  // Human readable summary
+  console.log(`RESULT: ${ok ? 'ALL OK' : 'FAIL'} - ${passed}/${total} passed`);
+  if (!ok) {
+     const failed = outputs.filter(o => !o.ok);
+     failed.forEach(f => console.log(` - ${f.name}: ${f.summary || 'failed'}`));
+  }
+  // JSON report for machines (omit when brief)
+  if (!BRIEF) {
+    console.log(JSON.stringify({ ok, outputs }, null, 2));
+  }
   process.exit(ok ? 0 : 1);
 })();
