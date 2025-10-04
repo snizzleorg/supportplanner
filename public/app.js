@@ -10,6 +10,7 @@ import { initTimeline as initTimelineCore } from './js/timeline.js';
 import { renderWeekBar, applyGroupLabelColors } from './js/timeline-ui.js';
 import { initSearch, applySearchFilter } from './js/search.js';
 import { fetchCalendars as apiFetchCalendars, refreshCaldav, clientLog as apiClientLog } from './js/api.js';
+import { renderLocationHelp, debouncedLocationValidate, setModalLoading, closeModal } from './js/modal.js';
 
 // DOM Elements
 const modal = document.getElementById('eventModal');
@@ -174,51 +175,7 @@ function escapeHtml(unsafe) {
     .replace(/'/g, '&#039;');
 }
 
-// Location validation and map preview helpers
-function debounce(fn, ms) {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
-  };
-}
-
-// tryParseLatLon and geocodeAddress now imported from ./js/geocode.js
-
-function renderLocationHelp(state) {
-  if (!eventLocationHelp) return;
-  if (!state || !state.status) { eventLocationHelp.textContent = ''; eventLocationHelp.className = 'help-text'; return; }
-  if (state.status === 'searching') { eventLocationHelp.textContent = 'Validating address…'; eventLocationHelp.className = 'help-text'; return; }
-  if (state.status === 'ok' && state.result) {
-    const { displayName, lat, lon } = state.result;
-    const osm = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=15/${lat}/${lon}`;
-    const gmaps = `https://maps.google.com/?q=${lat},${lon}`;
-    eventLocationHelp.innerHTML = `<div>✔ Found: ${displayName}</div><div style="margin-top:4px; display:flex; gap:8px;"><a href="${osm}" target="_blank" rel="noopener">OpenStreetMap</a><a href="${gmaps}" target="_blank" rel="noopener">Google Maps</a></div>`;
-    eventLocationHelp.className = 'help-text ok';
-    return;
-  }
-  if (state.status === 'coords' && state.result) {
-    const { lat, lon } = state.result;
-    const osm = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=15/${lat}/${lon}`;
-    const gmaps = `https://maps.google.com/?q=${lat},${lon}`;
-    eventLocationHelp.innerHTML = `<div>✔ Coordinates detected (${lat.toFixed(5)}, ${lon.toFixed(5)})</div><div style=\"margin-top:4px; display:flex; gap:8px;\"><a href=\"${osm}\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a><a href=\"${gmaps}\" target=\"_blank\" rel=\"noopener\">Google Maps</a></div>`;
-    eventLocationHelp.className = 'help-text ok';
-    return;
-  }
-  if (state.status === 'error') { eventLocationHelp.textContent = state.message || 'Could not validate address'; eventLocationHelp.className = 'help-text error'; }
-}
-
-const debouncedLocationValidate = debounce(async () => {
-  lastGeocode = null;
-  const q = (eventLocationInput?.value || '').trim();
-  if (!q) { renderLocationHelp(null); return; }
-  const coords = tryParseLatLon(q);
-  if (coords) { lastGeocode = { ...coords, displayName: `${coords.lat}, ${coords.lon}`, source: 'coords' }; renderLocationHelp({ status: 'coords', result: lastGeocode }); return; }
-  if (q.length < 3) { renderLocationHelp(null); return; }
-  renderLocationHelp({ status: 'searching' });
-  try { const found = await geocodeAddress(q); if (found) { lastGeocode = { ...found, source: 'geocode' }; renderLocationHelp({ status: 'ok', result: lastGeocode }); } else { renderLocationHelp({ status: 'error', message: 'No match found' }); } }
-  catch (e) { renderLocationHelp({ status: 'error', message: 'Validation error' }); }
-}, 450);
+// Location validation helpers moved to './js/modal.js'
 
 // Open the modal pre-filled to create an all-day event for a week
 async function openCreateWeekModal(calendarUrl, startDateStr, endDateStr, groupId) {
@@ -277,42 +234,7 @@ async function openCreateWeekModal(calendarUrl, startDateStr, endDateStr, groupI
   }
 }
 
-// Toggle modal loading state and button labels
-function setModalLoading(isLoading, action = 'save') {
-  if (!modalContent) return;
-  if (isLoading) {
-    modalContent.classList.add('loading');
-    // Update buttons
-    if (action === 'save') {
-      saveBtn.dataset.originalText = saveBtn.textContent;
-      saveBtn.textContent = 'Saving...';
-    } else if (action === 'delete') {
-      deleteBtn.dataset.originalText = deleteBtn.textContent;
-      deleteBtn.textContent = 'Deleting...';
-    }
-    // Disable all modal controls
-    saveBtn.disabled = true;
-    deleteBtn.disabled = true;
-    cancelBtn.disabled = true;
-    closeBtn.style.pointerEvents = 'none';
-    closeBtn.style.opacity = '0.5';
-  } else {
-    modalContent.classList.remove('loading');
-    // Restore button labels
-    if (saveBtn.dataset.originalText) {
-      saveBtn.textContent = saveBtn.dataset.originalText;
-      delete saveBtn.dataset.originalText;
-    }
-    if (deleteBtn.dataset.originalText) {
-      deleteBtn.textContent = deleteBtn.dataset.originalText;
-      delete deleteBtn.dataset.originalText;
-    }
-    // Re-enable controls (specific buttons will still be toggled by caller)
-    cancelBtn.disabled = false;
-    closeBtn.style.pointerEvents = '';
-    closeBtn.style.opacity = '';
-  }
-}
+// Modal loading helper moved to './js/modal.js'
 
 // Force refresh CalDAV cache using API helper
 async function forceRefreshCache() {
@@ -643,32 +565,7 @@ async function loadCalendars(selectedCalendarUrl = '') {
 }
 
 // Close the modal
-function closeModal() {
-  console.log('closeModal called');
-  if (modal) {
-    console.log('Hiding modal');
-    modal.classList.remove('show');
-    if (modalContent) modalContent.classList.remove('loading');
-    // Wait for the animation to complete before hiding
-    setTimeout(() => {
-      modal.style.display = 'none';
-    }, 300); // Match this with the CSS transition duration
-    document.body.style.overflow = ''; // Re-enable scrolling
-  } else {
-    console.error('Modal element not found when trying to close');
-  }
-  
-  if (eventForm) {
-    eventForm.reset();
-  } else {
-    console.error('Event form not found');
-  }
-  
-  currentEvent = null;
-  console.log('Modal closed and form reset');
-  // Clear location helper UI
-  renderLocationHelp(null);
-}
+// closeModal moved to './js/modal.js'
 
 // Handle form submission
 async function handleSubmit(e) {
