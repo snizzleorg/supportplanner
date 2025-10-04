@@ -9,8 +9,8 @@ import { renderMapMarkers } from './js/map.js';
 import { initTimeline as initTimelineCore } from './js/timeline.js';
 import { renderWeekBar, applyGroupLabelColors } from './js/timeline-ui.js';
 import { initSearch, applySearchFilter } from './js/search.js';
-import { fetchCalendars as apiFetchCalendars, refreshCaldav, clientLog as apiClientLog } from './js/api.js';
-import { renderLocationHelp, debouncedLocationValidate, setModalLoading, closeModal } from './js/modal.js';
+import { fetchCalendars as apiFetchCalendars, refreshCaldav, clientLog as apiClientLog, getEvent, updateEvent as apiUpdateEvent, deleteEvent as apiDeleteEvent, createAllDayEvent } from './js/api.js';
+import { renderLocationHelp, debouncedLocationValidate, setModalLoading, closeModal, createModalController } from './js/modal.js';
 
 // DOM Elements
 const modal = document.getElementById('eventModal');
@@ -177,62 +177,7 @@ function escapeHtml(unsafe) {
 
 // Location validation helpers moved to './js/modal.js'
 
-// Open the modal pre-filled to create an all-day event for a week
-async function openCreateWeekModal(calendarUrl, startDateStr, endDateStr, groupId) {
-  try {
-    setStatus('Creating new event…');
-    if (!modal) throw new Error('Modal element not found');
-
-    // Initialize a pseudo currentEvent without uid to signal create mode
-    currentEvent = {
-      uid: null,
-      summary: '',
-      description: '',
-      location: '',
-      start: startDateStr,
-      end: endDateStr,
-      allDay: true,
-      calendarUrl
-    };
-
-    // Remember which timeline group was clicked for optimistic insert fallback
-    currentCreateGroupId = groupId || null;
-
-    // Populate fields
-    eventIdInput.value = '';
-    const defaultTitle = `Week ${isoWeekNumber(new Date(startDateStr))}`;
-    eventTitleInput.value = defaultTitle;
-    eventDescriptionInput.value = '';
-    eventLocationInput.value = '';
-    // Clear structured meta fields for new create
-    if (eventOrderNumberInput) eventOrderNumberInput.value = '';
-    if (eventTicketLinkInput) eventTicketLinkInput.value = '';
-    if (eventSystemTypeInput) eventSystemTypeInput.value = '';
-    eventAllDayInput.checked = true;
-    eventStartDateInput.value = startDateStr;
-    eventEndDateInput.value = endDateStr;
-    // Kick off location validation UI
-    debouncedLocationValidate();
-
-    // Load calendars and preselect
-    await loadCalendars(calendarUrl);
-    // Ensure selection is set (fallback to provided calendarUrl)
-    if (!eventCalendarSelect.value) {
-      eventCalendarSelect.value = calendarUrl;
-    }
-
-    // Show modal
-    modal.style.display = 'flex';
-    modal.classList.add('show');
-    document.body.style.overflow = 'hidden';
-    // Focus title to allow quick overwrite
-    setTimeout(() => eventTitleInput.focus(), 0);
-    setStatus('');
-  } catch (e) {
-    console.error('Error opening create modal:', e);
-    setStatus(`Error: ${e.message}`);
-  }
-}
+// openCreateWeekModal moved to modal controller
 
 // Modal loading helper moved to './js/modal.js'
 
@@ -295,6 +240,9 @@ function initTimeline() {
   // Initialize search module with items dataset
   try { initSearch(items); } catch (_) {}
 }
+
+// Build modal controller with dependencies
+const modalCtl = createModalController({ setStatus, refresh, isoWeekNumber, items, urlToGroupId, forceRefreshCache, dayjs });
 
 // Dynamically size the timeline to its content while leaving room for the map
 function adjustTimelineHeight() {
@@ -436,44 +384,22 @@ async function openEditModal(eventId) {
   try {
     console.log('openEditModal called with eventId:', eventId);
     setStatus('Loading event details...');
-    
-    // Debug: Check if modal element exists
-    console.log('Modal element exists:', !!modal);
-    console.log('Modal display style before:', modal.style.display);
-    
-    if (!modal) {
-      throw new Error('Modal element not found');
-    }
-    
-    // Ensure modal is visible for debugging
+    if (!modal) throw new Error('Modal element not found');
     modal.style.display = 'flex';
     modal.style.backgroundColor = 'rgba(0,0,0,0.8)';
-    console.log('Modal display style set to flex, should be visible now');
-    
-    // Add a temporary debug element
-    const debugDiv = document.createElement('div');
-    debugDiv.id = 'debug-overlay';
-    debugDiv.style.position = 'fixed';
-    debugDiv.style.top = '10px';
-    debugDiv.style.left = '10px';
-    debugDiv.style.background = 'white';
-    debugDiv.style.padding = '10px';
-    debugDiv.style.zIndex = '99999';
     if (DEBUG_UI) {
+      const debugDiv = document.createElement('div');
+      debugDiv.id = 'debug-overlay';
+      debugDiv.style.position = 'fixed';
+      debugDiv.style.top = '10px';
+      debugDiv.style.left = '10px';
+      debugDiv.style.background = 'white';
+      debugDiv.style.padding = '10px';
+      debugDiv.style.zIndex = '99999';
       debugDiv.textContent = `Click detected for event: ${eventId}`;
       document.body.appendChild(debugDiv);
     }
-    
-    console.log(`Fetching event details for UID: ${eventId}`);
-    const response = await fetch(`/api/events/${eventId}`);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Failed to fetch event details:', response.status, errorText);
-      throw new Error(`Failed to fetch event details: ${response.status} ${response.statusText}`);
-    }
-    
-    const eventData = await response.json();
+    const eventData = await getEvent(eventId);
     console.log('Event data response:', eventData);
     console.log('Event data received:', eventData);
     
@@ -542,27 +468,7 @@ async function openEditModal(eventId) {
   }
 }
 
-// Load available calendars into the dropdown
-async function loadCalendars(selectedCalendarUrl = '') {
-  try {
-    const response = await fetch('/api/calendars');
-    const data = await response.json();
-    
-    // Clear existing options
-    eventCalendarSelect.innerHTML = '';
-    
-    // Add each calendar as an option
-    data.calendars.forEach(calendar => {
-      const option = document.createElement('option');
-      option.value = calendar.url;
-      option.textContent = calendar.displayName;
-      option.selected = calendar.url === selectedCalendarUrl;
-      eventCalendarSelect.appendChild(option);
-    });
-  } catch (error) {
-    console.error('Error loading calendars:', error);
-  }
-}
+// loadCalendars moved to modal controller
 
 // Close the modal
 // closeModal moved to './js/modal.js'
@@ -653,37 +559,12 @@ async function handleSubmit(e) {
     
     let response;
     if (!currentEvent.uid) {
-      // Create flow for all-day events
-      console.log('Create mode detected; posting to /api/events/all-day with calendar', eventCalendarSelect.value);
       const createCalendarUrl = eventCalendarSelect.value || currentEvent.calendarUrl;
-      if (!createCalendarUrl) {
-        throw new Error('No calendar selected for new event');
-      }
-      response = await fetch('/api/events/all-day', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          calendarUrl: createCalendarUrl,
-          summary: eventData.summary,
-          description: eventData.description,
-          location: eventData.location,
-          start: eventData.start,
-          end: eventData.end,
-          meta: eventData.meta
-        })
-      });
+      if (!createCalendarUrl) throw new Error('No calendar selected for new event');
+      var result = await createAllDayEvent(createCalendarUrl, eventData);
     } else {
-      // Update flow
-      response = await fetch(`/api/events/${currentEvent.uid}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(eventData),
-      });
+      var result = await apiUpdateEvent(currentEvent.uid, eventData);
     }
-    
-    const result = await response.json();
     
     if (result.success) {
       setStatus('Event updated successfully, refreshing data...');
@@ -749,13 +630,7 @@ async function handleDelete() {
     setStatus('Deleting event...');
     deleteBtn.disabled = true;
     setModalLoading(true, 'delete');
-    
-    // Note: You'll need to implement the delete endpoint on the server
-    const response = await fetch(`/api/events/${currentEvent.uid}`, {
-      method: 'DELETE',
-    });
-    
-    const result = await response.json();
+    const result = await apiDeleteEvent(currentEvent.uid);
     
     if (result.success) {
       setStatus('Event deleted, refreshing data...');
@@ -1142,7 +1017,7 @@ async function refresh() {
     apiClientLog('info', 'window-after-set', { start: w.start, end: w.end });
     setStatus(`Loaded ${allItems.length} items in ${allGroups.length} calendars | Window: ${w.start.toISOString().slice(0,10)} → ${w.end.toISOString().slice(0,10)}`);
     // Repaint week bar after data load
-    try { renderWeekBar(w.start, w.end); } catch (_) {}
+    try { renderWeekBar(timeline); } catch (_) {}
     // Fixed height; nothing to adjust
   } catch (e) {
     if (gen !== refreshGen) return;
@@ -1167,8 +1042,8 @@ function setDefaults() {
 }
 
 function wireEvents() {
-  // Initialize modal event listeners
-  initModal();
+  // Initialize modal event listeners via controller
+  modalCtl.initModal();
   
   // Initialize button event listeners that don't depend on the timeline
   // Refresh button should force a server-side cache refresh to fetch latest data
@@ -1192,7 +1067,7 @@ function wireEvents() {
     requestAnimationFrame(() => applyWindow(fromEl.value, toEl.value));
     requestAnimationFrame(() => updateAxisDensity(fromEl.value, toEl.value));
     // Repaint week labels to current positions
-    try { const w = timeline.getWindow(); requestAnimationFrame(() => renderWeekBar(w.start, w.end)); } catch (_) {}
+    try { requestAnimationFrame(() => renderWeekBar(timeline)); } catch (_) {}
     // Ensure Leaflet map resizes to new container dimensions
     try {
       if (typeof map !== 'undefined' && map && map.invalidateSize) {
@@ -1252,7 +1127,7 @@ function initTimelineEvents() {
       
       if (uid) {
         console.log('Extracted UID:', uid);
-        openEditModal(uid);
+        modalCtl.openEditModal(uid);
       } else {
         console.error('Could not extract UID from item ID:', properties.item);
         setStatus('Error: Could not identify event. Please try again.');
@@ -1290,7 +1165,7 @@ function initTimelineEvents() {
       const endStr = weekEnd.format('YYYY-MM-DD');
 
       // Open modal in create mode so we reuse the stable edit flow (no flicker)
-      await openCreateWeekModal(calendarUrl, startStr, endStr, g);
+      await modalCtl.openCreateWeekModal(calendarUrl, startStr, endStr, g);
     }
   });
   

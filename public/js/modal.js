@@ -1,6 +1,7 @@
 // Modal helpers module: handles modal UI state and location validation UI
 
 import { tryParseLatLon, geocodeAddress } from './geocode.js';
+import { fetchCalendars as apiFetchCalendars, getEvent, updateEvent as apiUpdateEvent, deleteEvent as apiDeleteEvent, createAllDayEvent } from './api.js';
 
 // DOM references
 const modal = document.getElementById('eventModal');
@@ -12,6 +13,17 @@ const saveBtn = document.getElementById('saveEvent');
 const deleteBtn = document.getElementById('deleteEvent');
 const eventLocationHelp = document.getElementById('eventLocationHelp');
 const eventLocationInput = document.getElementById('eventLocation');
+// Additional modal inputs
+const eventIdInput = document.getElementById('eventId');
+const eventTitleInput = document.getElementById('eventTitle');
+const eventDescriptionInput = document.getElementById('eventDescription');
+const eventOrderNumberInput = document.getElementById('eventOrderNumber');
+const eventTicketLinkInput = document.getElementById('eventTicketLink');
+const eventSystemTypeInput = document.getElementById('eventSystemType');
+const eventAllDayInput = document.getElementById('eventAllDay');
+const eventStartDateInput = document.getElementById('eventStartDate');
+const eventEndDateInput = document.getElementById('eventEndDate');
+const eventCalendarSelect = document.getElementById('eventCalendar');
 
 export function renderLocationHelp(state) {
   if (!eventLocationHelp) return;
@@ -87,4 +99,195 @@ export function closeModal() {
   document.body.style.overflow = '';
   if (eventForm) eventForm.reset();
   renderLocationHelp(null);
+}
+
+// Controller factory to encapsulate modal flows and dependencies
+export function createModalController({ setStatus, refresh, isoWeekNumber, items, urlToGroupId, forceRefreshCache, dayjs }) {
+  let currentEvent = null;
+  let currentCreateGroupId = null;
+
+  async function loadCalendars(selectedCalendarUrl = '') {
+    const calendars = await apiFetchCalendars();
+    eventCalendarSelect.innerHTML = '';
+    calendars.forEach(calendar => {
+      const option = document.createElement('option');
+      option.value = calendar.url;
+      option.textContent = calendar.displayName;
+      option.selected = calendar.url === selectedCalendarUrl;
+      eventCalendarSelect.appendChild(option);
+    });
+  }
+
+  async function openCreateWeekModal(calendarUrl, startDateStr, endDateStr, groupId) {
+    setStatus('Creating new event…');
+    if (!modal) throw new Error('Modal element not found');
+    currentEvent = {
+      uid: null,
+      summary: '',
+      description: '',
+      location: '',
+      start: startDateStr,
+      end: endDateStr,
+      allDay: true,
+      calendarUrl
+    };
+    currentCreateGroupId = groupId || null;
+    eventIdInput.value = '';
+    const defaultTitle = `Week ${isoWeekNumber(new Date(startDateStr))}`;
+    eventTitleInput.value = defaultTitle;
+    eventDescriptionInput.value = '';
+    eventLocationInput.value = '';
+    if (eventOrderNumberInput) eventOrderNumberInput.value = '';
+    if (eventTicketLinkInput) eventTicketLinkInput.value = '';
+    if (eventSystemTypeInput) eventSystemTypeInput.value = '';
+    eventAllDayInput.checked = true;
+    eventStartDateInput.value = startDateStr;
+    eventEndDateInput.value = endDateStr;
+    debouncedLocationValidate();
+    await loadCalendars(calendarUrl);
+    if (!eventCalendarSelect.value) eventCalendarSelect.value = calendarUrl;
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => eventTitleInput.focus(), 0);
+    setStatus('');
+  }
+
+  async function openEditModal(eventId) {
+    setStatus('Loading event details...');
+    if (!modal) throw new Error('Modal element not found');
+    modal.style.display = 'flex';
+    const eventData = await getEvent(eventId);
+    if (!eventData.success) throw new Error(eventData.error || 'Failed to load event');
+    currentEvent = eventData.event;
+    eventIdInput.value = currentEvent.uid;
+    eventTitleInput.value = currentEvent.summary || '';
+    eventDescriptionInput.value = currentEvent.description || '';
+    eventLocationInput.value = currentEvent.location || '';
+    debouncedLocationValidate();
+    const meta = currentEvent.meta || {};
+    if (eventOrderNumberInput) eventOrderNumberInput.value = meta.orderNumber || '';
+    if (eventTicketLinkInput) eventTicketLinkInput.value = meta.ticketLink || '';
+    if (eventSystemTypeInput) eventSystemTypeInput.value = meta.systemType || '';
+    const isAllDay = currentEvent.allDay || false;
+    eventAllDayInput.checked = isAllDay;
+    if (isAllDay) {
+      const startDate = dayjs(currentEvent.start).format('YYYY-MM-DD');
+      const endDate = dayjs(currentEvent.end).format('YYYY-MM-DD');
+      eventStartDateInput.value = startDate;
+      eventEndDateInput.value = endDate;
+    } else {
+      const startDate = dayjs(currentEvent.start).local();
+      const endDate = dayjs(currentEvent.end).local();
+      eventStartDateInput.value = startDate.format('YYYY-MM-DDTHH:mm');
+      eventEndDateInput.value = endDate.format('YYYY-MM-DDTHH:mm');
+    }
+    await loadCalendars(currentEvent.calendarUrl);
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+    setStatus('');
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!currentEvent) return;
+    try {
+      setStatus('Saving changes...');
+      setModalLoading(true, 'save');
+      const title = eventTitleInput.value.trim();
+      if (!title) { setStatus('Please enter a title'); setModalLoading(false, 'save'); return; }
+      if (eventTicketLinkInput && eventTicketLinkInput.value.trim()) {
+        let urlVal = eventTicketLinkInput.value.trim();
+        if (!/^https?:\/\//i.test(urlVal)) { urlVal = 'https://' + urlVal; eventTicketLinkInput.value = urlVal; }
+        new URL(urlVal);
+      }
+      if (eventOrderNumberInput && eventOrderNumberInput.value.length > 64) { setStatus('Order Number is too long (max 64 characters).'); setModalLoading(false, 'save'); return; }
+      const startDate = new Date(eventStartDateInput.value);
+      const endDate = new Date(eventEndDateInput.value);
+      const isAllDay = eventAllDayInput.checked;
+      const payload = {
+        summary: eventTitleInput.value.trim(),
+        description: eventDescriptionInput.value.trim(),
+        location: eventLocationInput.value.trim(),
+        start: isAllDay ? `${startDate.getFullYear()}-${String(startDate.getMonth()+1).padStart(2,'0')}-${String(startDate.getDate()).padStart(2,'0')}` : startDate.toISOString(),
+        end: isAllDay ? `${endDate.getFullYear()}-${String(endDate.getMonth()+1).padStart(2,'0')}-${String(endDate.getDate()).padStart(2,'0')}` : endDate.toISOString(),
+        allDay: isAllDay,
+        meta: {
+          ...(eventOrderNumberInput?.value ? { orderNumber: eventOrderNumberInput.value.trim() } : {}),
+          ...(eventTicketLinkInput?.value ? { ticketLink: eventTicketLinkInput.value.trim() } : {}),
+          ...(eventSystemTypeInput?.value ? { systemType: eventSystemTypeInput.value.trim() } : {}),
+        }
+      };
+
+      let result;
+      if (!currentEvent.uid) {
+        const createCalendarUrl = eventCalendarSelect.value || currentEvent.calendarUrl;
+        if (!createCalendarUrl) throw new Error('No calendar selected for new event');
+        result = await createAllDayEvent(createCalendarUrl, payload);
+      } else {
+        result = await apiUpdateEvent(currentEvent.uid, payload);
+      }
+
+      if (result.success) {
+        setStatus('Event updated successfully, refreshing data...');
+        try {
+          if (!currentEvent.uid) {
+            const created = result.event || {};
+            const createdUid = created.uid || `temp-${Date.now()}`;
+            const resolvedGroupId = urlToGroupId.get(eventCalendarSelect.value || currentEvent.calendarUrl) || currentCreateGroupId;
+            if (resolvedGroupId) {
+              const startIsDateOnly = typeof payload.start === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(payload.start);
+              const endIsDateOnly = typeof payload.end === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(payload.end);
+              const startVal = startIsDateOnly ? dayjs(payload.start).toDate() : new Date(payload.start);
+              const endVal = (startIsDateOnly && endIsDateOnly) ? dayjs(payload.end).add(1, 'day').toDate() : new Date(payload.end);
+              items.add({ id: `${resolvedGroupId}-${(eventCalendarSelect.value || currentEvent.calendarUrl)}/${createdUid}`, group: resolvedGroupId, content: payload.summary, start: startVal, end: endVal, allDay: isAllDay });
+            }
+          } else {
+            await forceRefreshCache();
+          }
+          setStatus('Cache refreshed, updating display...');
+        } catch (_) {}
+        closeModal();
+      } else {
+        throw new Error(result.error || 'Failed to update event');
+      }
+    } catch (error) {
+      setStatus(`Error: ${error.message}`);
+    } finally {
+      setModalLoading(false, 'save');
+    }
+  }
+
+  async function handleDelete() {
+    if (!currentEvent || !confirm('Are you sure you want to delete this event?')) return;
+    try {
+      setStatus('Deleting event...');
+      setModalLoading(true, 'delete');
+      const result = await apiDeleteEvent(currentEvent.uid);
+      if (result.success) {
+        try { await forceRefreshCache(); } catch (_) {}
+        setStatus('Cache refreshed, updating display...');
+        closeModal();
+      } else {
+        throw new Error(result.error || 'Failed to delete event');
+      }
+    } catch (error) {
+      setStatus(`Error: ${error.message}`);
+    } finally {
+      setModalLoading(false, 'delete');
+    }
+  }
+
+  function initModal() {
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (eventForm) eventForm.addEventListener('submit', handleSubmit);
+    if (deleteBtn) deleteBtn.addEventListener('click', handleDelete);
+    if (eventLocationInput) {
+      eventLocationInput.addEventListener('input', () => debouncedLocationValidate());
+      eventLocationInput.addEventListener('blur', () => debouncedLocationValidate());
+    }
+  }
+
+  return { initModal, openCreateWeekModal, openEditModal };
 }
