@@ -25,8 +25,10 @@ RUN if [ -f package-lock.json ]; then \
 # Copy runner script
 # Copy runner script and public tests
 COPY tests/runner/run-tests.mjs ./run-tests.mjs
+COPY tests/runner/css-audit.mjs ./css-audit.mjs
 COPY public/tests ./public/tests
 COPY public/js ./public/js
+COPY public/styles.css ./public/styles.css
 
 # Runtime env
 ENV PUPPETEER_PRODUCT=chrome
