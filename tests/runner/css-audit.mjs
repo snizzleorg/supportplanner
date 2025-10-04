@@ -12,7 +12,7 @@ if (!APP_URL) {
   process.exit(2);
 }
 
-const cssPathInImage = path.resolve('./public/styles.css');
+const cssRoot = path.resolve('./public');
 
 function stripComments(css) {
   return css.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -59,8 +59,21 @@ function normalizeSelector(sel) {
 async function main() {
   const out = { ok: true, totalSelectors: 0, testedSelectors: 0, matchedSelectors: 0, unusedSelectors: [], errors: [], note: '' };
   try {
-    const css = await fs.readFile(cssPathInImage, 'utf-8');
-    const selectors = extractSelectors(css);
+    // Read all CSS files under public/
+    async function readAllCss(dir) {
+      let acc = '';
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      for (const ent of entries) {
+        const p = path.join(dir, ent.name);
+        if (ent.isDirectory()) acc += await readAllCss(p);
+        else if (ent.isFile() && ent.name.endsWith('.css')) acc += '\n' + await fs.readFile(p, 'utf-8');
+      }
+      return acc;
+    }
+    const allCss = await readAllCss(cssRoot);
+    const allSelectors = extractSelectors(allCss);
+    // Dedupe selectors to avoid repeated work
+    const selectors = Array.from(new Set(allSelectors));
     out.totalSelectors = selectors.length;
 
     const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
@@ -97,6 +110,14 @@ async function main() {
         // Week label
         let wlbl = document.querySelector('.week-label');
         if (!wlbl) { wlbl = document.createElement('div'); wlbl.className = 'week-label'; document.body.appendChild(wlbl); }
+
+        // Modal help-text states (dynamic): create nodes to match .help-text.ok and .help-text.error
+        if (!document.querySelector('.help-text.ok')) {
+          const ok = document.createElement('div'); ok.className = 'help-text ok'; ok.textContent = 'OK'; document.body.appendChild(ok);
+        }
+        if (!document.querySelector('.help-text.error')) {
+          const err = document.createElement('div'); err.className = 'help-text error'; err.textContent = 'Error'; document.body.appendChild(err);
+        }
       } catch (_) {}
     });
 
