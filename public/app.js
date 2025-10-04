@@ -8,6 +8,8 @@ import { geocodeLocation, tryParseLatLon, geocodeAddress } from './js/geocode.js
 import { renderMapMarkers } from './js/map.js';
 import { initTimeline as initTimelineCore } from './js/timeline.js';
 import { renderWeekBar, applyGroupLabelColors } from './js/timeline-ui.js';
+import { initSearch, applySearchFilter } from './js/search.js';
+import { fetchCalendars as apiFetchCalendars, refreshCaldav, clientLog as apiClientLog } from './js/api.js';
 
 // DOM Elements
 const modal = document.getElementById('eventModal');
@@ -69,56 +71,7 @@ function setStatus(msg) {
   statusEl.textContent = msg || '';
 }
 
-// --- Search input wiring ---
-if (searchBox) {
-  searchBox.addEventListener('input', () => {
-    currentSearch = searchBox.value || '';
-    applySearchFilter();
-  });
-}
-if (clearSearchBtn) {
-  clearSearchBtn.addEventListener('click', () => {
-    if (searchBox) searchBox.value = '';
-    currentSearch = '';
-    applySearchFilter();
-  });
-}
-
-// --- Search / filter ---
-let currentSearch = '';
-function itemMatchesQuery(item, q) {
-  if (!q) return true;
-  const hay = [item.content, item.title, item.description, item.location];
-  const meta = item.meta || {};
-  hay.push(meta.orderNumber, meta.systemType, meta.ticketLink);
-  return hay.filter(Boolean).some(v => String(v).toLowerCase().includes(q));
-}
-function applySearchFilter() {
-  const q = (currentSearch || '').trim().toLowerCase();
-  try {
-    const els = document.querySelectorAll('.vis-timeline .vis-item');
-    els.forEach(el => {
-      const id = el.getAttribute('data-id');
-      let it = null;
-      if (id && items) {
-        it = items.get(id);
-        if (!it && !Number.isNaN(Number(id))) {
-          it = items.get(Number(id));
-        }
-      }
-      let match = false;
-      if (it) {
-        match = itemMatchesQuery(it, q);
-      } else {
-        // Fallback: use DOM text when item not found (e.g., id type mismatch during redraw)
-        const txt = (el.textContent || '').toLowerCase();
-        match = txt.includes(q);
-      }
-      el.classList.toggle('dimmed', !!q && !match);
-      el.classList.toggle('search-match', !!q && match);
-    });
-  } catch (_) {}
-}
+// --- Search wiring moved to './js/search.js' ---
 
 // Week bar helpers moved to './js/timeline-ui.js'
 
@@ -361,19 +314,14 @@ function setModalLoading(isLoading, action = 'save') {
   }
 }
 
-// Force refresh CalDAV cache
+// Force refresh CalDAV cache using API helper
 async function forceRefreshCache() {
   try {
     setStatus('Refreshing calendar data...');
-    const response = await fetch('/api/refresh-caldav', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    
-    const result = await response.json();
+    const result = await refreshCaldav();
     if (result.success) {
       setStatus('Calendar data refreshed. Updating view...');
-      await refresh(); // Refresh the timeline with new data
+      await refresh();
       setStatus('Calendar data updated successfully');
     } else {
       throw new Error(result.error || 'Failed to refresh calendar data');
@@ -381,27 +329,15 @@ async function forceRefreshCache() {
   } catch (error) {
     console.error('Error refreshing calendar data:', error);
     setStatus(`Error: ${error.message}`);
-    clientLog('error', 'Cache refresh failed', { error: error.message });
+    apiClientLog('error', 'Cache refresh failed', { error: error.message });
   }
 }
 
-// Client logging to backend
-async function clientLog(level, message, extra) {
-  try {
-    await fetch('/api/client-log', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ level, message, extra, userAgent: navigator.userAgent, ts: new Date().toISOString() }),
-    });
-  } catch (e) {
-    // ignore
-  }
-}
 window.addEventListener('error', (e) => {
-  clientLog('error', e.message || 'window.error', { filename: e.filename, lineno: e.lineno, colno: e.colno, error: String(e.error) });
+  apiClientLog('error', e.message || 'window.error', { filename: e.filename, lineno: e.lineno, colno: e.colno, error: String(e.error) });
 });
 window.addEventListener('unhandledrejection', (e) => {
-  clientLog('error', 'unhandledrejection', { reason: String(e.reason) });
+  apiClientLog('error', 'unhandledrejection', { reason: String(e.reason) });
 });
 
 // Add passive event listeners helper
@@ -434,6 +370,8 @@ function initTimeline() {
   try { window.groups = groups; window.items = items; } catch (_) {}
   // Create timeline via module
   timeline = initTimelineCore(timelineEl, items, groups);
+  // Initialize search module with items dataset
+  try { initSearch(items); } catch (_) {}
 }
 
 // Dynamically size the timeline to its content while leaving room for the map
@@ -547,15 +485,7 @@ function applyWindow(from, to) {
 async function fetchCalendars() {
   try {
     setStatus('Loading calendars...');
-    const res = await fetch('/api/calendars');
-    if (!res.ok) {
-      const text = await res.text();
-      setStatus(`Failed to load calendars: ${res.status} ${res.statusText}`);
-      console.error('Calendars fetch failed', res.status, res.statusText, text);
-      return [];
-    }
-    const data = await res.json();
-    const list = data.calendars || [];
+    const list = await apiFetchCalendars();
     setStatus(`Loaded ${list.length} calendars`);
     console.debug('Calendars:', list);
     return list;
