@@ -3,6 +3,7 @@
 import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1.11.13/+esm';
 import { DataSet, Timeline } from 'https://cdn.jsdelivr.net/npm/vis-timeline@7.7.3/standalone/esm/vis-timeline-graph2d.min.js';
 import { setupTooltipHandlers } from './custom-tooltip.js';
+import { getHolidaysInRange } from './js/holidays.js';
 
 // DOM Elements
 const modal = document.getElementById('eventModal');
@@ -240,76 +241,7 @@ function renderWeekBar(from, to) {
 }
 
 // --- Holidays and Special Dates ---
-const holidaysCache = new Map();
-
-async function getHolidaysForYear(year) {
-  // Check cache first
-  if (holidaysCache.has(year)) {
-    return holidaysCache.get(year);
-  }
-
-  try {
-    // Using Nager.Date API for German public holidays
-    const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/DE`);
-    if (!response.ok) throw new Error('Failed to fetch holidays');
-    
-    const holidays = await response.json();
-    
-    // Filter for Berlin-specific holidays (Germany + Berlin state holidays)
-    const berlinHolidays = holidays.filter(h => 
-      !h.counties || // National holidays
-      h.counties.includes('DE-BE') // Berlin state holidays
-    );
-    
-    // Cache the results
-    holidaysCache.set(year, berlinHolidays);
-    return berlinHolidays;
-  } catch (error) {
-    console.error('Error fetching holidays:', error);
-    return [];
-  }
-}
-
-async function getHolidaysInRange(start, end) {
-  const startYear = dayjs(start).year();
-  const endYear = dayjs(end).year();
-  const allHolidays = [];
-  
-  try {
-    // Get holidays for each year in the range
-    for (let year = startYear; year <= endYear; year++) {
-      console.log(`Fetching holidays for year: ${year}`);
-      const holidays = await getHolidaysForYear(year);
-      if (holidays && Array.isArray(holidays)) {
-        allHolidays.push(...holidays);
-      }
-    }
-    
-    console.log('All holidays before filtering:', allHolidays);
-    
-    // Convert to Date objects and filter to the requested range
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    
-    const filteredHolidays = allHolidays
-      .filter(h => h && h.date && h.localName) // Filter out any invalid entries
-      .map(h => ({
-        date: new Date(h.date),
-        name: h.localName,
-        global: !h.counties // National holiday (true) or state holiday (false)
-      }))
-      .filter(h => {
-        const holidayDate = new Date(h.date);
-        return holidayDate >= startDate && holidayDate <= endDate;
-      });
-      
-    console.log('Filtered holidays:', filteredHolidays);
-    return filteredHolidays;
-  } catch (error) {
-    console.error('Error in getHolidaysInRange:', error);
-    return [];
-  }
-}
+// getHolidaysInRange is now imported from './js/holidays.js'
 
 // --- Map marker icon helpers ---
 function parseHex(color) {
