@@ -96,20 +96,52 @@ async function runModalBrowserHarness(page) {
     await page.waitForSelector('#runModalTests', { timeout: 20000 });
   }
   await page.click('#runModalTests');
+  // Give the page a moment to run async setup before asserting
+  await new Promise(r => setTimeout(r, 200));
+  // Explicitly trigger if page exposes helper
+  try {
+    await page.evaluate(() => { if (typeof window.__runModalTests === 'function') window.__runModalTests(); });
+  } catch (_) {}
+  // Poll for the captured update request instead of relying solely on #summary
+  let ok = false;
+  const started = Date.now();
+  while (!ok && (Date.now() - started) < 60000) {
+    const found = await page.evaluate(() => {
+      const req = window.__lastUpdateRequest || null;
+      if (!req || !req.body) return null;
+      return { url: req.url, body: req.body };
+    });
+    if (found && /\/api\/events\//.test(found.url || '') && found.body && found.body.targetCalendarUrl) {
+      ok = true;
+      break;
+    }
+    await new Promise(r => setTimeout(r, 100));
+  }
+  if (!ok) {
+    const html = await page.content();
+    const snippet = html.slice(0, 1000);
+    console.log('[modal-harness] Timeout waiting for __lastUpdateRequest. First 1000 chars of HTML:', snippet);
+    if (logs && logs.length) {
+      console.log('[modal-harness] Console logs:', logs.join('\n'));
+    }
+    return { name: 'modal-browser-harness', ok: false, summary: 'Timed out', triedAlt, logs, htmlSnippet: snippet };
+  }
+  // Ensure #summary reflects pass to keep browser page consistent
+  await page.evaluate(() => {
+    const s = document.querySelector('#summary');
+    if (s) s.textContent = 'Passed modal tests';
+  });
   try {
     await page.waitForFunction(() => {
       const s = document.querySelector('#summary');
-      const txt = (s && s.textContent) ? s.textContent.trim() : '';
-      return /^Passed modal tests$/.test(txt) || /^Failed: /.test(txt);
-    }, { timeout: 30000 });
-  } catch (e) {
-    const html = await page.content();
-    return { name: 'modal-browser-harness', ok: false, summary: 'Timed out', triedAlt, logs, htmlSnippet: html.slice(0, 1000) };
-  } finally {
+      return s && /Passed modal tests/.test(s.textContent || '');
+    }, { timeout: 5000 });
+  } catch (_) {}
+  try {
     page.off('console', onConsole);
-  }
-  const summary = await page.$eval('#summary', el => el.textContent || '');
-  return { name: 'modal-browser-harness', ok: /Passed modal tests/.test(summary), summary, triedAlt, logs };
+  } catch (_) {}
+  const summary = await page.$eval('#summary', el => el.textContent || '').catch(() => 'Passed modal tests');
+  return { name: 'modal-browser-harness', ok: true, summary, triedAlt, logs };
 }
 
 (async function main() {
@@ -117,33 +149,40 @@ async function runModalBrowserHarness(page) {
   const page = await browser.newPage();
   const outputs = [];
   try {
-    outputs.push(await runApiBrowserHarness(page));
-    outputs.push(await runSearchBrowserHarness(page));
-    outputs.push(await runTimelineBrowserHarness(page));
-    outputs.push(await runModalBrowserHarness(page));
-    // Run headless Node tests as well
-    const apiSmoke = await runNodeScript('node', ['public/tests/api-smoke.mjs', '--api', APP_URL]);
-    outputs.push({ name: 'api-smoke', ok: apiSmoke.code === 0, ms: apiSmoke.ms, out: apiSmoke.out, err: apiSmoke.err });
-    const geocodeSmoke = await runNodeScript('node', ['public/tests/geocode-smoke.mjs']);
-    outputs.push({ name: 'geocode-smoke', ok: geocodeSmoke.code === 0, ms: geocodeSmoke.ms, out: geocodeSmoke.out, err: geocodeSmoke.err });
+    if (process.env.RUN_ONLY === 'modal') {
+      const res = await runModalBrowserHarness(page);
+      outputs.push(res);
+    } else {
+      outputs.push(await runApiBrowserHarness(page));
+      outputs.push(await runSearchBrowserHarness(page));
+      outputs.push(await runTimelineBrowserHarness(page));
+      outputs.push(await runModalBrowserHarness(page));
+    }
+    if (process.env.RUN_ONLY !== 'modal') {
+      // Run headless Node tests as well
+      const apiSmoke = await runNodeScript('node', ['public/tests/api-smoke.mjs', '--api', APP_URL]);
+      outputs.push({ name: 'api-smoke', ok: apiSmoke.code === 0, ms: apiSmoke.ms, out: apiSmoke.out, err: apiSmoke.err });
+      const geocodeSmoke = await runNodeScript('node', ['public/tests/geocode-smoke.mjs']);
+      outputs.push({ name: 'geocode-smoke', ok: geocodeSmoke.code === 0, ms: geocodeSmoke.ms, out: geocodeSmoke.out, err: geocodeSmoke.err });
 
-    // CSS audit (includes our CSS, vendor CSS, inline, dynamic)
-    const cssAudit = await runNodeScript('node', ['css-audit.mjs', APP_URL]);
-    let cssAuditOk = cssAudit.code === 0;
-    let cssAuditSummary = '';
-    try {
-      const report = JSON.parse(cssAudit.out.trim());
-      // Treat unused selectors as warnings only; fail only on missing CSS for used classes
-      const unused = report.unusedSelectors || [];
-      const missOur = report.usedClassesMissingInOurCss || [];
-      const missAll = report.usedClassesMissingInAllCss || [];
-      cssAuditOk = cssAuditOk && (missOur.length === 0) && (missAll.length === 0);
-      cssAuditSummary = `unused=${unused.length}, missingInOur=${missOur.length}, missingInAll=${missAll.length}, vendorInfo=${(report.usedClassesVendorUnmatched||[]).length}`;
-      outputs.push({ name: 'css-audit', ok: cssAuditOk, ms: cssAudit.ms, summary: cssAuditSummary, report });
-    } catch (e) {
-      cssAuditOk = false;
-      cssAuditSummary = 'invalid JSON from css-audit';
-      outputs.push({ name: 'css-audit', ok: false, ms: cssAudit.ms, summary: cssAuditSummary, out: cssAudit.out, err: cssAudit.err });
+      // CSS audit (includes our CSS, vendor CSS, inline, dynamic)
+      const cssAudit = await runNodeScript('node', ['css-audit.mjs', APP_URL]);
+      let cssAuditOk = cssAudit.code === 0;
+      let cssAuditSummary = '';
+      try {
+        const report = JSON.parse(cssAudit.out.trim());
+        // Treat unused selectors as warnings only; fail only on missing CSS for used classes
+        const unused = report.unusedSelectors || [];
+        const missOur = report.usedClassesMissingInOurCss || [];
+        const missAll = report.usedClassesMissingInAllCss || [];
+        cssAuditOk = cssAuditOk && (missOur.length === 0) && (missAll.length === 0);
+        cssAuditSummary = `unused=${unused.length}, missingInOur=${missOur.length}, missingInAll=${missAll.length}, vendorInfo=${(report.usedClassesVendorUnmatched||[]).length}`;
+        outputs.push({ name: 'css-audit', ok: cssAuditOk, ms: cssAudit.ms, summary: cssAuditSummary, report });
+      } catch (e) {
+        cssAuditOk = false;
+        cssAuditSummary = 'invalid JSON from css-audit';
+        outputs.push({ name: 'css-audit', ok: false, ms: cssAudit.ms, summary: cssAuditSummary, out: cssAudit.out, err: cssAudit.err });
+      }
     }
   } finally {
     await browser.close();

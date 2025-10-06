@@ -18,6 +18,7 @@ function setStatus(msg) {
   const originalFetch = window.fetch.bind(window);
   window.fetch = async (url, init) => {
     const u = typeof url === 'string' ? url : url.url || String(url);
+    try { console.log('[fetch]', u, (init && init.method) || 'GET'); } catch (_) {}
     // Geocoding: mock Nominatim responses
     if (/nominatim\.openstreetmap\.org/.test(u)) {
       return new Response(JSON.stringify([
@@ -31,8 +32,28 @@ function setStatus(msg) {
         { url: 'https://example.com/cals/b/', displayName: 'Travel (Bob Jones)' },
       ] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
+    // Update event (capture PUT body)
+    if (/\/api\/events\//.test(u) && init && /PUT/i.test(init.method || '')) {
+      try {
+        const body = init && init.body ? JSON.parse(init.body) : {};
+        window.__lastUpdateRequest = { url: u, method: init.method, body };
+      } catch (_) {
+        window.__lastUpdateRequest = { url: u, method: init.method, body: null };
+      }
+      return new Response(JSON.stringify({ success: true, event: { uid: 'updated' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    // Create all-day event fallback (capture POST body)
+    if (u.endsWith('/api/events/all-day') && init && /POST/i.test(init.method || '')) {
+      try {
+        const body = init && init.body ? JSON.parse(init.body) : {};
+        window.__lastUpdateRequest = { url: u, method: init.method, body };
+      } catch (_) {
+        window.__lastUpdateRequest = { url: u, method: init.method, body: null };
+      }
+      return new Response(JSON.stringify({ success: true, event: { uid: 'created' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     // Get event
-    const m = u.match(/\/api\/events\/([^/?#]+)/);
+    const m = u.match(/\/api\/events\/([^\/?#]+)/);
     if (m) {
       const uid = decodeURIComponent(m[1]);
       if (uid === 'uid-all-day') {
@@ -78,6 +99,7 @@ function isoWeekNumber(jsDate) {
 
 async function run() {
   try {
+    console.log('[modal-tests] run() start');
     // Build controller with stubs
     // Provide a shim so instance.local() is available in tests
     const dayjsShim = (v) => {
@@ -102,6 +124,7 @@ async function run() {
 
     // Test: openEditModal all-day
     await ctl.openEditModal('uid-all-day');
+    console.log('[modal-tests] openEditModal done');
     const allDayChecked = document.getElementById('eventAllDay').checked;
     const startVal1 = document.getElementById('eventStartDate').value;
     const endVal1 = document.getElementById('eventEndDate').value;
@@ -122,6 +145,34 @@ async function run() {
     const cal = document.getElementById('eventCalendar');
     assert('calendars exist', cal.options.length >= 2, cal.options.length);
 
+    // Test: changing calendar triggers targetCalendarUrl in update payload
+    // Open an existing all-day event, change calendar, submit
+    await ctl.openEditModal('uid-all-day');
+    const originalCal = cal.value;
+    const otherCal = Array.from(cal.options).map(o => o.value).find(v => v !== originalCal);
+    assert('has different calendar option', !!otherCal, { originalCal });
+    cal.value = otherCal;
+
+    // Fill required fields for submit (title required)
+    document.getElementById('eventTitle').value = 'Updated Title';
+    // Submit the form reliably in headless mode
+    const form = document.getElementById('eventForm');
+    if (form && typeof form.requestSubmit === 'function') {
+      form.requestSubmit();
+    } else {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    }
+    // Wait for the update request to be captured (up to ~3s)
+    let req = null;
+    const startWait = Date.now();
+    while (!(req = window.__lastUpdateRequest) && (Date.now() - startWait) < 3000) {
+      await new Promise(r => setTimeout(r, 25));
+    }
+    req = req || {};
+    console.log('[modal-tests] captured request:', JSON.stringify(req));
+    assert('update called', /\/api\/events\//.test(req.url || ''), req.url || 'no url');
+    assert('targetCalendarUrl present', req.body && req.body.targetCalendarUrl === otherCal, req.body);
+
     console.log(JSON.stringify({ name: 'modal tests complete', ok: true }));
     document.getElementById('summary').textContent = 'Passed modal tests';
   } catch (e) {
@@ -130,3 +181,16 @@ async function run() {
 }
 
 document.getElementById('runModalTests')?.addEventListener('click', run);
+
+// Auto-run once after full window load to avoid flakiness in headless harness
+if (!window.__modalTestsStarted) {
+  window.__modalTestsStarted = true;
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      try { run(); } catch (_) {}
+    }, 50);
+  });
+}
+
+// Expose for harness to trigger explicitly when needed
+window.__runModalTests = run;
