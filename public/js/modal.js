@@ -147,7 +147,13 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     if (eventOrderNumberInput) eventOrderNumberInput.value = '';
     if (eventTicketLinkInput) eventTicketLinkInput.value = '';
     if (eventSystemTypeInput) eventSystemTypeInput.value = '';
-    eventAllDayInput.checked = true;
+    // Force full-day mode for this app: all events are all-day
+    if (eventAllDayInput) {
+      try {
+        eventAllDayInput.checked = true;
+        eventAllDayInput.disabled = true;
+      } catch (_) {}
+    }
     eventStartDateInput.value = startDateStr;
     eventEndDateInput.value = endDateStr;
     debouncedLocationValidate();
@@ -225,8 +231,14 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     if (eventOrderNumberInput) eventOrderNumberInput.value = meta.orderNumber || '';
     if (eventTicketLinkInput) eventTicketLinkInput.value = meta.ticketLink || '';
     if (eventSystemTypeInput) eventSystemTypeInput.value = meta.systemType || '';
-    const isAllDay = currentEvent.allDay || false;
-    eventAllDayInput.checked = isAllDay;
+    // Force full-day mode for this app: all events are all-day
+    const isAllDay = true;
+    if (eventAllDayInput) {
+      try {
+        eventAllDayInput.checked = true;
+        eventAllDayInput.disabled = true;
+      } catch (_) {}
+    }
     if (isAllDay) {
       const startDate = dayjs(currentEvent.start).format('YYYY-MM-DD');
       const endDate = dayjs(currentEvent.end).format('YYYY-MM-DD');
@@ -281,13 +293,14 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
       if (eventOrderNumberInput && eventOrderNumberInput.value.length > 64) { setStatus('Order Number is too long (max 64 characters).'); setModalLoading(false, 'save'); return; }
       const startDate = new Date(eventStartDateInput.value);
       const endDate = new Date(eventEndDateInput.value);
-      const isAllDay = eventAllDayInput.checked;
+      // Force full-day mode for this app
+    const isAllDay = true;
       const payload = {
         summary: eventTitleInput.value.trim(),
         description: eventDescriptionInput.value.trim(),
         location: eventLocationInput.value.trim(),
-        start: isAllDay ? `${startDate.getFullYear()}-${String(startDate.getMonth()+1).padStart(2,'0')}-${String(startDate.getDate()).padStart(2,'0')}` : startDate.toISOString(),
-        end: isAllDay ? `${endDate.getFullYear()}-${String(endDate.getMonth()+1).padStart(2,'0')}-${String(endDate.getDate()).padStart(2,'0')}` : endDate.toISOString(),
+        start: `${startDate.getFullYear()}-${String(startDate.getMonth()+1).padStart(2,'0')}-${String(startDate.getDate()).padStart(2,'0')}`,
+        end: `${endDate.getFullYear()}-${String(endDate.getMonth()+1).padStart(2,'0')}-${String(endDate.getDate()).padStart(2,'0')}`,
         allDay: isAllDay,
         meta: {
           ...(eventOrderNumberInput?.value ? { orderNumber: eventOrderNumberInput.value.trim() } : {}),

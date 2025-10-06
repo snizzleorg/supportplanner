@@ -775,6 +775,13 @@ async function refresh() {
   const allCalendars = await fetchCalendars();
   const allCalendarUrls = allCalendars.map(c => c.url);
   const total = allCalendarUrls.length;
+  // If no calendars are available, avoid posting an empty list (server returns 400)
+  if (total === 0) {
+    initTimeline();
+    setStatus('No calendars available. Check Nextcloud connection or permissions, then use Refresh.');
+    try { items.clear(); groups.clear(); } catch (_) {}
+    return;
+  }
   const gen = ++refreshGen;
   
   // Initialize arrays to hold all items and groups

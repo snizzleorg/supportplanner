@@ -25,7 +25,6 @@
 ## Phase 3: Advanced Features
 - [ ] User authentication and authorization
 - [x] Event search functionality
-- [ ] Recurring events support
 - [x] Exclude calendars from UI via configuration (`calendarExclude` in `config/calendar-order.js`)
 - [x] Leaflet map with grouped markers by location and colored pins per calendar
 - [ ] Map marker clustering for dense locations
