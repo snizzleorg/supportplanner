@@ -45,6 +45,8 @@ const toDateDisplay = document.getElementById('toDateDisplay');
 const refreshBtn = document.getElementById('refreshBtn');
 const fitBtn = document.getElementById('fitBtn');
 const todayBtn = document.getElementById('todayBtn');
+const monthViewBtn = document.getElementById('monthViewBtn');
+const quarterViewBtn = document.getElementById('quarterViewBtn');
 const zoomInBtn = document.getElementById('zoomInBtn');
 const zoomOutBtn = document.getElementById('zoomOutBtn');
 const showRangeBtn = document.getElementById('showRangeBtn');
@@ -1177,6 +1179,22 @@ function initTimelineEvents() {
   fitBtn.addEventListener('click', () => timeline.fit());
   todayBtn.addEventListener('click', () => {
     timeline.moveTo(dayjs().valueOf());
+  });
+  // Quick zoom: today-1w .. today+4w
+  monthViewBtn?.addEventListener('click', () => {
+    const now = dayjs();
+    const start = now.subtract(1, 'week').startOf('day').toDate();
+    const end = now.add(4, 'week').endOf('day').toDate();
+    timeline.setWindow(start, end, { animation: false });
+    updateAxisDensity(dayjs(start), dayjs(end));
+  });
+  // Quick zoom: today-1w .. today+3m
+  quarterViewBtn?.addEventListener('click', () => {
+    const now = dayjs();
+    const start = now.subtract(1, 'week').startOf('day').toDate();
+    const end = now.add(3, 'month').endOf('day').toDate();
+    timeline.setWindow(start, end, { animation: false });
+    updateAxisDensity(dayjs(start), dayjs(end));
   });
 }
 
