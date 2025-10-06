@@ -218,6 +218,55 @@ async function runTooltipBrowserHarness(page) {
   return { name: 'tooltip-browser-harness', ok: /Passed/.test(summary), summary, triedAlt, logs };
 }
 
+async function runTimelineDragE2E(page) {
+  // Navigate to the main app
+  await page.goto(url('/'));
+  // Wait for timeline to render items
+  await page.waitForSelector('#timeline', { timeout: 30000 });
+  // Get timeline center position
+  const box = await page.$eval('#timeline', el => {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+  // Simulate a drag: mouse down, move by 200px, up
+  await page.mouse.move(box.x, box.y);
+  await page.mouse.down({ button: 'left' });
+  await page.mouse.move(box.x + 200, box.y, { steps: 10 });
+  await page.mouse.up({ button: 'left' });
+  // After drag release, modal should not be shown
+  const modalShownAfterDrag = await page.evaluate(() => {
+    const m = document.getElementById('eventModal');
+    return !!(m && m.classList && m.classList.contains('show'));
+  });
+  if (modalShownAfterDrag) {
+    return { name: 'timeline-drag-e2e', ok: false, summary: 'Modal opened after drag' };
+  }
+  // Optional: if an event exists, try a click to confirm modal opens (best-effort)
+  const hasItem = await page.evaluate(() => !!document.querySelector('.vis-item:not(.vis-background)'));
+  if (hasItem) {
+    try {
+      const itemBox = await page.$eval('.vis-item:not(.vis-background)', el => {
+        const r = el.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      });
+      await page.mouse.click(itemBox.x, itemBox.y, { button: 'left' });
+      const t0 = Date.now();
+      let opened = false;
+      while (!opened && (Date.now() - t0) < 1500) {
+        opened = await page.evaluate(() => {
+          const m = document.getElementById('eventModal');
+          return !!(m && m.classList && m.classList.contains('show'));
+        });
+        if (!opened) await new Promise(r => setTimeout(r, 100));
+      }
+      return { name: 'timeline-drag-e2e', ok: true, summary: opened ? 'Drag suppressed; click opens modal' : 'Drag suppressed; click not verified' };
+    } catch (_) {
+      return { name: 'timeline-drag-e2e', ok: true, summary: 'Drag suppressed; no item click verified' };
+    }
+  }
+  return { name: 'timeline-drag-e2e', ok: true, summary: 'Drag suppressed; no items available' };
+}
+
 (async function main() {
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
   const page = await browser.newPage();
@@ -239,6 +288,7 @@ async function runTooltipBrowserHarness(page) {
       outputs.push(await runHolidayBrowserHarness(page));
       outputs.push(await runTooltipBrowserHarness(page));
       outputs.push(await runModalBrowserHarness(page));
+      outputs.push(await runTimelineDragE2E(page));
     }
     if (process.env.RUN_ONLY !== 'modal') {
       // Run headless Node tests as well
