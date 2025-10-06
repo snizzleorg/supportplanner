@@ -21,6 +21,30 @@ This folder contains lightweight test utilities for exercising the browser-facin
     ```
   - Exit code is non‑zero on failure. Output is JSON with results.
 
+## Map markers harness
+
+- Page: `map-tests.html`
+  - Open at `/tests/map-tests.html`.
+  - Verifies that `renderMapMarkers()` creates grouped Leaflet markers with distinct icons per group color.
+  - Uses a built‑in Leaflet stub; no network calls.
+
+- Runner:
+  ```bash
+  docker compose run --rm -e RUN_ONLY=map support-planner-tests
+  ```
+
+## A11y modal harness
+
+- Page: `a11y-modal-tests.html`
+  - Open at `/tests/a11y-modal-tests.html`.
+  - Exercises the edit modal behaviors: focus on open, ARIA attributes, focus trap, Escape to close, Save/Cancel interactions.
+  - Uses fetch mocks; no server mutations.
+
+- Runner:
+  ```bash
+  docker compose run --rm -e RUN_ONLY=a11y support-planner-tests
+  ```
+
 ## Notes
 - The API base can be overridden by `--api` or `API_BASE` env.
 - The mutating tests will create, update, and delete a temporary all‑day event.
