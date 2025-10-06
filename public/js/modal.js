@@ -219,6 +219,15 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
         }
       };
 
+      // If the calendar selection changed, instruct backend to move the event
+      const selectedCalUrl = eventCalendarSelect?.value;
+      const currentCalUrl = currentEvent.calendarUrl || currentEvent.calendar;
+      if (currentEvent.uid && selectedCalUrl && currentCalUrl && selectedCalUrl !== currentCalUrl) {
+        payload.targetCalendarUrl = selectedCalUrl;
+        // Optional: log for debugging
+        console.log('[modal] Moving event to different calendar:', { uid: currentEvent.uid, from: currentCalUrl, to: selectedCalUrl });
+      }
+
       let result;
       if (!currentEvent.uid) {
         const createCalendarUrl = eventCalendarSelect.value || currentEvent.calendarUrl;
