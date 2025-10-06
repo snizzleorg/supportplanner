@@ -27,6 +27,11 @@ function initMapOnce() {
   }).addTo(map);
   markersLayer = L.layerGroup().addTo(map);
   map.setView([51.1657, 10.4515], 5); // default: Germany
+  try {
+    if (window.__MAP_TESTING) {
+      console.log('[map] initMapOnce called, markersLayer ready');
+    }
+  } catch (_) {}
 }
 
 function parseHex(color) {
@@ -81,6 +86,7 @@ function makePinIcon(color) {
 export async function renderMapMarkers(allServerItems, groups) {
   initMapOnce();
   if (!map || !markersLayer) return;
+  try { if (window.__MAP_TESTING) console.log('[map] renderMapMarkers start', (allServerItems||[]).length); } catch (_) {}
   markersLayer.clearLayers();
   const bounds = [];
 
@@ -125,6 +131,12 @@ export async function renderMapMarkers(allServerItems, groups) {
       const color = getGroupColor(gid);
       const { lat, lon } = addOffset(latlon.lat, latlon.lon, idx, total);
       const marker = L.marker([lat, lon], { icon: makePinIcon(color) }).addTo(markersLayer);
+      try {
+        if (window.__MAP_TESTING) {
+          window.__mapMarkerAddedCount = (window.__mapMarkerAddedCount||0) + 1;
+          console.log('[map] marker added', loc, gid, lat, lon);
+        }
+      } catch (_) {}
       bounds.push([lat, lon]);
       const list = evs.slice(0, 5)
         .map(e => `<li>${escapeHtml(e.content || e.summary || 'Untitled')} (${escapeHtml(e.start)} → ${escapeHtml(e.end)})</li>`)

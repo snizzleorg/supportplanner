@@ -99,6 +99,13 @@ export function closeModal() {
   document.body.style.overflow = '';
   if (eventForm) eventForm.reset();
   renderLocationHelp(null);
+  // Restore pointer-events to underlying layers after modal closes
+  try {
+    const mapEl = document.getElementById('map');
+    const timelineEl = document.getElementById('timeline');
+    if (mapEl) mapEl.style.pointerEvents = '';
+    if (timelineEl) timelineEl.style.pointerEvents = '';
+  } catch (_) {}
 }
 
 // Controller factory to encapsulate modal flows and dependencies
@@ -161,7 +168,12 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     const root = modal;
     if (!root) return [];
     const nodes = Array.from(root.querySelectorAll('a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])'));
-    return nodes.filter(el => !el.disabled && el.tabIndex !== -1 && el.offsetParent !== null);
+    return nodes.filter(el => {
+      if (!el || el.disabled || el.tabIndex === -1) return false;
+      // Visible check compatible with fixed/flex layouts in headless
+      const hasRects = typeof el.getClientRects === 'function' && el.getClientRects().length > 0;
+      return el.offsetParent !== null || hasRects;
+    });
   }
 
   function enableFocusTrap() {
@@ -238,6 +250,15 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     lastActiveElement = document.activeElement;
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
+    // Ensure Save button is enabled when opening
+    try { if (saveBtn) saveBtn.disabled = false; } catch (_) {}
+    // Prevent underlying layers from intercepting pointer events while modal is open
+    try {
+      const mapEl = document.getElementById('map');
+      const timelineEl = document.getElementById('timeline');
+      if (mapEl) mapEl.style.pointerEvents = 'none';
+      if (timelineEl) timelineEl.style.pointerEvents = 'none';
+    } catch (_) {}
     setStatus('');
     enableFocusTrap();
     // Focus the title field for accessibility
@@ -346,7 +367,35 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
   function initModal() {
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-    if (eventForm) eventForm.addEventListener('submit', handleSubmit);
+    if (eventForm) {
+      // Avoid native validation blocking submit in some browsers
+      try { eventForm.setAttribute('novalidate', 'novalidate'); } catch (_) {}
+      eventForm.addEventListener('submit', handleSubmit);
+    }
+    // Ensure Save click always submits the form (guards against environments preventing default submit)
+    if (saveBtn && eventForm) {
+      // Use capture to ensure we get the click even if bubbling handlers interfere
+      saveBtn.addEventListener('click', (e) => {
+        try {
+          if (typeof eventForm.requestSubmit === 'function') {
+            eventForm.requestSubmit();
+          } else {
+            eventForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+          }
+        } catch (_) {}
+      }, { capture: true });
+      // Also handle mousedown early to directly invoke submit logic if click is swallowed later
+      saveBtn.addEventListener('mousedown', (e) => {
+        try {
+          e.preventDefault();
+          e.stopPropagation();
+          // Minimal guard to avoid double-submit; rely on loading state
+          if (!modal.classList.contains('show')) return;
+          if (modalContent && modalContent.classList.contains('loading')) return;
+          if (typeof handleSubmit === 'function') handleSubmit(new Event('submit'));
+        } catch (_) {}
+      }, { capture: true });
+    }
     if (deleteBtn) deleteBtn.addEventListener('click', handleDelete);
     // Close on Escape key when modal is open
     window.addEventListener('keydown', (e) => {
