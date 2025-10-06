@@ -153,6 +153,50 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     setStatus('');
   }
 
+  // A11y state
+  let lastActiveElement = null;
+  let trapHandler = null;
+
+  function getFocusableInModal() {
+    const root = modal;
+    if (!root) return [];
+    const nodes = Array.from(root.querySelectorAll('a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])'));
+    return nodes.filter(el => !el.disabled && el.tabIndex !== -1 && el.offsetParent !== null);
+  }
+
+  function enableFocusTrap() {
+    if (trapHandler) return;
+    trapHandler = (e) => {
+      if (e.key !== 'Tab') return;
+      const isOpen = modal && modal.classList && modal.classList.contains('show');
+      if (!isOpen) return;
+      const focusables = getFocusableInModal();
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey) {
+        if (active === first || !modal.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (active === last || !modal.contains(active)) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', trapHandler, true);
+  }
+
+  function disableFocusTrap() {
+    if (trapHandler) {
+      window.removeEventListener('keydown', trapHandler, true);
+      trapHandler = null;
+    }
+  }
+
   async function openEditModal(eventId) {
     setStatus('Loading event details...');
     if (!modal) throw new Error('Modal element not found');
@@ -183,9 +227,19 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
       eventEndDateInput.value = endDate.format('YYYY-MM-DDTHH:mm');
     }
     await loadCalendars(currentEvent.calendarUrl);
+    // A11y attributes
+    try {
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      if (!modal.getAttribute('aria-label')) {
+        modal.setAttribute('aria-label', 'Edit Event');
+      }
+    } catch (_) {}
+    lastActiveElement = document.activeElement;
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
     setStatus('');
+    enableFocusTrap();
     // Focus the title field for accessibility
     try { setTimeout(() => { const el = document.getElementById('eventTitle'); if (el) el.focus(); }, 0); } catch (_) {}
   }
