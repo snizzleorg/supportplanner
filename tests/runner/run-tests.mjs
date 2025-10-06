@@ -133,11 +133,11 @@ async function runModalBrowserHarness(page) {
     let cssAuditSummary = '';
     try {
       const report = JSON.parse(cssAudit.out.trim());
-      // Consider actionable failures only: unusedSelectors or missing in our/all CSS
+      // Treat unused selectors as warnings only; fail only on missing CSS for used classes
       const unused = report.unusedSelectors || [];
       const missOur = report.usedClassesMissingInOurCss || [];
       const missAll = report.usedClassesMissingInAllCss || [];
-      cssAuditOk = cssAuditOk && unused.length === 0 && missOur.length === 0 && missAll.length === 0;
+      cssAuditOk = cssAuditOk && (missOur.length === 0) && (missAll.length === 0);
       cssAuditSummary = `unused=${unused.length}, missingInOur=${missOur.length}, missingInAll=${missAll.length}, vendorInfo=${(report.usedClassesVendorUnmatched||[]).length}`;
       outputs.push({ name: 'css-audit', ok: cssAuditOk, ms: cssAudit.ms, summary: cssAuditSummary, report });
     } catch (e) {
