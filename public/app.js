@@ -664,6 +664,18 @@ function initModal() {
   cancelBtn.addEventListener('click', closeModal);
   eventForm.addEventListener('submit', handleSubmit);
   deleteBtn.addEventListener('click', handleDelete);
+  // Ensure save click always submits, even if other handlers interfere
+  if (saveBtn) {
+    saveBtn.addEventListener('click', (e) => {
+      try {
+        if (typeof eventForm.requestSubmit === 'function') {
+          eventForm.requestSubmit();
+        } else {
+          eventForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        }
+      } catch (_) {}
+    });
+  }
   // Location live validation
   if (eventLocationInput) {
     eventLocationInput.addEventListener('input', () => debouncedLocationValidate());

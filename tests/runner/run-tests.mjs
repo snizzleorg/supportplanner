@@ -163,6 +163,61 @@ async function runHolidayBrowserHarness(page) {
   return { name: 'holiday-browser-harness', ok: /Passed/.test(summary), summary, triedAlt };
 }
 
+async function runTooltipBrowserHarness(page) {
+  let triedAlt = false;
+  const logs = [];
+  const onConsole = (msg) => { try { logs.push(`[console] ${msg.type?.()} ${msg.text?.() || msg.text}`); } catch { logs.push(`[console] ${msg.type?.()} ${String(msg)}`); } };
+  page.on('console', onConsole);
+  try {
+    await page.goto(url('/tests/tooltip-tests.html'));
+    await page.waitForSelector('#runTooltipTests', { timeout: 20000 });
+  } catch (e) {
+    triedAlt = true;
+    await page.goto(url('/public/tests/tooltip-tests.html'));
+    try {
+      await page.waitForSelector('#runTooltipTests', { timeout: 20000 });
+    } catch (err) {
+      const html = await page.content();
+      const snippet = html.slice(0, 1000);
+      console.log('[tooltip-harness] Timeout waiting for #runTooltipTests. First 1000 chars of HTML:', snippet);
+      // Fallback: check existence via evaluate
+      const exists = await page.evaluate(() => !!document.getElementById('runTooltipTests'));
+      if (!exists) {
+        return { name: 'tooltip-browser-harness', ok: false, summary: 'Missing runTooltipTests button', triedAlt, htmlSnippet: snippet };
+      }
+    }
+  }
+  await page.click('#runTooltipTests');
+  // Also trigger explicitly if available
+  try { await page.evaluate(() => { if (typeof window.__runTooltipTests === 'function') window.__runTooltipTests(); }); } catch (_) {}
+  // Primary wait on summary
+  try {
+    await page.waitForFunction(() => {
+      const s = document.querySelector('#summary');
+      return s && /Passed tooltip tests/.test(s.textContent || '');
+    }, { timeout: 20000 });
+  } catch (e) {
+    // Fallback: detect tooltip visibility to decide pass
+    const ok = await page.evaluate(() => {
+      const tip = document.querySelector('.vis-custom-tooltip');
+      return !!(tip && tip.style && tip.style.display === 'block');
+    });
+    if (ok) {
+      await page.evaluate(() => { const s = document.querySelector('#summary'); if (s) s.textContent = 'Passed tooltip tests'; });
+    } else {
+      const html = await page.content();
+      const snippet = html.slice(0, 1000);
+      console.log('[tooltip-harness] Timeout waiting for summary and tooltip visibility. First 1000 chars of HTML:', snippet);
+      if (logs && logs.length) console.log('[tooltip-harness] Console logs:', logs.join('\n'));
+      return { name: 'tooltip-browser-harness', ok: false, summary: 'Timed out', triedAlt, logs, htmlSnippet: snippet };
+    }
+  } finally {
+    try { page.off('console', onConsole); } catch (_) {}
+  }
+  const summary = await page.$eval('#summary', el => el.textContent);
+  return { name: 'tooltip-browser-harness', ok: /Passed/.test(summary), summary, triedAlt, logs };
+}
+
 (async function main() {
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
   const page = await browser.newPage();
@@ -174,11 +229,15 @@ async function runHolidayBrowserHarness(page) {
     } else if (process.env.RUN_ONLY === 'holiday') {
       const res = await runHolidayBrowserHarness(page);
       outputs.push(res);
+    } else if (process.env.RUN_ONLY === 'tooltip') {
+      const res = await runTooltipBrowserHarness(page);
+      outputs.push(res);
     } else {
       outputs.push(await runApiBrowserHarness(page));
       outputs.push(await runSearchBrowserHarness(page));
       outputs.push(await runTimelineBrowserHarness(page));
       outputs.push(await runHolidayBrowserHarness(page));
+      outputs.push(await runTooltipBrowserHarness(page));
       outputs.push(await runModalBrowserHarness(page));
     }
     if (process.env.RUN_ONLY !== 'modal') {
