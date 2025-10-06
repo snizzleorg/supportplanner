@@ -4,6 +4,7 @@ import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1.11.13/+esm';
 import { DataSet, Timeline } from 'https://cdn.jsdelivr.net/npm/vis-timeline@7.7.3/standalone/esm/vis-timeline-graph2d.min.js';
 import { setupTooltipHandlers } from './custom-tooltip.js';
 import { getHolidaysInRange } from './js/holidays.js';
+import { upsertHolidayBackgrounds } from './js/holidays-ui.js';
 import { geocodeLocation, tryParseLatLon, geocodeAddress } from './js/geocode.js';
 import { renderMapMarkers } from './js/map.js';
 import { initTimeline as initTimelineCore } from './js/timeline.js';
@@ -978,49 +979,10 @@ async function refresh() {
       console.warn('Map marker render failed', e);
     }
 
-    // Add holiday highlights
-  try {
-    console.log('Fetching holidays...');
-    const holidays = await getHolidaysInRange(from, to);
-    console.log('Holidays found:', holidays);
-
-    // Clean up previously added holiday background items (avoid duplicate IDs)
+    // Add holiday highlights via helper (de-duplicates IDs across refreshes)
     try {
-      // Prefer DataSet.getIds with filter if available; otherwise derive from items.get()
-      const existingHolidayIds = (typeof items.getIds === 'function')
-        ? items.getIds({ filter: (it) => typeof it?.id === 'string' && it.id.startsWith('holiday-') })
-        : (items.get() || []).filter(it => typeof it?.id === 'string' && it.id.startsWith('holiday-')).map(it => it.id);
-      if (existingHolidayIds && existingHolidayIds.length > 0) {
-        items.remove(existingHolidayIds);
-      }
-    } catch (cleanupErr) {
-      console.warn('Holiday cleanup failed', cleanupErr);
-    }
-    
-    const holidayItems = [];
-      
-      holidays.forEach(holiday => {
-        const startDate = dayjs(holiday.date).startOf('day');
-        const endDate = startDate.add(1, 'day');
-        
-        holidayItems.push({
-          id: `holiday-${startDate.format('YYYY-MM-DD')}`,
-          start: startDate.toDate(),
-          end: endDate.toDate(),
-          type: 'background',
-          className: 'holiday-bg',
-          title: holiday.name,
-          editable: false,
-          selectable: false
-        });
-      });
-      
-      if (holidayItems.length > 0) {
-        console.log('Adding holiday items:', holidayItems);
-        items.add(holidayItems);
-      } else {
-        console.log('No holiday items to add');
-      }
+      console.log('Fetching holidays...');
+      await upsertHolidayBackgrounds(items, from, to, getHolidaysInRange, dayjs);
     } catch (e) {
       console.error('Failed to add holiday highlights:', e);
     }

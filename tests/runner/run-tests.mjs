@@ -144,6 +144,25 @@ async function runModalBrowserHarness(page) {
   return { name: 'modal-browser-harness', ok: true, summary, triedAlt, logs };
 }
 
+async function runHolidayBrowserHarness(page) {
+  let triedAlt = false;
+  try {
+    await page.goto(url('/tests/holiday-tests.html'));
+    await page.waitForSelector('#runHolidayTests', { timeout: 20000 });
+  } catch (e) {
+    triedAlt = true;
+    await page.goto(url('/public/tests/holiday-tests.html'));
+    await page.waitForSelector('#runHolidayTests', { timeout: 20000 });
+  }
+  await page.click('#runHolidayTests');
+  await page.waitForFunction(() => {
+    const s = document.querySelector('#summary');
+    return s && /Passed holiday tests/.test(s.textContent || '');
+  }, { timeout: 20000 });
+  const summary = await page.$eval('#summary', el => el.textContent);
+  return { name: 'holiday-browser-harness', ok: /Passed/.test(summary), summary, triedAlt };
+}
+
 (async function main() {
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
   const page = await browser.newPage();
@@ -152,10 +171,14 @@ async function runModalBrowserHarness(page) {
     if (process.env.RUN_ONLY === 'modal') {
       const res = await runModalBrowserHarness(page);
       outputs.push(res);
+    } else if (process.env.RUN_ONLY === 'holiday') {
+      const res = await runHolidayBrowserHarness(page);
+      outputs.push(res);
     } else {
       outputs.push(await runApiBrowserHarness(page));
       outputs.push(await runSearchBrowserHarness(page));
       outputs.push(await runTimelineBrowserHarness(page));
+      outputs.push(await runHolidayBrowserHarness(page));
       outputs.push(await runModalBrowserHarness(page));
     }
     if (process.env.RUN_ONLY !== 'modal') {
