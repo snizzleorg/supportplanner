@@ -979,12 +979,25 @@ async function refresh() {
     }
 
     // Add holiday highlights
+  try {
+    console.log('Fetching holidays...');
+    const holidays = await getHolidaysInRange(from, to);
+    console.log('Holidays found:', holidays);
+
+    // Clean up previously added holiday background items (avoid duplicate IDs)
     try {
-      console.log('Fetching holidays...');
-      const holidays = await getHolidaysInRange(from, to);
-      console.log('Holidays found:', holidays);
-      
-      const holidayItems = [];
+      // Prefer DataSet.getIds with filter if available; otherwise derive from items.get()
+      const existingHolidayIds = (typeof items.getIds === 'function')
+        ? items.getIds({ filter: (it) => typeof it?.id === 'string' && it.id.startsWith('holiday-') })
+        : (items.get() || []).filter(it => typeof it?.id === 'string' && it.id.startsWith('holiday-')).map(it => it.id);
+      if (existingHolidayIds && existingHolidayIds.length > 0) {
+        items.remove(existingHolidayIds);
+      }
+    } catch (cleanupErr) {
+      console.warn('Holiday cleanup failed', cleanupErr);
+    }
+    
+    const holidayItems = [];
       
       holidays.forEach(holiday => {
         const startDate = dayjs(holiday.date).startOf('day');
