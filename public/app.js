@@ -1094,10 +1094,27 @@ function wireEvents() {
 function initTimelineEvents() {
   if (!timeline) return;
   
+  // Track user panning/zooming to suppress accidental click after drag
+  timeline.on('rangechange', (props) => {
+    try {
+      if (props && props.byUser) {
+        isPanning = true;
+      }
+    } catch (_) {}
+  });
+  timeline.on('rangechanged', (props) => {
+    try {
+      if (props && props.byUser) {
+        isPanning = false;
+        lastPanEnd = Date.now();
+      }
+    } catch (_) {}
+  });
+
   // Timeline event click handler
   timeline.on('click', async (properties) => {
     // Ignore clicks right after a user drag/pan
-    if (isPanning || (Date.now() - lastPanEnd) < 250) {
+    if (isPanning || (Date.now() - lastPanEnd) < 350) {
       return;
     }
     console.log('Timeline click event:', properties);
