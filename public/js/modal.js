@@ -186,6 +186,8 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
     setStatus('');
+    // Focus the title field for accessibility
+    try { setTimeout(() => { const el = document.getElementById('eventTitle'); if (el) el.focus(); }, 0); } catch (_) {}
   }
 
   async function handleSubmit(e) {
@@ -292,6 +294,16 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
     if (eventForm) eventForm.addEventListener('submit', handleSubmit);
     if (deleteBtn) deleteBtn.addEventListener('click', handleDelete);
+    // Close on Escape key when modal is open
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const m = document.getElementById('eventModal');
+        if (m && m.classList && m.classList.contains('show')) {
+          e.preventDefault();
+          closeModal();
+        }
+      }
+    });
     if (eventLocationInput) {
       eventLocationInput.addEventListener('input', () => debouncedLocationValidate());
       eventLocationInput.addEventListener('blur', () => debouncedLocationValidate());

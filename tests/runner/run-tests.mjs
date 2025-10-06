@@ -267,6 +267,26 @@ async function runTimelineDragE2E(page) {
   return { name: 'timeline-drag-e2e', ok: true, summary: 'Drag suppressed; no items available' };
 }
 
+async function runA11yModalBrowserHarness(page) {
+  let triedAlt = false;
+  try {
+    await page.goto(url('/tests/a11y-modal-tests.html'));
+    try { await page.waitForSelector('#runA11yModalTests', { timeout: 5000 }); } catch (_) {}
+  } catch (e) {
+    triedAlt = true;
+    await page.goto(url('/public/tests/a11y-modal-tests.html'));
+    try { await page.waitForSelector('#runA11yModalTests', { timeout: 5000 }); } catch (_) {}
+  }
+  try { await page.click('#runA11yModalTests'); } catch (_) {}
+  try { await page.evaluate(() => { if (typeof window.__runA11yModalTests === 'function') window.__runA11yModalTests(); }); } catch (_) {}
+  await page.waitForFunction(() => {
+    const s = document.querySelector('#summary');
+    return s && /Passed a11y modal tests/.test(s.textContent || '');
+  }, { timeout: 20000 });
+  const summary = await page.$eval('#summary', el => el.textContent);
+  return { name: 'a11y-modal-browser-harness', ok: /Passed/.test(summary), summary, triedAlt };
+}
+
 (async function main() {
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
   const page = await browser.newPage();
@@ -281,12 +301,16 @@ async function runTimelineDragE2E(page) {
     } else if (process.env.RUN_ONLY === 'tooltip') {
       const res = await runTooltipBrowserHarness(page);
       outputs.push(res);
+    } else if (process.env.RUN_ONLY === 'a11y') {
+      const res = await runA11yModalBrowserHarness(page);
+      outputs.push(res);
     } else {
       outputs.push(await runApiBrowserHarness(page));
       outputs.push(await runSearchBrowserHarness(page));
       outputs.push(await runTimelineBrowserHarness(page));
       outputs.push(await runHolidayBrowserHarness(page));
       outputs.push(await runTooltipBrowserHarness(page));
+      outputs.push(await runA11yModalBrowserHarness(page));
       outputs.push(await runModalBrowserHarness(page));
       outputs.push(await runTimelineDragE2E(page));
     }
