@@ -162,6 +162,9 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     modal.style.display = 'flex';
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
+    // Reset any stale loading UI to ensure buttons are interactive
+    try { modalContent?.classList.remove('loading'); } catch (_) {}
+    // Note: we no longer disable pointer-events on background to avoid unintended side-effects
     setTimeout(() => eventTitleInput.focus(), 0);
     setStatus('');
   }
@@ -264,13 +267,9 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     document.body.style.overflow = 'hidden';
     // Ensure Save button is enabled when opening
     try { if (saveBtn) saveBtn.disabled = false; } catch (_) {}
-    // Prevent underlying layers from intercepting pointer events while modal is open
-    try {
-      const mapEl = document.getElementById('map');
-      const timelineEl = document.getElementById('timeline');
-      if (mapEl) mapEl.style.pointerEvents = 'none';
-      if (timelineEl) timelineEl.style.pointerEvents = 'none';
-    } catch (_) {}
+    // Reset any stale loading UI to ensure buttons are interactive
+    try { modalContent?.classList.remove('loading'); } catch (_) {}
+    // Note: we no longer disable pointer-events on background to avoid unintended side-effects
     setStatus('');
     enableFocusTrap();
     // Focus the title field for accessibility
@@ -279,6 +278,7 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
 
   async function handleSubmit(e) {
     e.preventDefault();
+    try { console.debug('[modal] handleSubmit start'); } catch (_) {}
     if (!currentEvent) return;
     try {
       setStatus('Saving changes...');
@@ -384,12 +384,23 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
       // Avoid native validation blocking submit in some browsers
       try { eventForm.setAttribute('novalidate', 'novalidate'); } catch (_) {}
       eventForm.addEventListener('submit', handleSubmit);
+      // Submit on Enter key as an additional fallback
+      eventForm.addEventListener('keydown', (e) => {
+        try {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (typeof eventForm.requestSubmit === 'function') eventForm.requestSubmit();
+            else handleSubmit(new Event('submit'));
+          }
+        } catch (_) {}
+      });
     }
     // Ensure Save click always submits the form (guards against environments preventing default submit)
     if (saveBtn && eventForm) {
       // Use capture to ensure we get the click even if bubbling handlers interfere
       saveBtn.addEventListener('click', (e) => {
         try {
+          console.debug('[modal] save click (button handler)');
           if (typeof eventForm.requestSubmit === 'function') {
             eventForm.requestSubmit();
           } else {
@@ -405,10 +416,49 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
           // Minimal guard to avoid double-submit; rely on loading state
           if (!modal.classList.contains('show')) return;
           if (modalContent && modalContent.classList.contains('loading')) return;
+          console.debug('[modal] save mousedown (button handler) -> direct submit');
           if (typeof handleSubmit === 'function') handleSubmit(new Event('submit'));
         } catch (_) {}
       }, { capture: true });
+      // Pointerup capture as another fallback on some platforms
+      saveBtn.addEventListener('pointerup', (e) => {
+        try {
+          if (!modal.classList.contains('show')) return;
+          if (modalContent && modalContent.classList.contains('loading')) return;
+          // If modal-body had pointer-events:none accidentally, clear it
+          const mb = document.querySelector('#eventModal .modal-body');
+          if (mb && getComputedStyle(mb).pointerEvents === 'none') {
+            console.debug('[modal] clearing accidental pointer-events:none on modal-body');
+            mb.style.pointerEvents = 'auto';
+          }
+          console.debug('[modal] save pointerup (button handler)');
+          if (typeof eventForm?.requestSubmit === 'function') eventForm.requestSubmit();
+          else if (typeof handleSubmit === 'function') handleSubmit(new Event('submit'));
+        } catch (_) {}
+      }, { capture: true });
     }
+    // Global capture fallback: if Save is clicked while modal is open, trigger submit
+    document.addEventListener('click', (e) => {
+      try {
+        const isOpen = modal && modal.classList && modal.classList.contains('show');
+        if (!isOpen) return;
+        const target = e.target;
+        // Consider clicks on the primary action area as Save
+        const isSave = target && (target.closest && (
+          target.closest('#saveEvent') ||
+          target.closest('#eventForm .form-actions .btn-primary')
+        ));
+        if (!isSave) return;
+        // If already loading, ignore
+        if (modalContent && modalContent.classList.contains('loading')) return;
+        console.debug('[modal] save click (document capture)');
+        if (typeof eventForm?.requestSubmit === 'function') {
+          eventForm.requestSubmit();
+        } else if (typeof handleSubmit === 'function') {
+          handleSubmit(new Event('submit'));
+        }
+      } catch (_) {}
+    }, true);
     if (deleteBtn) deleteBtn.addEventListener('click', handleDelete);
     // Close on Escape key when modal is open
     window.addEventListener('keydown', (e) => {
