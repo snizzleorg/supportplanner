@@ -101,9 +101,9 @@ const {
   OIDC_POST_LOGOUT_REDIRECT_URI
 } = process.env;
 
-// RBAC group mapping (comma-separated group names from IdP claims)
-const ADMIN_GROUPS = (process.env.ADMIN_GROUPS || '').split(',').map(s => s.trim()).filter(Boolean);
-const EDITOR_GROUPS = (process.env.EDITOR_GROUPS || '').split(',').map(s => s.trim()).filter(Boolean);
+// RBAC group mapping (comma-separated group names from IdP claims) — case-insensitive
+const ADMIN_GROUPS = (process.env.ADMIN_GROUPS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+const EDITOR_GROUPS = (process.env.EDITOR_GROUPS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 const EDITOR_EMAILS = (process.env.EDITOR_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
@@ -168,11 +168,16 @@ if (authEnabled) {
       req.session.code_verifier = code_verifier;
       const state = generators.state();
       req.session.state = state;
+      const claimsReq = {
+        id_token: { groups: null },
+        userinfo: { groups: null, preferred_username: null, name: null, email: null }
+      };
       const url = client.authorizationUrl({
         scope: OIDC_SCOPES,
         code_challenge,
         code_challenge_method: 'S256',
-        state
+        state,
+        claims: claimsReq
       });
       res.redirect(url);
     } catch (e) {
@@ -208,13 +213,15 @@ if (authEnabled) {
       const claims = { ...uiClaims, ...idClaims };
       // Keep id_token for RP-initiated logout
       try { req.session.id_token = tokenSet.id_token; } catch (_) {}
+      // Persist raw claims for diagnostics (/api/me?verbose=1)
+      try { req.session.claims = { id: idClaims, userinfo: uiClaims }; } catch (_) {}
       // Extract roles from claims/groups
       const groups = (
         (Array.isArray(claims.groups) && claims.groups) ||
         (Array.isArray(claims.roles) && claims.roles) ||
         (claims.realm_access && Array.isArray(claims.realm_access.roles) && claims.realm_access.roles) ||
         []
-      ).map(String);
+      ).map(v => String(v).toLowerCase());
       const hasAny = (list)=> list.some(g => groups.includes(g));
       let role = 'reader';
       if (hasAny(ADMIN_GROUPS)) role = 'admin';
@@ -291,7 +298,12 @@ if (authEnabled) {
   // Current user info
   app.get('/api/me', (req, res) => {
     const user = req.session?.user || null;
-    res.json({ authEnabled: true, authenticated: Boolean(user), user });
+    const verbose = String(req.query.verbose || '').toLowerCase() === '1';
+    const base = { authEnabled: true, authenticated: Boolean(user), user };
+    if (verbose) {
+      base.claims = req.session?.claims || null;
+    }
+    res.json(base);
   });
 
   // Lightweight error page route
