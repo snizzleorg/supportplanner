@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SupportPlanner Modal Controller Tests</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 16px; }
+      .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+      #eventModal { display: none; position: fixed; inset: 0; justify-content: center; align-items: center; background: rgba(0,0,0,.5); }
+      #eventModal.show { display: flex; }
+      #eventModal .modal-content { background: white; padding: 12px; width: 600px; border-radius: 8px; }
+      .help-text { font-size: 12px; color: #4b5563; }
+      label { display: block; font-size: 12px; color: #111827; margin-top: 8px; }
+      input, textarea, select { width: 100%; }
+    </style>
+  </head>
+  <body>
+    <h1>Modal Controller Tests</h1>
+    <div class="row">
+      <button id="runModalTests">Run modal tests</button>
+      <span id="summary"></span>
+    </div>
+
+    <!-- Minimal modal DOM required by modal.js -->
+    <div id="eventModal">
+      <div class="modal-content">
+        <button class="close-btn" type="button">×</button>
+        <form id="eventForm">
+          <input id="eventId" type="hidden" />
+          <label>Title<input id="eventTitle" /></label>
+          <label>Description<textarea id="eventDescription"></textarea></label>
+          <label>Location<input id="eventLocation" /></label>
+          <div id="eventLocationHelp" class="help-text"></div>
+          <label>Order #<input id="eventOrderNumber" /></label>
+          <label>Ticket Link<input id="eventTicketLink" /></label>
+          <label>System Type<input id="eventSystemType" /></label>
+          <label><input id="eventAllDay" type="checkbox" /> All day</label>
+          <label>Start<input id="eventStartDate" type="text" /></label>
+          <label>End<input id="eventEndDate" type="text" /></label>
+          <label>Calendar<select id="eventCalendar"></select></label>
+          <div style="margin-top:8px; display:flex; gap:8px;">
+            <button id="saveEvent" type="submit">Save</button>
+            <button id="deleteEvent" type="button">Delete</button>
+            <button id="cancelEdit" type="button">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script type="module" src="./modal-tests.js"></script>
+  </body>
+</html>

@@ -59,6 +59,13 @@
   font-size: 12px;
 }
 
+/* Unconfirmed badge (yellow) */
+.tooltip-meta .meta-badge.unconfirmed {
+  background: #fef3c7;  /* amber-100 */
+  color: #92400e;       /* amber-800 */
+  border-color: #f59e0b;/* amber-500 */
+}
+
 .tooltip-link a {
   color: #1d4ed8;
   text-decoration: none;

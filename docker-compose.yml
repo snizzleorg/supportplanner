@@ -1,4 +1,4 @@
-version: "3.8"
+
 services:
   support-planner:
     build: .
@@ -8,3 +8,15 @@ services:
     ports:
       - "5174:5173"  # Changed external port to 5174 to avoid conflict
     restart: unless-stopped
+
+  support-planner-tests:
+    build:
+      context: .
+      dockerfile: tests/runner/Dockerfile
+    container_name: support-planner-tests
+    environment:
+      - APP_URL=http://support-planner:5173
+    depends_on:
+      - support-planner
+    # No ports exposed; this is a one-shot runner
+    restart: "no"

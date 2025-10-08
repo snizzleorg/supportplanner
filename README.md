@@ -9,6 +9,20 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
 - Color-coded event types
 - Real-time updates
 - Mobile-responsive design
+- Leaflet-based map with per-location markers and group-colored pins
+- Accessible edit modal (focus on open, Escape to close, focus trap)
+- Quick-zoom timeline controls (Month, Quarter)
+
+## UI Controls
+
+- **From/To**: Select the loaded data window. Use Refresh to fetch data for the selected range.
+- **Refresh**: Reload events for the selected From/To window (server-side CalDAV cache refresh).
+- **Fit**: Fit the timeline to all currently loaded items.
+- **Today**: Center the timeline on now.
+- **Month**: Sets the visible timeline window to today−1 week .. today+4 weeks (no data reload).
+- **Quarter**: Sets the visible timeline window to today−1 week .. today+3 months (no data reload).
+
+The Month/Quarter buttons only change the visible window. The loaded range (From/To) remains unchanged until you explicitly Refresh.
 
 ## API Endpoints
 
@@ -290,6 +304,35 @@ docker-compose up -d --build
 ```
 
 The application will be available at `http://localhost:5173`.
+
+## Tests
+
+This repo includes a lightweight browser test harness and a headless runner.
+
+### Run all tests (browser + smokes)
+
+```bash
+docker compose run --rm -e RUNNER_BRIEF=1 support-planner-tests
+```
+
+### Focus a specific harness
+
+- Map markers: `RUN_ONLY=map`
+- A11y modal: `RUN_ONLY=a11y`
+- Tooltip: `RUN_ONLY=tooltip`
+- Holiday: `RUN_ONLY=holiday`
+- Modal CRUD: `RUN_ONLY=modal`
+
+Example:
+
+```bash
+docker compose run --rm -e RUN_ONLY=map support-planner-tests
+```
+
+### Notes
+
+- The a11y harness is made resilient in CI and will report details even if headless focus simulation is flaky.
+- Map tests use a Leaflet stub and verify group-colored icons and marker counts.
 
 ## License
 
