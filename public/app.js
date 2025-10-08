@@ -3,6 +3,15 @@
 import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1.11.13/+esm';
 import { DataSet, Timeline } from 'https://cdn.jsdelivr.net/npm/vis-timeline@7.7.3/standalone/esm/vis-timeline-graph2d.min.js';
 import { setupTooltipHandlers } from './custom-tooltip.js';
+import { getHolidaysInRange } from './js/holidays.js';
+import { upsertHolidayBackgrounds } from './js/holidays-ui.js';
+import { geocodeLocation, tryParseLatLon, geocodeAddress } from './js/geocode.js';
+import { renderMapMarkers } from './js/map.js';
+import { initTimeline as initTimelineCore } from './js/timeline.js';
+import { renderWeekBar, applyGroupLabelColors } from './js/timeline-ui.js';
+import { initSearch, applySearchFilter } from './js/search.js';
+import { fetchCalendars as apiFetchCalendars, refreshCaldav, clientLog as apiClientLog, getEvent, updateEvent as apiUpdateEvent, deleteEvent as apiDeleteEvent, createAllDayEvent } from './js/api.js';
+import { renderLocationHelp, debouncedLocationValidate, setModalLoading, closeModal, createModalController } from './js/modal.js';
 
 // DOM Elements
 const modal = document.getElementById('eventModal');
@@ -36,6 +45,8 @@ const toDateDisplay = document.getElementById('toDateDisplay');
 const refreshBtn = document.getElementById('refreshBtn');
 const fitBtn = document.getElementById('fitBtn');
 const todayBtn = document.getElementById('todayBtn');
+const monthViewBtn = document.getElementById('monthViewBtn');
+const quarterViewBtn = document.getElementById('quarterViewBtn');
 const zoomInBtn = document.getElementById('zoomInBtn');
 const zoomOutBtn = document.getElementById('zoomOutBtn');
 const showRangeBtn = document.getElementById('showRangeBtn');
@@ -64,252 +75,12 @@ function setStatus(msg) {
   statusEl.textContent = msg || '';
 }
 
-// --- Search input wiring ---
-if (searchBox) {
-  searchBox.addEventListener('input', () => {
-    currentSearch = searchBox.value || '';
-    applySearchFilter();
-  });
-}
-if (clearSearchBtn) {
-  clearSearchBtn.addEventListener('click', () => {
-    if (searchBox) searchBox.value = '';
-    currentSearch = '';
-    applySearchFilter();
-  });
-}
+// --- Search wiring moved to './js/search.js' ---
 
-// --- Search / filter ---
-let currentSearch = '';
-function itemMatchesQuery(item, q) {
-  if (!q) return true;
-  const hay = [item.content, item.title, item.description, item.location];
-  const meta = item.meta || {};
-  hay.push(meta.orderNumber, meta.systemType, meta.ticketLink);
-  return hay.filter(Boolean).some(v => String(v).toLowerCase().includes(q));
-}
-function applySearchFilter() {
-  const q = (currentSearch || '').trim().toLowerCase();
-  try {
-    const els = document.querySelectorAll('.vis-timeline .vis-item');
-    els.forEach(el => {
-      const id = el.getAttribute('data-id');
-      let it = null;
-      if (id && items) {
-        it = items.get(id);
-        if (!it && !Number.isNaN(Number(id))) {
-          it = items.get(Number(id));
-        }
-      }
-      let match = false;
-      if (it) {
-        match = itemMatchesQuery(it, q);
-      } else {
-        // Fallback: use DOM text when item not found (e.g., id type mismatch during redraw)
-        const txt = (el.textContent || '').toLowerCase();
-        match = txt.includes(q);
-      }
-      el.classList.toggle('dimmed', !!q && !match);
-      el.classList.toggle('search-match', !!q && match);
-    });
-  } catch (_) {}
-}
-
-// --- Week bar overlay (bottom) ---
-function ensureWeekBar() {
-  if (weekBarEl && weekBarEl.parentElement) return weekBarEl;
-  weekBarEl = document.createElement('div');
-  weekBarEl.className = 'week-bar';
-  // Attach to the bottom panel so it overlays above the entire bottom axis
-  const bottomPanel = document.querySelector('.vis-timeline .vis-panel.vis-bottom');
-  if (bottomPanel && bottomPanel.appendChild) {
-    bottomPanel.style.position = bottomPanel.style.position || 'relative';
-    weekBarEl.style.zIndex = '3000';
-    bottomPanel.appendChild(weekBarEl);
-  } else if (timelineEl && timelineEl.appendChild) {
-    timelineEl.appendChild(weekBarEl);
-  }
-  return weekBarEl;
-}
-
-function renderWeekBar(from, to) {
-  try {
-    if (!timeline) return;
-    const bar = ensureWeekBar();
-    if (!bar) return;
-    // Clear existing chips
-    while (bar.firstChild) bar.removeChild(bar.firstChild);
-    const start = dayjs(from).startOf('day');
-    const end = dayjs(to).endOf('day');
-    // Find first Monday on/after start
-    let ws = start;
-    while (ws.day() !== 1) ws = ws.add(1, 'day');
-    // Compute left offsets relative to bottom panel
-    const bottomPanel = document.querySelector('.vis-timeline .vis-panel.vis-bottom');
-    const panelRect = bottomPanel ? bottomPanel.getBoundingClientRect() : null;
-    const centerContent = document.querySelector('.vis-timeline .vis-center .vis-content');
-    const centerRect = centerContent ? centerContent.getBoundingClientRect() : null;
-    // Map time -> X using current window and center content width
-    const win = timeline.getWindow ? timeline.getWindow() : { start: from, end: to };
-    const startMs = +new Date(win.start);
-    const endMs = +new Date(win.end);
-    const spanMs = Math.max(1, endMs - startMs);
-    const contentWidth = centerContent ? centerContent.clientWidth : (timelineEl ? timelineEl.clientWidth : 1);
-    // Span full width of axis panel
-    bar.style.top = '0px';
-    bar.style.bottom = '0px';
-    bar.style.height = '100%';
-    let count = 0;
-    // Draw vertical week boundary lines at each Monday boundary
-    let tickCursor = start.clone();
-    while (tickCursor.day() !== 1) tickCursor = tickCursor.add(1, 'day');
-    while (tickCursor.isBefore(end)) {
-      const tTick = +tickCursor.toDate();
-      const fracTick = (tTick - startMs) / spanMs;
-      const xTickAbs = (centerRect ? centerRect.left : 0) + (Math.max(0, Math.min(1, fracTick)) * contentWidth);
-      if (isFinite(xTickAbs)) {
-        const line = document.createElement('div');
-        line.className = 'week-tick';
-        const leftTick = (panelRect) ? (xTickAbs - panelRect.left) : xTickAbs;
-        line.style.left = `${leftTick}px`;
-        bar.appendChild(line);
-      }
-      tickCursor = tickCursor.add(7, 'day');
-    }
-    while (ws.isBefore(end)) {
-      const iso = isoWeekNumber(ws.toDate());
-      // place label roughly at week center (Mon + 3.5 days)
-      const mid = ws.add(3, 'day').add(12, 'hour').toDate();
-      const t = +mid;
-      const frac = (t - startMs) / spanMs;
-      const x = (centerRect ? centerRect.left : 0) + (Math.max(0, Math.min(1, frac)) * contentWidth);
-      if (isFinite(x)) {
-        const chip = document.createElement('div');
-        chip.className = 'week-chip';
-        chip.textContent = `W${String(iso).padStart(2, '0')}`;
-        chip.style.position = 'absolute';
-        const left = (panelRect) ? (x - panelRect.left) : x;
-        chip.style.left = `${left}px`;
-        chip.style.bottom = '2px';
-        bar.appendChild(chip);
-        count++;
-      }
-      ws = ws.add(7, 'day');
-    }
-    // Fallback: if none created (DOM differences), create labels stepping weekly from window start
-    if (count === 0) {
-      let cur = dayjs(win.start).startOf('day');
-      while (cur.isBefore(win.end)) {
-        const iso = isoWeekNumber(cur.toDate());
-        const mid = cur.add(3, 'day').add(12, 'hour').toDate();
-        const t = +mid;
-        const frac = (t - startMs) / spanMs;
-        const x = (centerRect ? centerRect.left : 0) + (Math.max(0, Math.min(1, frac)) * contentWidth);
-        if (isFinite(x)) {
-          const chip = document.createElement('div');
-          chip.className = 'week-chip';
-          chip.textContent = `W${String(iso).padStart(2, '0')}`;
-          chip.style.position = 'absolute';
-          const left = (panelRect) ? (x - panelRect.left) : x;
-          chip.style.left = `${left}px`;
-          chip.style.bottom = '2px';
-          bar.appendChild(chip);
-          count++;
-        }
-        cur = cur.add(7, 'day');
-      }
-      // Add a center debug chip to verify visibility
-      const centerT = new Date((startMs + endMs) / 2);
-      const fracC = (centerT - startMs) / spanMs;
-      const xC = (centerRect ? centerRect.left : 0) + (Math.max(0, Math.min(1, fracC)) * contentWidth);
-      if (isFinite(xC)) {
-        const chip = document.createElement('div');
-        chip.className = 'week-chip';
-        chip.textContent = 'W?';
-        chip.style.position = 'absolute';
-        const left = (panelRect) ? (xC - panelRect.left) : xC;
-        chip.style.left = `${left}px`;
-        chip.style.bottom = '2px';
-        bar.appendChild(chip);
-      }
-    }
-    try { console.debug('[weekbar] rendered chips:', count); } catch (_) {}
-  } catch (e) {
-    try { console.warn('[weekbar] render failed', e); } catch (_) {}
-  }
-}
+// Week bar helpers moved to './js/timeline-ui.js'
 
 // --- Holidays and Special Dates ---
-const holidaysCache = new Map();
-
-async function getHolidaysForYear(year) {
-  // Check cache first
-  if (holidaysCache.has(year)) {
-    return holidaysCache.get(year);
-  }
-
-  try {
-    // Using Nager.Date API for German public holidays
-    const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/DE`);
-    if (!response.ok) throw new Error('Failed to fetch holidays');
-    
-    const holidays = await response.json();
-    
-    // Filter for Berlin-specific holidays (Germany + Berlin state holidays)
-    const berlinHolidays = holidays.filter(h => 
-      !h.counties || // National holidays
-      h.counties.includes('DE-BE') // Berlin state holidays
-    );
-    
-    // Cache the results
-    holidaysCache.set(year, berlinHolidays);
-    return berlinHolidays;
-  } catch (error) {
-    console.error('Error fetching holidays:', error);
-    return [];
-  }
-}
-
-async function getHolidaysInRange(start, end) {
-  const startYear = dayjs(start).year();
-  const endYear = dayjs(end).year();
-  const allHolidays = [];
-  
-  try {
-    // Get holidays for each year in the range
-    for (let year = startYear; year <= endYear; year++) {
-      console.log(`Fetching holidays for year: ${year}`);
-      const holidays = await getHolidaysForYear(year);
-      if (holidays && Array.isArray(holidays)) {
-        allHolidays.push(...holidays);
-      }
-    }
-    
-    console.log('All holidays before filtering:', allHolidays);
-    
-    // Convert to Date objects and filter to the requested range
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    
-    const filteredHolidays = allHolidays
-      .filter(h => h && h.date && h.localName) // Filter out any invalid entries
-      .map(h => ({
-        date: new Date(h.date),
-        name: h.localName,
-        global: !h.counties // National holiday (true) or state holiday (false)
-      }))
-      .filter(h => {
-        const holidayDate = new Date(h.date);
-        return holidayDate >= startDate && holidayDate <= endDate;
-      });
-      
-    console.log('Filtered holidays:', filteredHolidays);
-    return filteredHolidays;
-  } catch (error) {
-    console.error('Error in getHolidaysInRange:', error);
-    return [];
-  }
-}
+// getHolidaysInRange is now imported from './js/holidays.js'
 
 // --- Map marker icon helpers ---
 function parseHex(color) {
@@ -394,41 +165,9 @@ function getColorForString(str) {
   return colors[index];
 }
 
-// Apply calendar group color to label rows so labels match map pin colors
-const LABEL_PALETTE = ['#e0f2fe','#fce7f3','#dcfce7','#fff7ed','#ede9fe','#f1f5f9','#fef9c3','#fee2e2','#e9d5ff','#cffafe'];
-function applyGroupLabelColors() {
-  try {
-    const labelNodes = document.querySelectorAll('.vis-timeline .vis-labelset .vis-label');
-    if (!labelNodes || labelNodes.length === 0) return;
-    // Get groups in current visual order as a fallback mapping
-    const gs = (typeof groups?.get === 'function') ? groups.get() : [];
-    labelNodes.forEach((node, idx) => {
-      let color = '';
-      const g = gs[idx];
-      if (g) {
-        color = g.bg || '';
-        if (!color && g.style) {
-          const m = String(g.style).match(/background-color:\s*([^;]+)/i);
-          if (m && m[1]) color = m[1].trim();
-        }
-      }
-      if (!color) color = LABEL_PALETTE[idx % LABEL_PALETTE.length];
-      node.style.backgroundColor = color;
-      const inner = node.querySelector('.vis-inner');
-      if (inner) inner.style.backgroundColor = color;
-    });
-  } catch (e) {
-    // ignore
-  }
-}
+// Group label color helpers moved to './js/timeline-ui.js'
 
-// --- Map: Leaflet setup and marker rendering ---
-let map; // Leaflet map instance
-let markersLayer; // Layer group for markers
-const geocodeCache = new Map(); // location string -> {lat, lon}
-let geocodeQueue = [];
-let geocodeTimer = null;
-
+// --- Map: Leaflet rendering moved to './js/map.js' ---
 function escapeHtml(unsafe) {
   if (unsafe === undefined || unsafe === null) return '';
   return String(unsafe)
@@ -439,300 +178,20 @@ function escapeHtml(unsafe) {
     .replace(/'/g, '&#039;');
 }
 
-function initMapOnce() {
-  if (map) return;
-  const mapEl = document.getElementById('map');
-  if (!mapEl) return;
-  map = L.map('map');
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
-  markersLayer = L.layerGroup().addTo(map);
-  map.setView([51.1657, 10.4515], 5); // default: Germany
-}
+// Location validation helpers moved to './js/modal.js'
 
-function enqueueGeocode(query, resolve) {
-  geocodeQueue.push({ query, resolve });
-  if (!geocodeTimer) {
-    geocodeTimer = setInterval(processGeocodeQueue, 350); // ~3 req/sec
-  }
-}
+// openCreateWeekModal moved to modal controller
 
-async function processGeocodeQueue() {
-  if (geocodeQueue.length === 0) {
-    clearInterval(geocodeTimer);
-    geocodeTimer = null;
-    return;
-  }
-  // Process up to 3 per tick
-  const batch = geocodeQueue.splice(0, 3);
-  await Promise.all(batch.map(async ({ query, resolve }) => {
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`, { headers: { 'Accept': 'application/json' } });
-      if (!res.ok) throw new Error('geocode http');
-      const data = await res.json();
-      if (data && data[0]) {
-        const lat = parseFloat(data[0].lat);
-        const lon = parseFloat(data[0].lon);
-        geocodeCache.set(query, { lat, lon });
-        resolve({ lat, lon });
-      } else {
-        resolve(null);
-      }
-    } catch (_) {
-      resolve(null);
-    }
-  }));
-}
+// Modal loading helper moved to './js/modal.js'
 
-async function geocodeLocation(locationStr) {
-  // If coordinates, parse directly
-  const coords = tryParseLatLon(locationStr);
-  if (coords) return coords;
-  const key = String(locationStr).trim().toLowerCase();
-  if (geocodeCache.has(key)) return geocodeCache.get(key);
-  return new Promise((resolve) => enqueueGeocode(key, resolve));
-}
-
-async function renderMapMarkers(allServerItems) {
-  initMapOnce();
-  if (!map || !markersLayer) return;
-  markersLayer.clearLayers();
-  const bounds = [];
-
-  // Helper: resolve exact calendar color from the event's group
-  const getGroupColor = (groupId) => {
-    const g = groups.get(groupId);
-    if (!g) return '#3b82f6';
-    if (g.bg) return g.bg;
-    if (g.style) {
-      const m = String(g.style).match(/background-color:\s*([^;]+)/i);
-      if (m && m[1]) return m[1].trim();
-    }
-    return '#3b82f6';
-  };
-
-  // Group by location, then by group id, so we can render one pin per calendar per location
-  const byLocThenGroup = new Map(); // loc -> Map(groupId -> items[])
-  for (const it of allServerItems) {
-    const loc = (it.location || '').trim();
-    if (!loc) continue;
-    if (!byLocThenGroup.has(loc)) byLocThenGroup.set(loc, new Map());
-    const inner = byLocThenGroup.get(loc);
-    const gid = it.group || '__nogroup__';
-    if (!inner.has(gid)) inner.set(gid, []);
-    inner.get(gid).push(it);
-  }
-
-  // Utility: compute a small offset in degrees for separating markers around a location
-  const addOffset = (lat, lon, index, total) => {
-    // Arrange in a circle around the center
-    if (total <= 1) return { lat, lon };
-    const radiusMeters = 12; // ~12m spread
-    const angle = (2 * Math.PI * index) / total;
-    const dLat = (radiusMeters * Math.sin(angle)) / 111111; // meters -> degrees
-    const dLon = (radiusMeters * Math.cos(angle)) / (111111 * Math.max(0.1, Math.cos(lat * Math.PI / 180)));
-    return { lat: lat + dLat, lon: lon + dLon };
-  };
-
-  // For each location, render one pin per calendar group with slight offsets
-  for (const [loc, inner] of byLocThenGroup.entries()) {
-    const coords = await geocodeLocation(loc);
-    if (!coords) continue;
-    const entries = Array.from(inner.entries()); // [groupId, items[]]
-    const total = entries.length;
-    entries.forEach(([gid, evs], idx) => {
-      const color = getGroupColor(gid);
-      const { lat, lon } = addOffset(coords.lat, coords.lon, idx, total);
-      const marker = L.marker([lat, lon], { icon: makePinIcon(color) }).addTo(markersLayer);
-      bounds.push([lat, lon]);
-      // Build a compact popup listing up to 5 events for this calendar at this location
-      const list = evs.slice(0, 5)
-        .map(e => `<li>${escapeHtml(e.content || e.summary || 'Untitled')} (${escapeHtml(e.start)} → ${escapeHtml(e.end)})</li>`)
-        .join('');
-      const more = evs.length > 5 ? `<div>…and ${evs.length - 5} more</div>` : '';
-      const groupObj = groups.get(gid);
-      const who = groupObj ? (groupObj.content || groupObj.title || '') : '';
-      marker.bindPopup(`<div><strong>${escapeHtml(loc)}</strong><div>${escapeHtml(who)}</div><ul>${list}</ul>${more}</div>`);
-    });
-  }
-
-  if (bounds.length) {
-    map.fitBounds(bounds, { padding: [20, 20] });
-  }
-}
-
-// Location validation and map preview helpers
-function debounce(fn, ms) {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
-  };
-}
-
-function tryParseLatLon(text) {
-  const m = String(text).trim().match(/^\s*([+-]?\d{1,2}(?:\.\d+)?)\s*,\s*([+-]?\d{1,3}(?:\.\d+)?)\s*$/);
-  if (!m) return null;
-  const lat = parseFloat(m[1]);
-  const lon = parseFloat(m[2]);
-  if (isNaN(lat) || isNaN(lon)) return null;
-  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
-  return { lat, lon };
-}
-
-async function geocodeAddress(q) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
-  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-  if (!res.ok) throw new Error(`Geocode failed: ${res.status}`);
-  const data = await res.json();
-  if (!Array.isArray(data) || data.length === 0) return null;
-  const hit = data[0];
-  return { lat: parseFloat(hit.lat), lon: parseFloat(hit.lon), displayName: hit.display_name, osmId: hit.osm_id, osmType: hit.osm_type };
-}
-
-function renderLocationHelp(state) {
-  if (!eventLocationHelp) return;
-  if (!state || !state.status) { eventLocationHelp.textContent = ''; eventLocationHelp.className = 'help-text'; return; }
-  if (state.status === 'searching') { eventLocationHelp.textContent = 'Validating address…'; eventLocationHelp.className = 'help-text'; return; }
-  if (state.status === 'ok' && state.result) {
-    const { displayName, lat, lon } = state.result;
-    const osm = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=15/${lat}/${lon}`;
-    const gmaps = `https://maps.google.com/?q=${lat},${lon}`;
-    eventLocationHelp.innerHTML = `<div>✔ Found: ${displayName}</div><div style="margin-top:4px; display:flex; gap:8px;"><a href="${osm}" target="_blank" rel="noopener">OpenStreetMap</a><a href="${gmaps}" target="_blank" rel="noopener">Google Maps</a></div>`;
-    eventLocationHelp.className = 'help-text ok';
-    return;
-  }
-  if (state.status === 'coords' && state.result) {
-    const { lat, lon } = state.result;
-    const osm = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=15/${lat}/${lon}`;
-    const gmaps = `https://maps.google.com/?q=${lat},${lon}`;
-    eventLocationHelp.innerHTML = `<div>✔ Coordinates detected (${lat.toFixed(5)}, ${lon.toFixed(5)})</div><div style=\"margin-top:4px; display:flex; gap:8px;\"><a href=\"${osm}\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a><a href=\"${gmaps}\" target=\"_blank\" rel=\"noopener\">Google Maps</a></div>`;
-    eventLocationHelp.className = 'help-text ok';
-    return;
-  }
-  if (state.status === 'error') { eventLocationHelp.textContent = state.message || 'Could not validate address'; eventLocationHelp.className = 'help-text error'; }
-}
-
-const debouncedLocationValidate = debounce(async () => {
-  lastGeocode = null;
-  const q = (eventLocationInput?.value || '').trim();
-  if (!q) { renderLocationHelp(null); return; }
-  const coords = tryParseLatLon(q);
-  if (coords) { lastGeocode = { ...coords, displayName: `${coords.lat}, ${coords.lon}`, source: 'coords' }; renderLocationHelp({ status: 'coords', result: lastGeocode }); return; }
-  if (q.length < 3) { renderLocationHelp(null); return; }
-  renderLocationHelp({ status: 'searching' });
-  try { const found = await geocodeAddress(q); if (found) { lastGeocode = { ...found, source: 'geocode' }; renderLocationHelp({ status: 'ok', result: lastGeocode }); } else { renderLocationHelp({ status: 'error', message: 'No match found' }); } }
-  catch (e) { renderLocationHelp({ status: 'error', message: 'Validation error' }); }
-}, 450);
-
-// Open the modal pre-filled to create an all-day event for a week
-async function openCreateWeekModal(calendarUrl, startDateStr, endDateStr, groupId) {
-  try {
-    setStatus('Creating new event…');
-    if (!modal) throw new Error('Modal element not found');
-
-    // Initialize a pseudo currentEvent without uid to signal create mode
-    currentEvent = {
-      uid: null,
-      summary: '',
-      description: '',
-      location: '',
-      start: startDateStr,
-      end: endDateStr,
-      allDay: true,
-      calendarUrl
-    };
-
-    // Remember which timeline group was clicked for optimistic insert fallback
-    currentCreateGroupId = groupId || null;
-
-    // Populate fields
-    eventIdInput.value = '';
-    const defaultTitle = `Week ${isoWeekNumber(new Date(startDateStr))}`;
-    eventTitleInput.value = defaultTitle;
-    eventDescriptionInput.value = '';
-    eventLocationInput.value = '';
-    // Clear structured meta fields for new create
-    if (eventOrderNumberInput) eventOrderNumberInput.value = '';
-    if (eventTicketLinkInput) eventTicketLinkInput.value = '';
-    if (eventSystemTypeInput) eventSystemTypeInput.value = '';
-    eventAllDayInput.checked = true;
-    eventStartDateInput.value = startDateStr;
-    eventEndDateInput.value = endDateStr;
-    // Kick off location validation UI
-    debouncedLocationValidate();
-
-    // Load calendars and preselect
-    await loadCalendars(calendarUrl);
-    // Ensure selection is set (fallback to provided calendarUrl)
-    if (!eventCalendarSelect.value) {
-      eventCalendarSelect.value = calendarUrl;
-    }
-
-    // Show modal
-    modal.style.display = 'flex';
-    modal.classList.add('show');
-    document.body.style.overflow = 'hidden';
-    // Focus title to allow quick overwrite
-    setTimeout(() => eventTitleInput.focus(), 0);
-    setStatus('');
-  } catch (e) {
-    console.error('Error opening create modal:', e);
-    setStatus(`Error: ${e.message}`);
-  }
-}
-
-// Toggle modal loading state and button labels
-function setModalLoading(isLoading, action = 'save') {
-  if (!modalContent) return;
-  if (isLoading) {
-    modalContent.classList.add('loading');
-    // Update buttons
-    if (action === 'save') {
-      saveBtn.dataset.originalText = saveBtn.textContent;
-      saveBtn.textContent = 'Saving...';
-    } else if (action === 'delete') {
-      deleteBtn.dataset.originalText = deleteBtn.textContent;
-      deleteBtn.textContent = 'Deleting...';
-    }
-    // Disable all modal controls
-    saveBtn.disabled = true;
-    deleteBtn.disabled = true;
-    cancelBtn.disabled = true;
-    closeBtn.style.pointerEvents = 'none';
-    closeBtn.style.opacity = '0.5';
-  } else {
-    modalContent.classList.remove('loading');
-    // Restore button labels
-    if (saveBtn.dataset.originalText) {
-      saveBtn.textContent = saveBtn.dataset.originalText;
-      delete saveBtn.dataset.originalText;
-    }
-    if (deleteBtn.dataset.originalText) {
-      deleteBtn.textContent = deleteBtn.dataset.originalText;
-      delete deleteBtn.dataset.originalText;
-    }
-    // Re-enable controls (specific buttons will still be toggled by caller)
-    cancelBtn.disabled = false;
-    closeBtn.style.pointerEvents = '';
-    closeBtn.style.opacity = '';
-  }
-}
-
-// Force refresh CalDAV cache
+// Force refresh CalDAV cache using API helper
 async function forceRefreshCache() {
   try {
     setStatus('Refreshing calendar data...');
-    const response = await fetch('/api/refresh-caldav', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    
-    const result = await response.json();
+    const result = await refreshCaldav();
     if (result.success) {
       setStatus('Calendar data refreshed. Updating view...');
-      await refresh(); // Refresh the timeline with new data
+      await refresh();
       setStatus('Calendar data updated successfully');
     } else {
       throw new Error(result.error || 'Failed to refresh calendar data');
@@ -740,27 +199,15 @@ async function forceRefreshCache() {
   } catch (error) {
     console.error('Error refreshing calendar data:', error);
     setStatus(`Error: ${error.message}`);
-    clientLog('error', 'Cache refresh failed', { error: error.message });
+    apiClientLog('error', 'Cache refresh failed', { error: error.message });
   }
 }
 
-// Client logging to backend
-async function clientLog(level, message, extra) {
-  try {
-    await fetch('/api/client-log', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ level, message, extra, userAgent: navigator.userAgent, ts: new Date().toISOString() }),
-    });
-  } catch (e) {
-    // ignore
-  }
-}
 window.addEventListener('error', (e) => {
-  clientLog('error', e.message || 'window.error', { filename: e.filename, lineno: e.lineno, colno: e.colno, error: String(e.error) });
+  apiClientLog('error', e.message || 'window.error', { filename: e.filename, lineno: e.lineno, colno: e.colno, error: String(e.error) });
 });
 window.addEventListener('unhandledrejection', (e) => {
-  clientLog('error', 'unhandledrejection', { reason: String(e.reason) });
+  apiClientLog('error', 'unhandledrejection', { reason: String(e.reason) });
 });
 
 // Add passive event listeners helper
@@ -787,126 +234,18 @@ function addPassiveEventListener(element, event, handler) {
 
 function initTimeline() {
   if (timeline) return;
-  
-  // Create groups and items DataSets
+  // Create datasets
   groups = new DataSet();
-  items = new DataSet({
-    type: { start: 'ISODate', end: 'ISODate' }
-  });
-  // Expose for console debugging
+  items = new DataSet({ type: { start: 'ISODate', end: 'ISODate' } });
   try { window.groups = groups; window.items = items; } catch (_) {}
-
-  // Configuration for the Timeline
-  const options = {
-    groupOrder: 'order',
-    stack: true,
-    stackSubgroups: false,
-    height: 'auto',
-    minHeight: '500px',
-    //maxHeight: '600px',
-    verticalScroll: true,
-    horizontalScroll: false,
-    zoomable: true,
-    zoomKey: 'ctrlKey', // Use Ctrl+wheel to zoom
-    zoomMin: 1000 * 60 * 60 * 24, // 1 day
-    zoomMax: 1000 * 60 * 60 * 24 * 365 * 2, // 2 years
-    orientation: 'both',
-    selectable: false,
-    autoResize: true,
-    // Tighter vertical spacing between stacked items
-    margin: { item: 0, axis: 10 },
-    timeAxis: { scale: 'day', step: 1 },
-    showTooltips: false, // We'll handle tooltips manually
-    template: function(item, element) {
-      if (!item) return '';
-      
-      // Create a simple div for the item content
-      const div = document.createElement('div');
-      div.className = 'vis-item-content';
-      div.textContent = item.content || '';
-      // If the title/content contains '???', render more transparent to indicate unconfirmed
-      try {
-        const text = `${item.title || ''} ${item.content || ''}`;
-        if (/\?\?\?/.test(text)) {
-          div.style.opacity = '0.5';
-          // Optional enhancements: mark item element and tooltip
-          if (element && element.classList) {
-            element.classList.add('unconfirmed');
-          }
-          // If native title tooltip is used anywhere, append an indicator
-          const baseTitle = item.title || item.content || '';
-          element && element.setAttribute && element.setAttribute('title', `${baseTitle} (unconfirmed)`);
-        }
-      } catch (_) {}
-      
-      // Add data attributes for tooltip
-      if (item.dataAttributes) {
-        Object.entries(item.dataAttributes).forEach(([key, value]) => {
-          div.setAttribute(key, value);
-        });
-      }
-      
-      return div;
-    },
-    tooltip: {
-      followMouse: true,
-      overflowMethod: 'cap'
-    },
-  };
-  
-  // Initialize the Timeline
-  timeline = new Timeline(timelineEl, items, groups, options);
-  // Expose timeline for console debugging
-  try { window.timeline = timeline; } catch (_) {}
-  // Initial week bar render
-  try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
-  // Let vis size to content (capped by maxHeight) to avoid stretching groups
-  
-  // Set up custom tooltip handlers
-  setupTooltipHandlers(timeline);
-
-  // Re-apply group label colors whenever timeline updates
-  ['changed','rangechanged','rangechange','redraw'].forEach(evt => {
-    try {
-      timeline.on(evt, () => {
-        requestAnimationFrame(applyGroupLabelColors);
-        try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
-        // Re-apply search filter to DOM on redraws
-        requestAnimationFrame(applySearchFilter);
-      });
-    } catch (_) {}
-  });
-
-  // Observe label DOM for changes and recolor
-  try {
-    const labelSet = document.querySelector('.vis-timeline .vis-labelset');
-    if (labelSet && !labelObserver) {
-      labelObserver = new MutationObserver(() => applyGroupLabelColors());
-      labelObserver.observe(labelSet, { childList: true, subtree: true });
-    }
-  } catch (_) {}
-
-  // Track user-initiated panning to suppress subsequent click
-  try {
-    timeline.on('rangechange', (props) => {
-      if (props && props.byUser) {
-        isPanning = true;
-      }
-    });
-    timeline.on('rangechanged', (props) => {
-      if (props && props.byUser) {
-        isPanning = false;
-        lastPanEnd = Date.now();
-      }
-      // Repaint week bar on any range change
-      try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
-    });
-    timeline.on('redraw', () => {
-      try { const w = timeline.getWindow(); renderWeekBar(w.start, w.end); } catch (_) {}
-    });
-    // No dynamic resize; fixed height
-  } catch (_) {}
+  // Create timeline via module
+  timeline = initTimelineCore(timelineEl, items, groups);
+  // Initialize search module with items dataset
+  try { initSearch(items); } catch (_) {}
 }
+
+// Build modal controller with dependencies
+const modalCtl = createModalController({ setStatus, refresh, isoWeekNumber, items, urlToGroupId, forceRefreshCache, dayjs });
 
 // Dynamically size the timeline to its content while leaving room for the map
 function adjustTimelineHeight() {
@@ -1019,15 +358,7 @@ function applyWindow(from, to) {
 async function fetchCalendars() {
   try {
     setStatus('Loading calendars...');
-    const res = await fetch('/api/calendars');
-    if (!res.ok) {
-      const text = await res.text();
-      setStatus(`Failed to load calendars: ${res.status} ${res.statusText}`);
-      console.error('Calendars fetch failed', res.status, res.statusText, text);
-      return [];
-    }
-    const data = await res.json();
-    const list = data.calendars || [];
+    const list = await apiFetchCalendars();
     setStatus(`Loaded ${list.length} calendars`);
     console.debug('Calendars:', list);
     return list;
@@ -1056,44 +387,22 @@ async function openEditModal(eventId) {
   try {
     console.log('openEditModal called with eventId:', eventId);
     setStatus('Loading event details...');
-    
-    // Debug: Check if modal element exists
-    console.log('Modal element exists:', !!modal);
-    console.log('Modal display style before:', modal.style.display);
-    
-    if (!modal) {
-      throw new Error('Modal element not found');
-    }
-    
-    // Ensure modal is visible for debugging
+    if (!modal) throw new Error('Modal element not found');
     modal.style.display = 'flex';
     modal.style.backgroundColor = 'rgba(0,0,0,0.8)';
-    console.log('Modal display style set to flex, should be visible now');
-    
-    // Add a temporary debug element
-    const debugDiv = document.createElement('div');
-    debugDiv.id = 'debug-overlay';
-    debugDiv.style.position = 'fixed';
-    debugDiv.style.top = '10px';
-    debugDiv.style.left = '10px';
-    debugDiv.style.background = 'white';
-    debugDiv.style.padding = '10px';
-    debugDiv.style.zIndex = '99999';
     if (DEBUG_UI) {
+      const debugDiv = document.createElement('div');
+      debugDiv.id = 'debug-overlay';
+      debugDiv.style.position = 'fixed';
+      debugDiv.style.top = '10px';
+      debugDiv.style.left = '10px';
+      debugDiv.style.background = 'white';
+      debugDiv.style.padding = '10px';
+      debugDiv.style.zIndex = '99999';
       debugDiv.textContent = `Click detected for event: ${eventId}`;
       document.body.appendChild(debugDiv);
     }
-    
-    console.log(`Fetching event details for UID: ${eventId}`);
-    const response = await fetch(`/api/events/${eventId}`);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Failed to fetch event details:', response.status, errorText);
-      throw new Error(`Failed to fetch event details: ${response.status} ${response.statusText}`);
-    }
-    
-    const eventData = await response.json();
+    const eventData = await getEvent(eventId);
     console.log('Event data response:', eventData);
     console.log('Event data received:', eventData);
     
@@ -1162,55 +471,10 @@ async function openEditModal(eventId) {
   }
 }
 
-// Load available calendars into the dropdown
-async function loadCalendars(selectedCalendarUrl = '') {
-  try {
-    const response = await fetch('/api/calendars');
-    const data = await response.json();
-    
-    // Clear existing options
-    eventCalendarSelect.innerHTML = '';
-    
-    // Add each calendar as an option
-    data.calendars.forEach(calendar => {
-      const option = document.createElement('option');
-      option.value = calendar.url;
-      option.textContent = calendar.displayName;
-      option.selected = calendar.url === selectedCalendarUrl;
-      eventCalendarSelect.appendChild(option);
-    });
-  } catch (error) {
-    console.error('Error loading calendars:', error);
-  }
-}
+// loadCalendars moved to modal controller
 
 // Close the modal
-function closeModal() {
-  console.log('closeModal called');
-  if (modal) {
-    console.log('Hiding modal');
-    modal.classList.remove('show');
-    if (modalContent) modalContent.classList.remove('loading');
-    // Wait for the animation to complete before hiding
-    setTimeout(() => {
-      modal.style.display = 'none';
-    }, 300); // Match this with the CSS transition duration
-    document.body.style.overflow = ''; // Re-enable scrolling
-  } else {
-    console.error('Modal element not found when trying to close');
-  }
-  
-  if (eventForm) {
-    eventForm.reset();
-  } else {
-    console.error('Event form not found');
-  }
-  
-  currentEvent = null;
-  console.log('Modal closed and form reset');
-  // Clear location helper UI
-  renderLocationHelp(null);
-}
+// closeModal moved to './js/modal.js'
 
 // Handle form submission
 async function handleSubmit(e) {
@@ -1298,37 +562,12 @@ async function handleSubmit(e) {
     
     let response;
     if (!currentEvent.uid) {
-      // Create flow for all-day events
-      console.log('Create mode detected; posting to /api/events/all-day with calendar', eventCalendarSelect.value);
       const createCalendarUrl = eventCalendarSelect.value || currentEvent.calendarUrl;
-      if (!createCalendarUrl) {
-        throw new Error('No calendar selected for new event');
-      }
-      response = await fetch('/api/events/all-day', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          calendarUrl: createCalendarUrl,
-          summary: eventData.summary,
-          description: eventData.description,
-          location: eventData.location,
-          start: eventData.start,
-          end: eventData.end,
-          meta: eventData.meta
-        })
-      });
+      if (!createCalendarUrl) throw new Error('No calendar selected for new event');
+      var result = await createAllDayEvent(createCalendarUrl, eventData);
     } else {
-      // Update flow
-      response = await fetch(`/api/events/${currentEvent.uid}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(eventData),
-      });
+      var result = await apiUpdateEvent(currentEvent.uid, eventData);
     }
-    
-    const result = await response.json();
     
     if (result.success) {
       setStatus('Event updated successfully, refreshing data...');
@@ -1394,13 +633,7 @@ async function handleDelete() {
     setStatus('Deleting event...');
     deleteBtn.disabled = true;
     setModalLoading(true, 'delete');
-    
-    // Note: You'll need to implement the delete endpoint on the server
-    const response = await fetch(`/api/events/${currentEvent.uid}`, {
-      method: 'DELETE',
-    });
-    
-    const result = await response.json();
+    const result = await apiDeleteEvent(currentEvent.uid);
     
     if (result.success) {
       setStatus('Event deleted, refreshing data...');
@@ -1433,6 +666,18 @@ function initModal() {
   cancelBtn.addEventListener('click', closeModal);
   eventForm.addEventListener('submit', handleSubmit);
   deleteBtn.addEventListener('click', handleDelete);
+  // Ensure save click always submits, even if other handlers interfere
+  if (saveBtn) {
+    saveBtn.addEventListener('click', (e) => {
+      try {
+        if (typeof eventForm.requestSubmit === 'function') {
+          eventForm.requestSubmit();
+        } else {
+          eventForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        }
+      } catch (_) {}
+    });
+  }
   // Location live validation
   if (eventLocationInput) {
     eventLocationInput.addEventListener('input', () => debouncedLocationValidate());
@@ -1530,6 +775,13 @@ async function refresh() {
   const allCalendars = await fetchCalendars();
   const allCalendarUrls = allCalendars.map(c => c.url);
   const total = allCalendarUrls.length;
+  // If no calendars are available, avoid posting an empty list (server returns 400)
+  if (total === 0) {
+    initTimeline();
+    setStatus('No calendars available. Check Nextcloud connection or permissions, then use Refresh.');
+    try { items.clear(); groups.clear(); } catch (_) {}
+    return;
+  }
   const gen = ++refreshGen;
   
   // Initialize arrays to hold all items and groups
@@ -1743,51 +995,25 @@ async function refresh() {
         }))
         .filter(it => it.location && String(it.location).trim().length > 0);
       console.debug('[map] unique input locations:', new Set(locItems.map(x => x.location.trim().toLowerCase())).size);
-      await renderMapMarkers(locItems);
+      await renderMapMarkers(locItems, groups);
     } catch (e) {
       console.warn('Map marker render failed', e);
     }
 
-    // Add holiday highlights
+    // Add holiday highlights via helper (de-duplicates IDs across refreshes)
     try {
       console.log('Fetching holidays...');
-      const holidays = await getHolidaysInRange(from, to);
-      console.log('Holidays found:', holidays);
-      
-      const holidayItems = [];
-      
-      holidays.forEach(holiday => {
-        const startDate = dayjs(holiday.date).startOf('day');
-        const endDate = startDate.add(1, 'day');
-        
-        holidayItems.push({
-          id: `holiday-${startDate.format('YYYY-MM-DD')}`,
-          start: startDate.toDate(),
-          end: endDate.toDate(),
-          type: 'background',
-          className: 'holiday-bg',
-          title: holiday.name,
-          editable: false,
-          selectable: false
-        });
-      });
-      
-      if (holidayItems.length > 0) {
-        console.log('Adding holiday items:', holidayItems);
-        items.add(holidayItems);
-      } else {
-        console.log('No holiday items to add');
-      }
+      await upsertHolidayBackgrounds(items, from, to, getHolidaysInRange, dayjs);
     } catch (e) {
       console.error('Failed to add holiday highlights:', e);
     }
 
     if (gen !== refreshGen) return; // aborted
     const w = timeline.getWindow();
-    clientLog('info', 'window-after-set', { start: w.start, end: w.end });
+    apiClientLog('info', 'window-after-set', { start: w.start, end: w.end });
     setStatus(`Loaded ${allItems.length} items in ${allGroups.length} calendars | Window: ${w.start.toISOString().slice(0,10)} → ${w.end.toISOString().slice(0,10)}`);
     // Repaint week bar after data load
-    try { renderWeekBar(w.start, w.end); } catch (_) {}
+    try { renderWeekBar(timeline); } catch (_) {}
     // Fixed height; nothing to adjust
   } catch (e) {
     if (gen !== refreshGen) return;
@@ -1812,8 +1038,8 @@ function setDefaults() {
 }
 
 function wireEvents() {
-  // Initialize modal event listeners
-  initModal();
+  // Initialize modal event listeners via controller
+  modalCtl.initModal();
   
   // Initialize button event listeners that don't depend on the timeline
   // Refresh button should force a server-side cache refresh to fetch latest data
@@ -1837,7 +1063,7 @@ function wireEvents() {
     requestAnimationFrame(() => applyWindow(fromEl.value, toEl.value));
     requestAnimationFrame(() => updateAxisDensity(fromEl.value, toEl.value));
     // Repaint week labels to current positions
-    try { const w = timeline.getWindow(); requestAnimationFrame(() => renderWeekBar(w.start, w.end)); } catch (_) {}
+    try { requestAnimationFrame(() => renderWeekBar(timeline)); } catch (_) {}
     // Ensure Leaflet map resizes to new container dimensions
     try {
       if (typeof map !== 'undefined' && map && map.invalidateSize) {
@@ -1877,10 +1103,27 @@ function wireEvents() {
 function initTimelineEvents() {
   if (!timeline) return;
   
+  // Track user panning/zooming to suppress accidental click after drag
+  timeline.on('rangechange', (props) => {
+    try {
+      if (props && props.byUser) {
+        isPanning = true;
+      }
+    } catch (_) {}
+  });
+  timeline.on('rangechanged', (props) => {
+    try {
+      if (props && props.byUser) {
+        isPanning = false;
+        lastPanEnd = Date.now();
+      }
+    } catch (_) {}
+  });
+
   // Timeline event click handler
   timeline.on('click', async (properties) => {
     // Ignore clicks right after a user drag/pan
-    if (isPanning || (Date.now() - lastPanEnd) < 250) {
+    if (isPanning || (Date.now() - lastPanEnd) < 350) {
       return;
     }
     console.log('Timeline click event:', properties);
@@ -1897,7 +1140,7 @@ function initTimelineEvents() {
       
       if (uid) {
         console.log('Extracted UID:', uid);
-        openEditModal(uid);
+        modalCtl.openEditModal(uid);
       } else {
         console.error('Could not extract UID from item ID:', properties.item);
         setStatus('Error: Could not identify event. Please try again.');
@@ -1935,7 +1178,7 @@ function initTimelineEvents() {
       const endStr = weekEnd.format('YYYY-MM-DD');
 
       // Open modal in create mode so we reuse the stable edit flow (no flicker)
-      await openCreateWeekModal(calendarUrl, startStr, endStr, g);
+      await modalCtl.openCreateWeekModal(calendarUrl, startStr, endStr, g);
     }
   });
   
@@ -1943,6 +1186,22 @@ function initTimelineEvents() {
   fitBtn.addEventListener('click', () => timeline.fit());
   todayBtn.addEventListener('click', () => {
     timeline.moveTo(dayjs().valueOf());
+  });
+  // Quick zoom: today-1w .. today+4w
+  monthViewBtn?.addEventListener('click', () => {
+    const now = dayjs();
+    const start = now.subtract(1, 'week').startOf('day').toDate();
+    const end = now.add(4, 'week').endOf('day').toDate();
+    timeline.setWindow(start, end, { animation: false });
+    updateAxisDensity(dayjs(start), dayjs(end));
+  });
+  // Quick zoom: today-1w .. today+3m
+  quarterViewBtn?.addEventListener('click', () => {
+    const now = dayjs();
+    const start = now.subtract(1, 'week').startOf('day').toDate();
+    const end = now.add(3, 'month').endOf('day').toDate();
+    timeline.setWindow(start, end, { animation: false });
+    updateAxisDensity(dayjs(start), dayjs(end));
   });
 }
 
