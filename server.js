@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import session from 'express-session';
+import { Issuer, generators } from 'openid-client';
 import { calendarCache } from './services/calendarCache.js';
 
 dotenv.config();
@@ -82,10 +84,96 @@ loadEventTypesConfig();
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
 
-// Initialize calendar cache
-const { NEXTCLOUD_URL, NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD, PORT = 5173 } = process.env;
+// Initialize calendar cache and optional auth config
+const {
+  NEXTCLOUD_URL,
+  NEXTCLOUD_USERNAME,
+  NEXTCLOUD_PASSWORD,
+  PORT = 5173,
+  SESSION_SECRET = 'supportplanner_dev_session',
+  OIDC_ISSUER_URL,
+  OIDC_CLIENT_ID,
+  OIDC_CLIENT_SECRET,
+  OIDC_REDIRECT_URI,
+  OIDC_SCOPES = 'openid profile email'
+} = process.env;
+
+// Session (required for OIDC)
+app.use(session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: false // set true when behind HTTPS/terminating proxy
+  }
+}));
+
+// Optional OIDC initialization
+const authEnabled = Boolean(OIDC_ISSUER_URL && OIDC_CLIENT_ID && OIDC_CLIENT_SECRET && OIDC_REDIRECT_URI);
+let oidcClientPromise = null;
+if (authEnabled) {
+  oidcClientPromise = (async () => {
+    const issuer = await Issuer.discover(OIDC_ISSUER_URL);
+    return new issuer.Client({
+      client_id: OIDC_CLIENT_ID,
+      client_secret: OIDC_CLIENT_SECRET,
+      redirect_uris: [OIDC_REDIRECT_URI],
+      response_types: ['code']
+    });
+  })();
+
+  // Auth routes
+  app.get('/auth/login', async (req, res, next) => {
+    try {
+      const client = await oidcClientPromise;
+      const code_verifier = generators.codeVerifier();
+      const code_challenge = generators.codeChallenge(code_verifier);
+      req.session.code_verifier = code_verifier;
+      const url = client.authorizationUrl({
+        scope: OIDC_SCOPES,
+        code_challenge,
+        code_challenge_method: 'S256'
+      });
+      res.redirect(url);
+    } catch (e) { next(e); }
+  });
+
+  app.get('/auth/callback', async (req, res, next) => {
+    try {
+      const client = await oidcClientPromise;
+      const params = client.callbackParams(req);
+      const tokenSet = await client.callback(OIDC_REDIRECT_URI, params, { code_verifier: req.session.code_verifier });
+      const claims = tokenSet.claims();
+      req.session.user = {
+        sub: claims.sub,
+        email: claims.email,
+        name: claims.name || claims.preferred_username || claims.email || claims.sub
+      };
+      res.redirect('/');
+    } catch (e) { next(e); }
+  });
+
+  app.post('/auth/logout', (req, res) => {
+    req.session.destroy(() => {
+      res.clearCookie('connect.sid');
+      res.redirect('/');
+    });
+  });
+
+  // Protection middleware: require session for all app routes except auth and client-log
+  app.use((req, res, next) => {
+    const openPaths = ['/auth/login', '/auth/callback', '/auth/logout', '/api/client-log'];
+    if (openPaths.includes(req.path) || req.path.startsWith('/public/')) return next();
+    if (req.session && req.session.user) return next();
+    return res.redirect('/auth/login');
+  });
+}
+
+// Static after auth guard (so guard can apply when enabled)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Initialize the calendar cache
 calendarCache.initialize(NEXTCLOUD_URL, NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD)
