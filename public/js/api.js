@@ -20,23 +20,23 @@ export async function fetchCalendars() {
     const list = data.calendars || [];
     return list;
   } catch (e) {
-    console.error('Calendars fetch error', e);
     return [];
   }
 }
 
 export async function refreshCaldav() {
-  try {
-    const response = await apiFetch('/api/refresh-caldav', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    console.error('Error refreshing calendar data:', error);
-    return { success: false, error: error.message };
-  }
+  const res = await apiFetch('/api/refresh-caldav', { method: 'POST' });
+  return res.json();
+}
+
+export async function me() {
+  const res = await apiFetch('/api/me');
+  return res.json();
+}
+
+export async function logout() {
+  const res = await apiFetch('/auth/logout', { method: 'POST' });
+  return res.ok;
 }
 
 export async function clientLog(level, message, extra) {

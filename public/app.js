@@ -10,7 +10,7 @@ import { renderMapMarkers } from './js/map.js';
 import { initTimeline as initTimelineCore } from './js/timeline.js';
 import { renderWeekBar, applyGroupLabelColors } from './js/timeline-ui.js';
 import { initSearch, applySearchFilter } from './js/search.js';
-import { fetchCalendars as apiFetchCalendars, refreshCaldav, clientLog as apiClientLog, getEvent, updateEvent as apiUpdateEvent, deleteEvent as apiDeleteEvent, createAllDayEvent } from './js/api.js';
+import { fetchCalendars as apiFetchCalendars, refreshCaldav, clientLog as apiClientLog, getEvent, updateEvent as apiUpdateEvent, deleteEvent as apiDeleteEvent, createAllDayEvent, me as apiMe, logout as apiLogout } from './js/api.js';
 import { renderLocationHelp, debouncedLocationValidate, setModalLoading, closeModal, createModalController } from './js/modal.js';
 
 // DOM Elements
@@ -53,6 +53,8 @@ const showRangeBtn = document.getElementById('showRangeBtn');
 const searchBox = document.getElementById('searchBox');
 const clearSearchBtn = document.getElementById('clearSearch');
 const timelineEl = document.getElementById('timeline');
+const userInfoEl = document.getElementById('userInfo');
+const logoutBtn = document.getElementById('logoutBtn');
 let timeline;
 let groups = new DataSet([]);
 let items = new DataSet([]);
@@ -73,6 +75,34 @@ const DEBUG_UI = false;
 
 function setStatus(msg) {
   statusEl.textContent = msg || '';
+}
+
+async function hydrateAuthBox() {
+  try {
+    const info = await apiMe();
+    const show = info && info.authEnabled && info.authenticated;
+    if (userInfoEl) {
+      if (show) {
+        const name = info.user?.name || info.user?.preferred_username || info.user?.email || 'Signed in';
+        userInfoEl.textContent = name;
+        userInfoEl.style.display = '';
+      } else {
+        userInfoEl.style.display = 'none';
+      }
+    }
+    if (logoutBtn) {
+      logoutBtn.style.display = show ? '' : 'none';
+      if (!logoutBtn._bound) {
+        logoutBtn.addEventListener('click', () => {
+          // Let the server initiate RP logout with the IdP and redirect back
+          location.href = '/auth/logout';
+        });
+        logoutBtn._bound = true;
+      }
+    }
+  } catch (err) {
+    // ignore auth box errors
+  }
 }
 
 // --- Search wiring moved to './js/search.js' ---
@@ -771,6 +801,8 @@ function initModal() {
 }
 
 async function refresh() {
+  // Update auth box first
+  await hydrateAuthBox();
   // Always fetch all calendars
   const allCalendars = await fetchCalendars();
   const allCalendarUrls = allCalendars.map(c => c.url);
