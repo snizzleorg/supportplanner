@@ -84,7 +84,8 @@ async function hydrateAuthBox() {
     if (userInfoEl) {
       if (show) {
         const name = info.user?.name || info.user?.preferred_username || info.user?.email || 'Signed in';
-        userInfoEl.textContent = name;
+        const role = info.user?.role ? ` (${info.user.role})` : '';
+        userInfoEl.textContent = name + role;
         userInfoEl.style.display = '';
       } else {
         userInfoEl.style.display = 'none';

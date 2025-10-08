@@ -101,6 +101,12 @@ const {
   OIDC_POST_LOGOUT_REDIRECT_URI
 } = process.env;
 
+// RBAC group mapping (comma-separated group names from IdP claims)
+const ADMIN_GROUPS = (process.env.ADMIN_GROUPS || '').split(',').map(s => s.trim()).filter(Boolean);
+const EDITOR_GROUPS = (process.env.EDITOR_GROUPS || '').split(',').map(s => s.trim()).filter(Boolean);
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+const EDITOR_EMAILS = (process.env.EDITOR_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
 // Session (required for OIDC)
 app.use(session({
   secret: SESSION_SECRET,
@@ -202,6 +208,23 @@ if (authEnabled) {
       const claims = { ...uiClaims, ...idClaims };
       // Keep id_token for RP-initiated logout
       try { req.session.id_token = tokenSet.id_token; } catch (_) {}
+      // Extract roles from claims/groups
+      const groups = (
+        (Array.isArray(claims.groups) && claims.groups) ||
+        (Array.isArray(claims.roles) && claims.roles) ||
+        (claims.realm_access && Array.isArray(claims.realm_access.roles) && claims.realm_access.roles) ||
+        []
+      ).map(String);
+      const hasAny = (list)=> list.some(g => groups.includes(g));
+      let role = 'reader';
+      if (hasAny(ADMIN_GROUPS)) role = 'admin';
+      else if (hasAny(EDITOR_GROUPS)) role = 'editor';
+      // Email-based mapping (overrides group mapping)
+      const emailLc = (claims.email || '').toLowerCase();
+      if (emailLc) {
+        if (ADMIN_EMAILS.includes(emailLc)) role = 'admin';
+        else if (EDITOR_EMAILS.includes(emailLc)) role = 'editor';
+      }
       const displayName = claims.name || [claims.given_name, claims.family_name].filter(Boolean).join(' ').trim() || claims.preferred_username || claims.email || claims.sub;
       req.session.user = {
         sub: claims.sub,
@@ -209,7 +232,9 @@ if (authEnabled) {
         name: displayName,
         given_name: claims.given_name,
         family_name: claims.family_name,
-        preferred_username: claims.preferred_username
+        preferred_username: claims.preferred_username,
+        groups,
+        role
       };
       res.redirect('/');
     } catch (e) {
@@ -314,6 +339,16 @@ app.get('/logged-out', (req, res) => {
   res.status(200).send(html);
 });
 
+// ----- RBAC helpers -----
+function requireRole(minRole = 'reader') {
+  const order = { reader: 0, editor: 1, admin: 2 };
+  return (req, res, next) => {
+    const role = req.session?.user?.role || 'reader';
+    if ((order[role] ?? 0) >= (order[minRole] ?? 0)) return next();
+    return res.status(403).json({ error: 'Forbidden', required: minRole, role });
+  };
+}
+
 // Initialize the calendar cache
 calendarCache.initialize(NEXTCLOUD_URL, NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD)
   .then(() => console.log('Calendar cache initialized successfully'))
@@ -327,7 +362,7 @@ process.on('SIGINT', async () => {
 });
 
 // Create a new all-day event (inclusive start/end dates)
-app.post('/api/events/all-day', async (req, res) => {
+app.post('/api/events/all-day', requireRole('editor'), async (req, res) => {
   try {
     const { calendarUrl, summary, description, location, start, end, meta } = req.body || {};
     if (!calendarUrl || !summary || !start || !end) {
@@ -360,7 +395,7 @@ app.post('/api/events/all-day', async (req, res) => {
 });
 
 // Delete an event by UID
-app.delete('/api/events/:uid', async (req, res) => {
+app.delete('/api/events/:uid', requireRole('editor'), async (req, res) => {
   try {
     const { uid } = req.params;
     if (!uid) {
@@ -725,7 +760,7 @@ function getEventType(summary) {
 }
 
 // Force refresh CalDAV data
-app.post('/api/refresh-caldav', async (req, res) => {
+app.post('/api/refresh-caldav', requireRole('admin'), async (req, res) => {
   try {
     console.log('Forcing CalDAV data refresh...');
     await calendarCache.refreshAllCalendars();
@@ -745,7 +780,7 @@ app.post('/api/refresh-caldav', async (req, res) => {
 });
 
 // Update event endpoint
-app.put('/api/events/:uid', async (req, res) => {
+app.put('/api/events/:uid', requireRole('editor'), async (req, res) => {
   try {
     const { uid } = req.params;
     const updateData = req.body;
@@ -850,7 +885,7 @@ app.get('/api/events/:uid', async (req, res) => {
 });
 
 // Update an event by UID
-app.put('/api/events/:uid', async (req, res) => {
+app.put('/api/events/:uid', requireRole('editor'), async (req, res) => {
   try {
     const { uid } = req.params;
     const updateData = req.body;
@@ -931,7 +966,7 @@ app.get('/api/events/:uid', async (req, res) => {
 });
 
 // Move event to a different calendar
-app.post('/api/events/:uid/move', async (req, res) => {
+app.post('/api/events/:uid/move', requireRole('editor'), async (req, res) => {
   try {
     const { uid } = req.params;
     const { targetCalendarUrl } = req.body;
