@@ -760,7 +760,7 @@ function getEventType(summary) {
 }
 
 // Force refresh CalDAV data
-app.post('/api/refresh-caldav', requireRole('admin'), async (req, res) => {
+app.post('/api/refresh-caldav', requireRole('reader'), async (req, res) => {
   try {
     console.log('Forcing CalDAV data refresh...');
     await calendarCache.refreshAllCalendars();

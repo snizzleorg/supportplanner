@@ -72,6 +72,8 @@ const urlToGroupId = new Map();
 let currentCreateGroupId = null;
 // Toggle to show/hide extra UI debug messages
 const DEBUG_UI = false;
+// Current user's role, used to gate editing features on the client
+let currentUserRole = 'reader';
 
 function setStatus(msg) {
   statusEl.textContent = msg || '';
@@ -81,6 +83,7 @@ async function hydrateAuthBox() {
   try {
     const info = await apiMe();
     const show = info && info.authEnabled && info.authenticated;
+    currentUserRole = (info && info.user && info.user.role) ? info.user.role : 'reader';
     if (userInfoEl) {
       if (show) {
         const name = info.user?.name || info.user?.preferred_username || info.user?.email || 'Signed in';
@@ -1173,6 +1176,11 @@ function initTimelineEvents() {
       
       if (uid) {
         console.log('Extracted UID:', uid);
+        // Readers are not allowed to edit
+        if (currentUserRole === 'reader') {
+          setStatus('Read-only: editing disabled');
+          return;
+        }
         modalCtl.openEditModal(uid);
       } else {
         console.error('Could not extract UID from item ID:', properties.item);
@@ -1187,6 +1195,12 @@ function initTimelineEvents() {
       const g = properties.group;
       const t = properties.time;
       if (!g || g === 'weeks' || !t) return;
+
+      // Readers are not allowed to create
+      if (currentUserRole === 'reader') {
+        setStatus('Read-only: creation disabled');
+        return;
+      }
 
       // Prefer the stored original URL on the group object
       const groupObj = groups.get(g);
