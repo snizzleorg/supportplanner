@@ -12,6 +12,7 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
 - Leaflet-based map with per-location markers and group-colored pins
 - Accessible edit modal (focus on open, Escape to close, focus trap)
 - Quick-zoom timeline controls (Month, Quarter)
+ - Optional OIDC login with roles (admin/editor/reader) and logout
 
 ## UI Controls
 
@@ -23,6 +24,32 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
 - **Quarter**: Sets the visible timeline window to today−1 week .. today+3 months (no data reload).
 
 The Month/Quarter buttons only change the visible window. The loaded range (From/To) remains unchanged until you explicitly Refresh.
+
+## Authentication and RBAC (Optional)
+
+If OIDC is configured, users must sign in. The header shows the signed-in user and role, with a Logout button.
+
+- Roles:
+  - admin: reserved for future admin UI
+  - editor: can create, update, delete, and move events
+  - reader: can view data and trigger refresh (no editing)
+
+- Server enforcement:
+  - `POST /api/events/all-day` → editor+
+  - `PUT /api/events/:uid` → editor+
+  - `DELETE /api/events/:uid` → editor+
+  - `POST /api/events/:uid/move` → editor+
+  - `POST /api/refresh-caldav` → reader+ (any signed-in user)
+
+- Client UI:
+  - Readers cannot open edit/create modals via timeline clicks.
+
+- Logout:
+  - RP-initiated logout redirects to IdP end-session (if supported), then back to `/logged-out`.
+
+### Role mapping
+
+Roles can be mapped via IdP groups or user email (emails take precedence). Configure via environment variables (see below).
 
 ## API Endpoints
 
@@ -46,6 +73,28 @@ GET /api/calendars
   ],
   "_cachedAt": "2025-09-22T10:00:00.000Z",
   "_cacheStatus": "fresh"
+}
+```
+
+### Current User
+
+Returns session authentication state and user info (including role).
+
+```http
+GET /api/me
+```
+
+**Response:**
+```json
+{
+  "authEnabled": true,
+  "authenticated": true,
+  "user": {
+    "sub": "...",
+    "email": "user@example.com",
+    "name": "User Name",
+    "role": "editor"
+  }
 }
 ```
 
@@ -272,13 +321,34 @@ Common HTTP status codes:
 
 ## Environment Variables
 
-Create a `.env` file in the project root with the following variables:
+Create a `.env` file in the project root with the following variables (minimum for CalDAV):
 
 ```
 NEXTCLOUD_URL=https://your-nextcloud-instance.com
 NEXTCLOUD_USERNAME=your-username
 NEXTCLOUD_PASSWORD=your-password
 PORT=5173
+```
+
+Optional OIDC authentication and roles. You can place these in `.env` or a separate `.env.auth` depending on your setup:
+
+```
+# OIDC (Authentik/Keycloak/etc.)
+OIDC_ISSUER_URL=https://auth.example.com/application/o/supportplanner/
+OIDC_CLIENT_ID=your-client-id
+OIDC_CLIENT_SECRET=your-client-secret
+OIDC_REDIRECT_URI=http://localhost:5175/auth/callback
+OIDC_SCOPES=openid profile email
+# Optional: post-logout landing page; must be registered at the IdP
+OIDC_POST_LOGOUT_REDIRECT_URI=http://localhost:5175/logged-out
+
+# Role mapping (optional)
+# Map IdP groups to roles (comma-separated group names). If your IdP does not send groups, leave empty.
+# ADMIN_GROUPS=
+# EDITOR_GROUPS=
+# Map by email (comma-separated). Emails override groups. Comparison is case-insensitive.
+# ADMIN_EMAILS=
+# EDITOR_EMAILS=
 ```
 
 ## Running the Application
@@ -294,6 +364,13 @@ PORT=5173
    ```
 
 3. Open your browser to `http://localhost:5173`
+
+If you run the dedicated auth stack, follow `docs/auth-example.env` to configure OIDC and then:
+
+```bash
+docker compose -f docker-compose.auth.yml build
+docker compose -f docker-compose.auth.yml up -d
+```
 
 ## Docker Support
 
