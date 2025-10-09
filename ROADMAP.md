@@ -20,10 +20,18 @@
 - [x] Accessible edit modal (focus on open, Escape to close, focus trap, ARIA)
 - [x] Prevent background interactions from interfering with modal actions
 - [ ] Improve focus order and tab reachability assertions (a11y)
+ - [x] Friendly OIDC error page (`/auth/callback` HTML feedback, `/auth/error`)
+ - [x] Header shows signed-in user and role; Logout button
 
 
 ## Phase 3: Advanced Features
-- [ ] User authentication and authorization
+- [x] OIDC authentication with PKCE (login)
+- [x] RP-initiated logout via provider end-session (logout)
+- [x] `GET /api/me` to expose session user and role
+- [x] Basic RBAC (admin/editor/reader) enforced on server for mutating APIs
+- [x] Reader UI gating: disable edit/create (modal no-op on click)
+- [x] Role mapping via environment (emails, optional groups)
+- [ ] Admin configuration UI (future; uses admin role)
 - [x] Event search functionality
 - [x] Exclude calendars from UI via configuration (`calendarExclude` in `config/calendar-order.js`)
 - [x] Leaflet map with grouped markers by location and colored pins per calendar
@@ -37,6 +45,7 @@
 - [ ] Implement proper logging and monitoring
 - [ ] Defer/throttle map rendering while modal is open
 - [ ] Batch geocoding with smarter backoff and cache warm-up
+ - [x] Safe refresh endpoint available to readers/editors (`POST /api/refresh-caldav`)
 
 ## Phase 5: Testing & Quality
 - [ ] Unit tests for core functionality
