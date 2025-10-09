@@ -12,7 +12,7 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
 - Leaflet-based map with per-location markers and group-colored pins
 - Accessible edit modal (focus on open, Escape to close, focus trap)
 - Quick-zoom timeline controls (Month, Quarter)
- - Optional OIDC login with roles (admin/editor/reader) and logout
+ - OIDC login with roles (admin/editor/reader) and logout
 
 ## UI Controls
 
@@ -330,17 +330,17 @@ NEXTCLOUD_PASSWORD=your-password
 PORT=5173
 ```
 
-Optional OIDC authentication and roles. You can place these in `.env` or a separate `.env.auth` depending on your setup:
+OIDC authentication and roles configuration (place in `.env`):
 
 ```
 # OIDC (Authentik/Keycloak/etc.)
 OIDC_ISSUER_URL=https://auth.example.com/application/o/supportplanner/
 OIDC_CLIENT_ID=your-client-id
 OIDC_CLIENT_SECRET=your-client-secret
-OIDC_REDIRECT_URI=http://localhost:5175/auth/callback
+OIDC_REDIRECT_URI=http://localhost:5173/auth/callback
 OIDC_SCOPES=openid profile email
 # Optional: post-logout landing page; must be registered at the IdP
-OIDC_POST_LOGOUT_REDIRECT_URI=http://localhost:5175/logged-out
+OIDC_POST_LOGOUT_REDIRECT_URI=http://localhost:5173/logged-out
 
 # Role mapping (optional)
 # Map IdP groups to roles (comma-separated group names). If your IdP does not send groups, leave empty.
@@ -365,12 +365,7 @@ OIDC_POST_LOGOUT_REDIRECT_URI=http://localhost:5175/logged-out
 
 3. Open your browser to `http://localhost:5173`
 
-If you run the dedicated auth stack, follow `docs/auth-example.env` to configure OIDC and then:
-
-```bash
-docker compose -f docker-compose.auth.yml build
-docker compose -f docker-compose.auth.yml up -d
-```
+For a quick start, copy values from `docs/auth-example.env` into your `.env` and adjust for your IdP.
 
 ## Docker Support
 

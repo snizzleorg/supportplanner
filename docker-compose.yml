@@ -1,4 +1,3 @@
-
 services:
   support-planner:
     build: .
@@ -6,7 +5,7 @@ services:
     env_file:
       - .env
     ports:
-      - "5174:5173"  # Changed external port to 5174 to avoid conflict
+      - "5173:5173"
     restart: unless-stopped
 
   support-planner-tests:
