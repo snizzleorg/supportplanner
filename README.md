@@ -337,10 +337,10 @@ OIDC authentication and roles configuration (place in `.env`):
 OIDC_ISSUER_URL=https://auth.example.com/application/o/supportplanner/
 OIDC_CLIENT_ID=your-client-id
 OIDC_CLIENT_SECRET=your-client-secret
-OIDC_REDIRECT_URI=http://localhost:5173/auth/callback
+OIDC_REDIRECT_URI=http://localhost:5175/auth/callback
 OIDC_SCOPES=openid profile email
 # Optional: post-logout landing page; must be registered at the IdP
-OIDC_POST_LOGOUT_REDIRECT_URI=http://localhost:5173/logged-out
+OIDC_POST_LOGOUT_REDIRECT_URI=http://localhost:5175/logged-out
 
 # Role mapping (optional)
 # Map IdP groups to roles (comma-separated group names). If your IdP does not send groups, leave empty.
@@ -363,9 +363,9 @@ OIDC_POST_LOGOUT_REDIRECT_URI=http://localhost:5173/logged-out
    npm run dev
    ```
 
-3. Open your browser to `http://localhost:5173`
+3. Open your browser to `http://localhost:5175`
 
-For a quick start, copy values from `docs/auth-example.env` into your `.env` and adjust for your IdP.
+For a quick start, copy `.env.example` to `.env` and adjust for your IdP.
 
 ## Docker Support
 
@@ -375,7 +375,7 @@ You can also run the application using Docker:
 docker-compose up -d --build
 ```
 
-The application will be available at `http://localhost:5173`.
+The application will be available at `http://localhost:5175`.
 
 ## Tests
 
