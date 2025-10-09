@@ -1,5 +1,8 @@
 # SupportPlanner Roadmap
 
+## Releases
+- [2025-10-09] v0.1.0: Authentik SSO (OIDC PKCE), basic RBAC and reader gating, auth config (`docker-compose.auth.yml`, `docs/auth-example.env`), frontend updates (`public/app.js`, `public/js/api.js`), and docs updates.
+
 ## Phase 1: Core Functionality
 - [x] Basic calendar integration with CalDAV
 - [x] Event display with color-coding
