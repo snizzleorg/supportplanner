@@ -358,6 +358,34 @@ body.axis-condensed .vis-time-axis .vis-text { font-size: 11px; }
   background-color: rgba(219, 234, 254, 0.9);
 }
 
+/* --- Multi-line timeline item text (2-line clamp) --- */
+/* Override any single-line truncation coming from dynamic styles */
+.vis-timeline .vis-item:not(.vis-background) {
+  white-space: normal !important;
+  /* Make items a bit taller for two lines and improve perceived centering */
+  padding-top: 4px;
+  padding-bottom: 6px;
+  /* Nudge horizontal padding: slightly smaller on the left */
+  padding-left: 6px;
+  padding-right: 10px;
+  min-height: 36px; /* ensures enough height for 2 lines at 1.3 line-height */
+}
+
+.vis-timeline .vis-item:not(.vis-background) .vis-item-content {
+  /* Enable 2-line clamp with ellipsis */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; /* number of lines to show */
+  line-clamp: 2; /* non-prefixed for linters; ignored by most browsers */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal !important;
+  /* Slight font size bump for readability */
+  font-size: 13px;
+  line-height: 1.3;
+  max-height: calc(1.3em * 2);
+}
+
 /* Vertical divider background items (drawn behind events) */
 .vis-item.vis-background.week-divider,
 .vis-item.vis-background.day-divider {
