@@ -340,11 +340,18 @@ async function runSecurityBrowserHarness(page) {
   page.on('console', onConsole);
   
   try {
-    await page.goto(url('/tests/security-tests.html?autorun=1'));
+    const response = await page.goto(url('/tests/security-tests.html?autorun=1'));
+    if (!response.ok()) {
+      console.log(`Page load failed: ${response.status()} ${response.statusText()}`);
+    }
     await page.waitForSelector('#runSecurityTests', { timeout: 20000 });
   } catch (e) {
+    console.log(`First attempt failed: ${e.message}, trying alternate path`);
     triedAlt = true;
-    await page.goto(url('/public/tests/security-tests.html?autorun=1'));
+    const response = await page.goto(url('/public/tests/security-tests.html?autorun=1'));
+    if (!response.ok()) {
+      console.log(`Alt page load failed: ${response.status()} ${response.statusText()}`);
+    }
     await page.waitForSelector('#runSecurityTests', { timeout: 20000 });
   }
   
