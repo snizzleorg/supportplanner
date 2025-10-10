@@ -1002,22 +1002,46 @@ app.post('/api/client-log', (req, res) => {
   const { level, message, extra } = req.body;
   const logMessage = `[CLIENT ${level.toUpperCase()}] ${message}${extra ? ' ' + JSON.stringify(extra) : ''}`;
   
-  switch (level) {
-    case 'error':
-      console.error(logMessage);
-      break;
-    case 'warn':
-      console.warn(logMessage);
-      break;
-    case 'info':
-    default:
-      console.log(logMessage);
+  if (level === 'error') {
+    console.error(logMessage);
+  } else {
+    console.log(logMessage);
   }
   
-  res.status(200).json({ status: 'ok' });
+  res.json({ success: true });
 });
 
-// Start the server
+// Health check endpoint for Docker/K8s
+app.get('/health', (req, res) => {
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: '0.3.0',
+    environment: process.env.NODE_ENV || 'development',
+    checks: {
+      calendarCache: calendarCache.isInitialized ? 'initialized' : 'pending',
+      auth: authEnabled ? 'enabled' : 'disabled'
+    }
+  };
+  
+  // Return 503 if critical services aren't ready
+  if (!calendarCache.isInitialized) {
+    return res.status(503).json({ ...health, status: 'unavailable' });
+  }
+  
+  res.json(health);
+});
+
+// Readiness probe (stricter than health)
+app.get('/ready', (req, res) => {
+  if (calendarCache.isInitialized && calendarCache.getAllCalendars().length > 0) {
+    res.json({ status: 'ready', calendars: calendarCache.getAllCalendars().length });
+  } else {
+    res.status(503).json({ status: 'not ready', reason: 'Calendar cache not initialized or no calendars loaded' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`SupportPlanner server running at http://localhost:${PORT}`);
 });
