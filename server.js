@@ -546,6 +546,7 @@ app.post('/api/events', async (req, res) => {
         }
         
         // Get the event type configuration
+        const eventTypes = getEventTypes();
         const typeConfig = eventTypes[eventType] || eventTypes._default;
         
         // Debug log to check event data
