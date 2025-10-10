@@ -1,6 +1,26 @@
-# SupportPlanner Front-end Test Harness
+# SupportPlanner Test Suite
 
-This folder contains lightweight test utilities for exercising the browser-facing API and modules.
+This folder contains lightweight test utilities for exercising the browser-facing API, security features, and UI modules.
+
+## Security tests (v0.3.1+)
+
+- Browser harness: `security-tests.html`
+  - Open in your running app at `/tests/security-tests.html`.
+  - Click "Run security tests" to execute all 23 security tests.
+  - Tests health endpoint, readiness probe, security headers, input validation, and rate limiting.
+  - Auto-runs with `?autorun=1` query parameter for automated testing.
+
+- Runner:
+  ```bash
+  docker compose run --rm -e RUN_ONLY=security support-planner-tests
+  ```
+
+**Test coverage:**
+- `/health` endpoint (status, version, uptime, service checks)
+- `/ready` endpoint (readiness probe for K8s)
+- Security headers (CSP, X-Frame-Options, X-Content-Type-Options, etc.)
+- Input validation (rejects invalid data with structured errors)
+- Rate limit headers (verifies presence and values)
 
 ## API tests
 
@@ -45,7 +65,32 @@ This folder contains lightweight test utilities for exercising the browser-facin
   docker compose run --rm -e RUN_ONLY=a11y support-planner-tests
   ```
 
+## Running all tests
+
+Run the complete test suite (all harnesses + smoke tests + CSS audit):
+
+```bash
+docker compose run --rm -e RUNNER_BRIEF=1 support-planner-tests
+```
+
+This executes:
+- Security tests (23 tests)
+- API browser tests
+- Search tests
+- Timeline tests
+- Holiday tests
+- Tooltip tests
+- A11y modal tests
+- Map tests
+- Modal CRUD tests
+- Timeline drag E2E
+- API smoke tests
+- Geocoding smoke tests
+- CSS audit
+
 ## Notes
 - The API base can be overridden by `--api` or `API_BASE` env.
 - The mutating tests will create, update, and delete a temporary all‑day event.
 - For CI, run the app in one job, then execute the smoke script in another job against the app URL.
+- Security tests auto-run with `?autorun=1` for headless testing.
+- Docker test container is optimized for Apple Silicon (ARM64) via `platform: linux/arm64`.
