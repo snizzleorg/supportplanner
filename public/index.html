@@ -11,6 +11,13 @@
     <link rel="stylesheet" href="/custom-tooltip.css" />
   </head>
   <body>
+    <div id="rotateOverlay" class="rotate-overlay" aria-live="polite" aria-atomic="true" aria-hidden="true">
+      <div class="rotate-box">
+        <div class="rotate-icon" aria-hidden="true">⤵︎</div>
+        <div class="rotate-title">Please rotate your device</div>
+        <div class="rotate-sub">Landscape is required for the SupportPlanner interface.</div>
+      </div>
+    </div>
     <header>
       <h1>SupportPlanner</h1>
       <div class="controls">
@@ -41,9 +48,15 @@
           <button id="logoutBtn" type="button" style="display:none;">Logout</button>
         </div>
       </div>
+      <!-- Mobile toggles (visible on small screens) -->
+      <div class="mobile-toggles" style="display:none; gap:8px; width:100%;">
+        <button id="filtersToggle" class="side-tab side-tab-left" type="button" aria-pressed="false" aria-label="Show Controls">Controls</button>
+        <button id="mapToggle" class="side-tab side-tab-right" type="button" aria-pressed="false" aria-label="Show Map">Map</button>
+      </div>
     </header>
 
     <main>
+      <div id="mobileBackdrop" class="mobile-backdrop" aria-hidden="true"></div>
       <div id="timeline"></div>
       <div id="mapContainer" class="map-container">
         <div id="map"></div>
