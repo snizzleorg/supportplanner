@@ -333,6 +333,25 @@ async function runMapBrowserHarness(page) {
   }
 }
 
+async function runSecurityBrowserHarness(page) {
+  let triedAlt = false;
+  try {
+    await page.goto(url('/tests/security-tests.html'));
+    await page.waitForSelector('#runSecurityTests', { timeout: 20000 });
+  } catch (e) {
+    triedAlt = true;
+    await page.goto(url('/public/tests/security-tests.html'));
+    await page.waitForSelector('#runSecurityTests', { timeout: 20000 });
+  }
+  await page.click('#runSecurityTests');
+  await page.waitForFunction(() => {
+    const s = document.querySelector('#summary');
+    return s && /Passed \d+\/\d+ security tests/.test(s.textContent || '');
+  }, { timeout: 20000 });
+  const summary = await page.$eval('#summary', el => el.textContent);
+  return { name: 'security-browser-harness', ok: /Passed/.test(summary), summary, triedAlt };
+}
+
 (async function main() {
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
   const page = await browser.newPage();
@@ -353,7 +372,11 @@ async function runMapBrowserHarness(page) {
     } else if (process.env.RUN_ONLY === 'map') {
       const res = await runMapBrowserHarness(page);
       outputs.push(res);
+    } else if (process.env.RUN_ONLY === 'security') {
+      const res = await runSecurityBrowserHarness(page);
+      outputs.push(res);
     } else {
+      outputs.push(await runSecurityBrowserHarness(page));
       outputs.push(await runApiBrowserHarness(page));
       outputs.push(await runSearchBrowserHarness(page));
       outputs.push(await runTimelineBrowserHarness(page));

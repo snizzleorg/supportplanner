@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SupportPlanner Security Tests</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 16px; }
+      .pass { color: green; }
+      .fail { color: red; }
+      pre { background: #f3f4f6; padding: 8px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <h1>Security & Health Tests</h1>
+    <div>
+      <button id="runSecurityTests">Run security tests</button>
+      <span id="summary"></span>
+    </div>
+    <div id="results"></div>
+    <script type="module" src="./security-tests.js"></script>
+  </body>
+</html>
