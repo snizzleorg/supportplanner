@@ -107,8 +107,10 @@ app.use(cors({
 app.use(express.json({ limit: '2mb' }));
 
 // Security headers with helmet
+// Note: upgrade-insecure-requests is disabled for local HTTP development
 app.use(helmet({
   contentSecurityPolicy: {
+    useDefaults: false, // Don't use helmet's defaults which include upgrade-insecure-requests
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
@@ -125,7 +127,11 @@ app.use(helmet({
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'none'"],
-      upgradeInsecureRequests: null, // Don't force HTTPS upgrades (we're running on HTTP)
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'self'"],
+      scriptSrcAttr: ["'none'"],
+      // upgradeInsecureRequests: [] is intentionally omitted for HTTP development
     },
   },
   crossOriginEmbedderPolicy: false, // Allow loading external resources
