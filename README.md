@@ -6,13 +6,13 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
 
 - View and manage support schedules
 - Drag-and-drop event rescheduling
-- Color-coded event types
 - Real-time updates
 - Mobile-responsive design
 - Leaflet-based map with per-location markers and group-colored pins
 - Accessible edit modal (focus on open, Escape to close, focus trap)
 - Quick-zoom timeline controls (Month, Quarter)
- - OIDC login with roles (admin/editor/reader) and logout
+- OIDC login with roles (admin/editor/reader) and logout
+- Search filter with calendar-name support (type a calendar name to highlight its events)
 
 ## UI Controls
 
@@ -418,3 +418,16 @@ docker compose run --rm -e RUN_ONLY=map support-planner-tests
 ## License
 
 MIT
+
+## What's New
+
+### v0.2.0 (2025-10-10)
+
+- Search matches calendar names and URLs in addition to event text.
+- Improved timeline item readability:
+  - Two-line clamp with balanced vertical padding and slightly larger font.
+  - Tighter left padding so text starts near the event border.
+- Timeline min height defaults refined in `public/js/timeline.js` (`minHeight: '600px'`).
+- Docs updated with new search capability and test instructions remain unchanged.
+
+See `ROADMAP.md` for release history.
