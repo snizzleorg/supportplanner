@@ -1,7 +1,22 @@
 # Server.js Refactoring Plan
 
-## Current State
-- **Lines**: 1,114 lines
+## Progress Summary
+
+**Status**: Phase 4 of 5 in progress  
+**Original**: 1,115 lines  
+**Current**: 663 lines  
+**Reduction**: 452 lines (41%)  
+**Tests**: 13/13 passing ✅
+
+### Completed Phases
+- ✅ Phase 1: Configuration (167 lines removed)
+- ✅ Phase 2: Middleware (247 lines removed)
+- ✅ Phase 3: Services & Utilities (38 lines removed)
+- 🚧 Phase 4: Routes (in progress, ~350 lines expected)
+- ⏳ Phase 5: Final Cleanup
+
+## Original State
+- **Lines**: 1,115 lines
 - **Structure**: Monolithic file with mixed concerns
 - **Issues**: Hard to test, maintain, and navigate
 
@@ -39,42 +54,46 @@ src/
 
 ## Refactoring Steps
 
-### Phase 1: Extract Configuration (~200 lines)
-- [ ] Create `src/config/` directory
-- [ ] Extract CORS config → `config/cors.js`
-- [ ] Extract helmet config → `config/helmet.js`
-- [ ] Extract session config → `config/session.js`
-- [ ] Extract rate limiters → `config/rate-limit.js`
-- [ ] Extract event types → `config/event-types.js`
-- [ ] Create `config/index.js` to export all
+### Phase 1: Extract Configuration (~200 lines) ✅ COMPLETE
+- [x] Create `src/config/` directory
+- [x] Extract CORS config → `config/cors.js`
+- [x] Extract helmet config → `config/helmet.js`
+- [x] Extract session config → `config/session.js`
+- [x] Extract rate limiters → `config/rate-limit.js`
+- [x] Extract event types → `config/event-types.js`
+- [x] Extract environment vars → `config/env.js`
+- [x] Create `config/index.js` to export all
+- [x] Fix CSP to allow holidays API (date.nager.at)
 
-**Estimated reduction**: 200 lines from server.js
+**Actual reduction**: 167 lines from server.js (1,115 → 948)
 
-### Phase 2: Extract Middleware (~150 lines)
-- [ ] Create `src/middleware/` directory
-- [ ] Extract OIDC setup + requireRole → `middleware/auth.js`
-- [ ] Extract validation rules → `middleware/validation.js`
-- [ ] Add error handler → `middleware/error-handler.js`
+### Phase 2: Extract Middleware (~150 lines) ✅ COMPLETE
+- [x] Create `src/middleware/` directory
+- [x] Extract OIDC setup + requireRole → `middleware/auth.js`
+- [x] Extract validation rules → `middleware/validation.js`
+- [x] Create `middleware/index.js` to export all
+- [x] Replace inline auth code with `initializeAuth(app)`
 
-**Estimated reduction**: 150 lines from server.js
+**Actual reduction**: 247 lines from server.js (948 → 701)
 
-### Phase 3: Extract Services (~300 lines)
-- [ ] Create `src/services/` directory
-- [ ] Extract calendar operations → `services/calendar.js`
-  - initCalendarCache()
-  - refreshCalendarCache()
-  - getCalendars()
-  - createEvent()
-  - updateEvent()
-  - deleteEvent()
-  - moveEvent()
-- [ ] Extract event type logic → `services/event-type.js`
+### Phase 3: Extract Services & Utilities (~50 lines) ✅ COMPLETE
+- [x] Create `src/services/` directory
+- [x] Create `src/utils/` directory
+- [x] Extract event type logic → `services/event-type.js`
   - getEventType()
-  - loadEventTypesConfig()
+- [x] Extract date utilities → `utils/date.js`
+  - isValidDate()
+- [x] Extract HTML utilities → `utils/html.js`
+  - escapeHtml()
+- [x] Move `services/calendarCache.js` → `src/services/calendar.js` for consistency
+- [x] Update imports in calendar.js (../../config/)
+- [x] Create index files for services and utils
 
-**Estimated reduction**: 300 lines from server.js
+**Actual reduction**: 38 lines from server.js (701 → 663)
 
-### Phase 4: Extract Routes (~400 lines)
+**Note**: Calendar service (CalDAV operations) was already modular, just moved for consistency.
+
+### Phase 4: Extract Routes (~400 lines) 🚧 IN PROGRESS
 - [ ] Create `src/routes/` directory
 - [ ] Extract event routes → `routes/events.js`
   - POST /api/events/all-day
@@ -87,35 +106,24 @@ src/
 - [ ] Extract calendar routes → `routes/calendars.js`
   - GET /api/calendars
   - POST /api/refresh-caldav
-- [ ] Extract auth routes → `routes/auth.js`
-  - GET /auth/login
-  - GET /auth/callback
-  - GET /auth/logout
-  - GET /auth/error
-  - GET /logged-out
 - [ ] Extract health routes → `routes/health.js`
   - GET /health
   - GET /ready
 - [ ] Extract client routes → `routes/client.js`
   - POST /api/client-log
+  - GET /logged-out
 - [ ] Create `routes/index.js` to register all routes
 
-**Estimated reduction**: 400 lines from server.js
+**Estimated reduction**: ~350 lines from server.js
 
-### Phase 5: Extract Utilities (~50 lines)
-- [ ] Create `src/utils/` directory
-- [ ] Extract date helpers → `utils/date.js`
-  - isValidDate()
-  - date formatting helpers
+**Note**: Auth routes already extracted to middleware/auth.js in Phase 2
 
-**Estimated reduction**: 50 lines from server.js
-
-### Phase 6: Final Cleanup
-- [ ] Update imports in server.js
-- [ ] Update package.json scripts if needed
-- [ ] Update Dockerfile if paths change
-- [ ] Run all tests to ensure nothing broke
-- [ ] Update documentation
+### Phase 5: Final Cleanup & Documentation
+- [ ] Review and optimize imports in server.js
+- [ ] Ensure all tests pass
+- [ ] Update REFACTORING_PLAN.md with final stats
+- [ ] Update main README.md if needed
+- [ ] Document new structure in README
 
 ## Expected Final State
 
