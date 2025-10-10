@@ -1,5 +1,37 @@
 * { box-sizing: border-box; }
 
+/* Full-screen modal on phones */
+@media (max-width: 640px) {
+  .modal { z-index: 2001; }
+  .modal .modal-content {
+    width: 100% !important;
+    max-width: none !important;
+    height: 100vh !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal .modal-header { position: sticky; top: 0; background: #fff; z-index: 1; }
+  .modal .modal-body { flex: 1 1 auto; overflow: auto; -webkit-overflow-scrolling: touch; }
+  .modal .form-actions { position: sticky; bottom: 0; background: #fff; z-index: 1; }
+}
+
+/* Full-screen modal when a real phone is detected */
+body.mobile-device .modal { z-index: 2001; }
+body.mobile-device .modal .modal-content {
+  width: 100% !important;
+  max-width: none !important;
+  height: 100vh !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+body.mobile-device .modal .modal-header { position: sticky; top: 0; background: #fff; z-index: 1; }
+body.mobile-device .modal .modal-body { flex: 1 1 auto; overflow: auto; -webkit-overflow-scrolling: touch; }
+body.mobile-device .modal .form-actions { position: sticky; bottom: 0; background: #fff; z-index: 1; }
+
 /* Rotate-to-landscape overlay (hidden by default) */
 .rotate-overlay {
   position: fixed;
