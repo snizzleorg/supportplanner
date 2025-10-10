@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import session from 'express-session';
 import { Issuer, generators } from 'openid-client';
+import rateLimit from 'express-rate-limit';
 import { calendarCache } from './services/calendarCache.js';
 
 dotenv.config();
@@ -149,6 +150,38 @@ app.use(session({
     secure: false // set true when behind HTTPS/terminating proxy
   }
 }));
+
+// Rate limiting to prevent abuse
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 login attempts per windowMs
+  message: 'Too many login attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Don't count successful logins
+});
+
+const refreshLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 10, // Limit refresh to 10 times per 5 minutes
+  message: 'Too many refresh requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiters
+app.use('/api/', apiLimiter);
+app.use('/auth/login', authLimiter);
+app.use('/auth/callback', authLimiter);
+app.use('/api/refresh-caldav', refreshLimiter);
 
 // Optional OIDC initialization
 const authEnabled = Boolean(OIDC_ISSUER_URL && OIDC_CLIENT_ID && OIDC_CLIENT_SECRET && OIDC_REDIRECT_URI);
