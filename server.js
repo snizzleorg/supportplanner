@@ -548,7 +548,7 @@ app.post('/api/events', async (req, res) => {
           from,
           to,
           calendarCount: 0,
-          eventCount: 0,
+          version: '0.3.0',
           occurrenceCount: 0,
           isEmpty: true,
           source: 'cache',
@@ -809,110 +809,10 @@ app.post('/api/refresh-caldav', requireRole('reader'), async (req, res) => {
   }
 });
 
-// Update event endpoint
-app.put('/api/events/:uid', requireRole('editor'), async (req, res) => {
-  try {
-    const { uid } = req.params;
-    const updateData = req.body;
-
-    console.log(`[updateEvent] Request to update event ${uid} with data:`, updateData);
-
-    // Basic validation
-    if (!uid) {
-      return res.status(400).json({ error: 'Event UID is required' });
-    }
-
-    if (!updateData || Object.keys(updateData).length === 0) {
-      return res.status(400).json({ error: 'No update data provided' });
-    }
-
-    // Validate date formats if provided
-    if (updateData.start && !isValidDate(updateData.start)) {
-      return res.status(400).json({ error: 'Invalid start date' });
-    }
-
-    if (updateData.end && !isValidDate(updateData.end)) {
-      return res.status(400).json({ error: 'Invalid end date' });
-    }
-
-    try {
-      // Update the event using the server's credentials
-      const updatedEvent = await calendarCache.updateEvent(uid, updateData);
-      
-      res.json({
-        success: true,
-        message: 'Event updated successfully',
-        event: updatedEvent
-      });
-    } catch (error) {
-      console.error('Error in calendarCache.updateEvent:', error);
-      res.status(500).json({ 
-        error: 'Failed to update event',
-        details: error.message 
-      });
-    }
-
-  } catch (error) {
-    console.error('Error updating event:', error);
-    res.status(500).json({ 
-      error: 'Failed to update event',
-      details: error.message 
-    });
-  }
-});
-
 // Helper function to validate date strings
 function isValidDate(dateString) {
   return !isNaN(Date.parse(dateString));
 }
-
-// Get a single event by UID
-app.get('/api/events/:uid', async (req, res) => {
-  try {
-    const { uid } = req.params;
-    console.log(`[getEvent] Fetching event with UID: ${uid}`);
-    
-    if (!uid) {
-      return res.status(400).json({ success: false, error: 'Event UID is required' });
-    }
-    
-    // Get the authorization header for the calendar cache
-    const authHeader = req.headers.authorization || '';
-    
-    // Get all calendar URLs
-    const calendars = calendarCache.getAllCalendars();
-    const calendarUrls = calendars.map(c => c.url);
-    
-    if (!calendarUrls.length) {
-      console.log('[getEvent] No calendars available');
-      return res.status(404).json({ success: false, error: 'No calendars available' });
-    }
-    
-    console.log(`[getEvent] Searching in ${calendarUrls.length} calendars`);
-    
-    // Get the event directly using the getEvent method
-    const event = await calendarCache.getEvent(uid);
-    
-    if (!event) {
-      console.log(`[getEvent] Event not found with UID: ${uid}`);
-      return res.status(404).json({ success: false, error: 'Event not found' });
-    }
-    
-    console.log(`[getEvent] Found event:`, event);
-    res.json({
-      success: true,
-      event
-    });
-    
-  } catch (error) {
-    console.error('Error fetching event:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to fetch event',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-  }
-});
 
 // Update an event by UID
 app.put('/api/events/:uid', requireRole('editor'), async (req, res) => {
