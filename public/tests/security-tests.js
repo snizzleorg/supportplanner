@@ -123,21 +123,32 @@ async function testRateLimitHeaders() {
 }
 
 async function runAllTests() {
-  resultsEl.innerHTML = '';
-  results.length = 0;
-  
-  await testHealthEndpoint();
-  await testReadyEndpoint();
-  await testSecurityHeaders();
-  await testInputValidation();
-  await testRateLimitHeaders();
-  
-  const passed = results.filter(r => r.pass === true).length;
-  const failed = results.filter(r => r.pass === false).length;
-  const total = passed + failed;
-  
-  summaryEl.textContent = `Passed ${passed}/${total} security tests`;
-  summaryEl.className = failed === 0 ? 'pass' : 'fail';
+  try {
+    resultsEl.innerHTML = '';
+    results.length = 0;
+    
+    await testHealthEndpoint();
+    await testReadyEndpoint();
+    await testSecurityHeaders();
+    await testInputValidation();
+    await testRateLimitHeaders();
+    
+    const passed = results.filter(r => r.pass === true).length;
+    const failed = results.filter(r => r.pass === false).length;
+    const total = passed + failed;
+    
+    summaryEl.textContent = `Passed ${passed}/${total} security tests`;
+    summaryEl.className = failed === 0 ? 'pass' : 'fail';
+  } catch (err) {
+    summaryEl.textContent = `Error running tests: ${err.message}`;
+    summaryEl.className = 'fail';
+    console.error('Test error:', err);
+  }
 }
 
-document.getElementById('runSecurityTests').addEventListener('click', runAllTests);
+const btn = document.getElementById('runSecurityTests');
+if (btn) {
+  btn.addEventListener('click', runAllTests);
+} else {
+  console.error('runSecurityTests button not found');
+}
