@@ -31,17 +31,6 @@ class CustomTooltip {
       // Delay hide slightly to allow moving back to the item
       this.scheduleHide(150);
     });
-
-    // On mobile, tapping the tooltip should open the edit modal (delegated via custom event)
-    this.tooltip.addEventListener('click', () => {
-      try {
-        if (!this.lastItem) return;
-        const uid = this.extractUid(this.lastItem);
-        if (!uid) return;
-        window.dispatchEvent(new CustomEvent('timeline:openEdit', { detail: { uid } }));
-        this.hide();
-      } catch (_) {}
-    });
   }
 
   extractUid(item) {
