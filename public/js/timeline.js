@@ -59,6 +59,40 @@ export function initTimeline(timelineEl, items, groups) {
 
   setupTooltipHandlers(timeline);
 
+  // Prevent native page pinch/double-tap zoom from conflicting with vis pinch-zoom inside the timeline area
+  if (isTouch) {
+    try {
+      // Ensure JS receives all touch gestures
+      timelineEl.style.touchAction = 'none';
+      const root = timelineEl.closest('.vis-timeline') || timelineEl;
+      if (root && root.style) root.style.touchAction = 'none';
+
+      const cancelIfMultiTouch = (e) => {
+        try { if ((e.touches && e.touches.length > 1) || (e.scale && e.scale !== 1)) e.preventDefault(); } catch (_) {}
+      };
+      const cancelIfDoubleTap = (() => {
+        let last = 0; const TH = 300;
+        return (e) => {
+          try {
+            const now = Date.now();
+            if (now - last < TH) { e.preventDefault(); }
+            last = now;
+          } catch (_) {}
+        };
+      })();
+
+      // iOS Safari older gesture events (safe to ignore if unsupported)
+      timelineEl.addEventListener('gesturestart', (e) => { try { e.preventDefault(); } catch (_) {} }, { passive: false });
+      timelineEl.addEventListener('gesturechange', (e) => { try { e.preventDefault(); } catch (_) {} }, { passive: false });
+      timelineEl.addEventListener('gestureend', (e) => { try { e.preventDefault(); } catch (_) {} }, { passive: false });
+
+      // Standard touch events
+      timelineEl.addEventListener('touchstart', cancelIfMultiTouch, { passive: false });
+      timelineEl.addEventListener('touchmove', cancelIfMultiTouch, { passive: false });
+      timelineEl.addEventListener('touchend', cancelIfDoubleTap, { passive: false });
+    } catch (_) {}
+  }
+
   ['changed','rangechanged','rangechange','redraw'].forEach(evt => {
     try {
       timeline.on(evt, () => {
