@@ -2,6 +2,7 @@
 
 ## Releases
 - [2025-10-09] v0.1.0: Authentik SSO (OIDC PKCE), basic RBAC and reader gating, auth config (`docker-compose.auth.yml`, `docs/auth-example.env`), frontend updates (`public/app.js`, `public/js/api.js`), and docs updates.
+- [2025-10-10] v0.2.0: Calendar-name search, timeline item readability tweaks (two-line clamp, padding, font sizing), docs updates.
 
 ## Phase 1: Core Functionality
 - [x] Basic calendar integration with CalDAV
@@ -25,6 +26,7 @@
 - [ ] Improve focus order and tab reachability assertions (a11y)
  - [x] Friendly OIDC error page (`/auth/callback` HTML feedback, `/auth/error`)
  - [x] Header shows signed-in user and role; Logout button
+ - [x] Match search by calendar name and URL
 
 
 ## Phase 3: Advanced Features
