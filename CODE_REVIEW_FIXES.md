@@ -62,13 +62,20 @@ This branch addresses issues identified in the code review of v0.3.0.
 
 ### 9. Magic Numbers
 **Files**: Multiple
-**Status**: TODO
-**Description**: Extract magic numbers to named constants
+**Status**: DONE (commit 4555998)
+**Description**: Created constants.js with all magic numbers:
+  - Mobile breakpoints (640px)
+  - Touch timings (long-press 550ms, movement tolerance 10px, etc.)
+  - Timeline settings (min height 600px, axis heights)
+  - Z-index layers, animation durations
+  - Updated app.js, custom-tooltip.js, timeline.js to use constants
 
 ### 10. Health Check Endpoint
 **File**: `server.js`
-**Status**: TODO
-**Description**: Add /health endpoint for Docker/K8s
+**Status**: DONE (commit 4555998)
+**Description**: Added /health and /ready endpoints:
+  - /health: Returns service status, uptime, version, checks
+  - /ready: Stricter readiness probe for K8s (checks calendar init)
 
 ### 11. Security Headers
 **Status**: TODO
@@ -89,6 +96,21 @@ This branch addresses issues identified in the code review of v0.3.0.
 
 - [x] Critical issues fixed (duplicate routes, version bump)
 - [x] High priority issues fixed (session secret, CORS)
-- [ ] Medium priority issues addressed
+- [x] Medium priority issues addressed (rate limiting, touch events verified)
+- [x] Low priority improvements (health endpoints, magic numbers extracted)
 - [ ] Tests added for fixes
 - [x] Documentation updated (.env.example)
+
+## Summary
+
+**Completed**: 8 out of 12 issues
+- All critical and high-priority security issues resolved
+- Rate limiting and health checks added
+- Code quality improved with constants extraction
+- Docker development workflow fixed
+
+**Remaining** (deferred to future work):
+- Excessive console logging (requires logging library migration)
+- Input sanitization (requires express-validator)
+- Security headers (requires helmet.js)
+- Request validation (requires express-validator)
