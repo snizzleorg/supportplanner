@@ -1130,23 +1130,28 @@ async function refresh() {
       console.warn('Label color fallback failed', e);
     }
 
-    // After items/groups added, render map markers from current DataSet items with locations
+    // After items/groups added, conditionally render map markers only when map is visible
     try {
-      const source = (typeof serverItems !== 'undefined' && Array.isArray(serverItems) && serverItems.length)
-        ? serverItems
-        : items.get();
-      const locItems = source
-        .map(it => ({
-          content: it.content,
-          summary: it.title || it.content,
-          start: typeof it.start === 'object' && it.start?.toISOString ? it.start.toISOString() : it.start,
-          end: typeof it.end === 'object' && it.end?.toISOString ? it.end.toISOString() : it.end,
-          location: it.location,
-          group: it.group
-        }))
-        .filter(it => it.location && String(it.location).trim().length > 0);
-      console.debug('[map] unique input locations:', new Set(locItems.map(x => x.location.trim().toLowerCase())).size);
-      await renderMapMarkers(locItems, groups);
+      const mapVisible = (window.innerWidth > 640) || document.body.classList.contains('map-open');
+      if (mapVisible) {
+        const source = (typeof serverItems !== 'undefined' && Array.isArray(serverItems) && serverItems.length)
+          ? serverItems
+          : items.get();
+        const locItems = source
+          .map(it => ({
+            content: it.content,
+            summary: it.title || it.content,
+            start: typeof it.start === 'object' && it.start?.toISOString ? it.start.toISOString() : it.start,
+            end: typeof it.end === 'object' && it.end?.toISOString ? it.end.toISOString() : it.end,
+            location: it.location,
+            group: it.group
+          }))
+          .filter(it => it.location && String(it.location).trim().length > 0);
+        console.debug('[map] unique input locations:', new Set(locItems.map(x => x.location.trim().toLowerCase())).size);
+        await renderMapMarkers(locItems, groups);
+      } else {
+        console.debug('[map] skipped marker render because map is hidden');
+      }
     } catch (e) {
       console.warn('Map marker render failed', e);
     }
