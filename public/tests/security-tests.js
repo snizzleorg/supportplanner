@@ -1,8 +1,11 @@
 // Security and health endpoint tests
+console.log('[security-tests] Script loaded');
 
 const results = [];
 const resultsEl = document.getElementById('results');
 const summaryEl = document.getElementById('summary');
+
+console.log('[security-tests] DOM elements:', { resultsEl: !!resultsEl, summaryEl: !!summaryEl });
 
 function log(msg, pass = null) {
   const div = document.createElement('div');
@@ -156,12 +159,14 @@ async function runAllTests() {
 }
 
 const btn = document.getElementById('runSecurityTests');
+console.log('[security-tests] Button found:', !!btn);
 if (btn) {
   btn.addEventListener('click', runAllTests);
   // Auto-run for automated test runners
   if (window.location.search.includes('autorun=1')) {
+    console.log('[security-tests] Auto-running tests');
     setTimeout(runAllTests, 100);
   }
 } else {
-  console.error('runSecurityTests button not found');
+  console.error('[security-tests] runSecurityTests button not found');
 }
