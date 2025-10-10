@@ -685,7 +685,7 @@ app.post('/api/events', async (req, res) => {
             'border-width: 1px;',
             'border-style: solid;',
             'border-radius: 4px;',
-            'font-weight: 500;',
+            'font-weight: 300;',
             'padding: 2px 6px;',
             'box-sizing: border-box;',
             'font-size: 12px;',
