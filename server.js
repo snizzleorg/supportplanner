@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { body } from 'express-validator';
-import { calendarCache } from './services/calendarCache.js';
 
 // Import configuration
 import {
@@ -44,7 +43,7 @@ import {
 } from './src/middleware/index.js';
 
 // Import services and utilities
-import { getEventType } from './src/services/index.js';
+import { getEventType, calendarCache } from './src/services/index.js';
 import { isValidDate, escapeHtml } from './src/utils/index.js';
 
 dotenv.config();
