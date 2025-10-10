@@ -118,6 +118,8 @@ app.use(helmet({
         "'self'",
         "https://nominatim.openstreetmap.org", // Geocoding API
         "https://*.tile.openstreetmap.org",     // Map tiles
+        "https://cdn.jsdelivr.net",             // CDN for libraries and source maps
+        "https://unpkg.com",                    // CDN for libraries and source maps
       ],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
