@@ -57,8 +57,12 @@ This branch addresses issues identified in the code review of v0.3.0.
 ## Low Priority / Future Improvements
 
 ### 8. Input Sanitization
-**Status**: TODO
-**Description**: Add server-side input sanitization for event data
+**Status**: DONE (commit pending)
+**Description**: Added express-validator for input validation:
+  - Event fields: summary (1-500 chars), description (max 5000), location (max 500)
+  - Date validation: ISO8601 format
+  - UID validation: 1-200 characters
+  - Applied to PUT/POST/DELETE /api/events endpoints
 
 ### 9. Magic Numbers
 **Files**: Multiple
@@ -78,12 +82,16 @@ This branch addresses issues identified in the code review of v0.3.0.
   - /ready: Stricter readiness probe for K8s (checks calendar init)
 
 ### 11. Security Headers
-**Status**: TODO
-**Description**: Add helmet.js for security headers
+**Status**: DONE (commit pending)
+**Description**: Added helmet.js with CSP:
+  - Content Security Policy configured
+  - Allow CDN resources (jsdelivr, unpkg)
+  - Restrict object/frame embedding
+  - X-Frame-Options, X-Content-Type-Options, etc.
 
 ### 12. Request Validation
-**Status**: TODO
-**Description**: Add express-validator for input validation
+**Status**: DONE (commit pending)
+**Description**: Implemented with express-validator (see #8)
 
 ## Already Tracked in ROADMAP.md
 
@@ -103,14 +111,11 @@ This branch addresses issues identified in the code review of v0.3.0.
 
 ## Summary
 
-**Completed**: 8 out of 12 issues
+**Completed**: 11 out of 12 issues
 - All critical and high-priority security issues resolved
 - Rate limiting and health checks added
 - Code quality improved with constants extraction
 - Docker development workflow fixed
 
 **Remaining** (deferred to future work):
-- Excessive console logging (requires logging library migration)
-- Input sanitization (requires express-validator)
-- Security headers (requires helmet.js)
-- Request validation (requires express-validator)
+- Excessive console logging (requires logging library migration - tracked in ROADMAP.md)
