@@ -3,6 +3,15 @@
 ## Releases
 - [2025-10-09] v0.1.0: Authentik SSO (OIDC PKCE), basic RBAC and reader gating, auth config (`docker-compose.auth.yml`, `docs/auth-example.env`), frontend updates (`public/app.js`, `public/js/api.js`), and docs updates.
 - [2025-10-10] v0.2.0: Calendar-name search, timeline item readability tweaks (two-line clamp, padding, font sizing), docs updates.
+- [2025-10-10] v0.3.0: Mobile-first improvements
+  - Off-canvas panels for Controls (left) and Map (right) with backdrop; only one open at a time
+  - Floating side tabs that do not consume layout
+  - Device-based mobile detection (`body.mobile-device`) independent of width
+  - Landscape-only overlay on phones; blocks portrait interaction
+  - Modal becomes full-screen on phones with sticky header/actions
+  - Timeline touch: single tap shows tooltip; long-press opens edit modal
+  - Disable native page zoom; prevent pinch/double-tap conflicts inside timeline
+  - Map panel invalidate-size fix when opening
 
 ## Phase 1: Core Functionality
 - [x] Basic calendar integration with CalDAV
@@ -16,10 +25,10 @@
 
 ## Phase 2: User Experience
 - [ ] Better error messages and user feedback
-- [ ] Responsive design improvements
-- [ ] Mobile-friendly interface
+- [x] Responsive design improvements
+- [x] Mobile-friendly interface (off-canvas panels, floating tabs, landscape overlay)
 - [ ] Dark/light theme support
-- [ ] Loading states and progress indicators
+- [x] Loading states and progress indicators (modal header/actions stick; body scroll)
 - [x] Show only firstname for calendar display names (e.g., `Travel (Firstname Lastname)` -> `Firstname`)
 - [x] Accessible edit modal (focus on open, Escape to close, focus trap, ARIA)
 - [x] Prevent background interactions from interfering with modal actions
@@ -51,6 +60,7 @@
 - [ ] Defer/throttle map rendering while modal is open
 - [ ] Batch geocoding with smarter backoff and cache warm-up
  - [x] Safe refresh endpoint available to readers/editors (`POST /api/refresh-caldav`)
+ - [x] Prevent native pinch/double-tap from conflicting with timeline pinch-zoom
 
 ## Phase 5: Testing & Quality
 - [ ] Unit tests for core functionality
@@ -60,6 +70,7 @@
 - [x] Browser harnesses for Map markers and A11y modal (`/public/tests/*.html`)
 - [x] Headless Puppeteer runner with focused runs via `RUN_ONLY`
 - [ ] Stabilize headless focus-trap checks across browsers
+ - [ ] Add viewport/mobile harness: tabs visible, 44px targets, panels slide, rotate overlay
 
 ## Phase 6: Deployment & Maintenance
 - [x] Dockerize application
