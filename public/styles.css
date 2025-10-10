@@ -1,4 +1,145 @@
 * { box-sizing: border-box; }
+
+/* Full-screen modal on phones */
+@media (max-width: 640px) {
+  .modal { z-index: 2001; }
+  .modal .modal-content {
+    width: 100% !important;
+    max-width: none !important;
+    height: 100vh !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal .modal-header { position: sticky; top: 0; background: #fff; z-index: 1; }
+  .modal .modal-body { flex: 1 1 auto; overflow: auto; -webkit-overflow-scrolling: touch; }
+  .modal .form-actions { position: sticky; bottom: 0; background: #fff; z-index: 1; }
+}
+
+/* Full-screen modal when a real phone is detected */
+body.mobile-device .modal { z-index: 2001; }
+body.mobile-device .modal .modal-content {
+  width: 100% !important;
+  max-width: none !important;
+  height: 100vh !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+body.mobile-device .modal .modal-header { position: sticky; top: 0; background: #fff; z-index: 1; }
+body.mobile-device .modal .modal-body { flex: 1 1 auto; overflow: auto; -webkit-overflow-scrolling: touch; }
+body.mobile-device .modal .form-actions { position: sticky; bottom: 0; background: #fff; z-index: 1; }
+
+/* Rotate-to-landscape overlay (hidden by default) */
+.rotate-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0f172acc; /* slate-900 with alpha */
+  color: #fff;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  text-align: center;
+  padding: 24px;
+}
+.rotate-box { max-width: 520px; }
+.rotate-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.9; }
+.rotate-title { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+.rotate-sub { font-size: 14px; opacity: 0.9; }
+
+/* Off-canvas panels for mobile */
+@media (max-width: 640px) {
+  /* Backdrop */
+  .mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+  body.overlay-open .mobile-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Filters panel (header .controls) slides from left */
+  header { position: sticky; top: 0; }
+  header .controls {
+    position: fixed;
+    top: var(--header-top, 0);
+    left: 0;
+    width: min(90vw, 420px);
+    max-height: calc(100vh - var(--header-top, 0));
+    overflow: auto;
+    background: #fff;
+    border-right: 1px solid #e5e7eb;
+    padding: 12px;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+    transform: translateX(-100%);
+    transition: transform 220ms ease;
+    z-index: 1001; /* above backdrop */
+  }
+  body.filters-open header .controls {
+    transform: translateX(0);
+  }
+
+  /* Map panel slides from right */
+  .map-container {
+    position: fixed;
+    top: var(--header-top, 0);
+    right: 0;
+    width: min(92vw, 560px);
+    height: calc(100vh - var(--header-top, 0));
+    max-height: calc(100vh - var(--header-top, 0));
+    background: #fff;
+    border-left: 1px solid #e5e7eb;
+    box-shadow: -2px 0 8px rgba(0,0,0,0.08);
+    transform: translateX(100%);
+    transition: transform 220ms ease;
+    z-index: 1001;
+  }
+  body.map-open .map-container {
+    transform: translateX(0);
+  }
+
+  /* When any panel is open, prevent body scroll */
+  body.overlay-open { overflow: hidden; }
+
+  /* Timeline takes full height behind overlays */
+  #timeline { height: calc(100vh - var(--header-top, 0)) !important; }
+
+  /* Hide large title on mobile to save space */
+  header h1 { display: none; }
+
+  /* Floating side tabs for Filters/Map that don't consume layout */
+  .mobile-toggles { position: static; }
+  .side-tab {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1102; /* above panels */
+    background: rgba(255,255,255,0.96);
+    color: #111827;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    border-radius: 999px;
+    padding: 8px 10px;
+    min-width: 36px;
+    min-height: 44px; /* touch target */
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 12px;
+  }
+  .side-tab-left { left: 6px; }
+  .side-tab-right { right: 6px; }
+  /* Keep tabs visible when panels are open by shifting them outside panel width */
+  body.filters-open .side-tab-left { left: calc(min(90vw, 420px) + 8px); }
+  body.map-open .side-tab-right { right: calc(min(92vw, 560px) + 8px); }
+}
 html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; color: #1f2937; }
 body { min-height: 100vh; display: flex; flex-direction: column; }
 
@@ -318,6 +459,38 @@ textarea:focus {
   }
 }
 
+/* Mobile-friendly layout and touch targets */
+@media (max-width: 640px) {
+  /* Respect safe areas on iOS */
+  body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  header { position: sticky; top: 0; z-index: 100; background: #fff; gap: 12px; padding: 10px 12px; }
+  header h1 { font-size: 16px; }
+  .controls { width: 100%; gap: 10px; }
+  .mobile-toggles { display: flex !important; }
+  .field { flex: 1 1 100%; font-size: 12px; }
+  .field input { min-width: 0; width: 100%; }
+  .buttons { width: 100%; flex-wrap: wrap; }
+  .buttons button { flex: 1 1 calc(50% - 6px); min-height: 44px; }
+  button { min-height: 44px; }
+
+  /* Larger tap targets for auth/logout */
+  .auth-box button { min-height: 44px; }
+
+  /* Timeline and map split vertically */
+  #timeline { height: 48vh !important; min-height: 220px; }
+  .map-container { min-height: 42vh; }
+
+  /* Timeline readability tweaks on small screens */
+  .vis-timeline .vis-item:not(.vis-background) .vis-item-content { font-size: 12px; line-height: 1.3; -webkit-line-clamp: 2; line-clamp: 2; }
+  .vis-time-axis .vis-text { font-size: 10px; }
+}
+
+@media (max-width: 420px) {
+  .buttons button { flex: 1 1 100%; }
+  header { padding: 8px 10px; }
+  .controls { gap: 8px; }
+}
+
 /* Week header row styling */
 .week-label {
   background: #f9fafb;
@@ -544,3 +717,58 @@ body.axis-condensed .vis-time-axis .vis-text { font-size: 11px; }
 /* Ensure tooltip doesn't exceed viewport - handled in consolidated .vis-tooltip rule above */
 
 /* Event styles are now loaded dynamically from /dynamic-styles.css */
+
+
+/* --- Force mobile layout when an actual phone is detected (independent of screen size) --- */
+/* JS adds body.mobile-device for real phones (UA + touch). These rules mirror the @media (max-width:640px) ones. */
+body.mobile-device {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+body.mobile-device header { position: sticky; top: 0; z-index: 100; background: #fff; gap: 12px; padding: 10px 12px; }
+body.mobile-device header h1 { display: none; }
+body.mobile-device .mobile-toggles { display: flex !important; }
+body.mobile-device .field { flex: 1 1 100%; font-size: 12px; }
+body.mobile-device .field input { min-width: 0; width: 100%; }
+body.mobile-device .buttons { width: 100%; flex-wrap: wrap; }
+body.mobile-device .buttons button { flex: 1 1 calc(50% - 6px); min-height: 44px; }
+body.mobile-device button { min-height: 44px; }
+body.mobile-device .auth-box button { min-height: 44px; }
+body.mobile-device #timeline { height: calc(100vh - var(--header-top, 0)) !important; }
+
+/* Backdrop for off-canvas */
+body.mobile-device .mobile-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: opacity 200ms ease; }
+body.mobile-device.overlay-open .mobile-backdrop { opacity: 1; pointer-events: auto; }
+
+/* Filters panel (left) */
+body.mobile-device header .controls {
+  position: fixed; top: var(--header-top, 0); left: 0; width: min(90vw, 420px);
+  max-height: calc(100vh - var(--header-top, 0)); overflow: auto; background: #fff;
+  border-right: 1px solid #e5e7eb; padding: 12px; box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+  transform: translateX(-100%); transition: transform 220ms ease; z-index: 1001;
+}
+body.mobile-device.filters-open header .controls { transform: translateX(0); }
+
+/* Map panel (right) */
+body.mobile-device .map-container {
+  position: fixed; top: var(--header-top, 0); right: 0; width: min(92vw, 560px);
+  height: calc(100vh - var(--header-top, 0)); max-height: calc(100vh - var(--header-top, 0));
+  background: #fff; border-left: 1px solid #e5e7eb; box-shadow: -2px 0 8px rgba(0,0,0,0.08);
+  transform: translateX(100%); transition: transform 220ms ease; z-index: 1001;
+}
+body.mobile-device.map-open .map-container { transform: translateX(0); }
+body.mobile-device.overlay-open { overflow: hidden; }
+
+/* Floating side tabs */
+body.mobile-device .side-tab { position: fixed; top: 50%; transform: translateY(-50%); z-index: 1102; background: rgba(255,255,255,0.96); color: #111827; border: 1px solid #e5e7eb; box-shadow: 0 2px 6px rgba(0,0,0,0.12); border-radius: 999px; padding: 8px 10px; min-width: 36px; min-height: 44px; writing-mode: vertical-rl; text-orientation: mixed; font-size: 12px; }
+body.mobile-device .side-tab-left { left: 6px; }
+body.mobile-device .side-tab-right { right: 6px; }
+body.mobile-device.filters-open .side-tab-left { left: calc(min(90vw, 420px) + 8px); }
+body.mobile-device.map-open .side-tab-right { right: calc(min(92vw, 560px) + 8px); }
+
+/* Rotate overlay for phones in portrait, regardless of width */
+@media (orientation: portrait) {
+  body.mobile-device .rotate-overlay { display: flex; }
+  body.mobile-device header, body.mobile-device main, body.mobile-device footer { filter: blur(1px); pointer-events: none; user-select: none; }
+  body.mobile-device { overflow: hidden; }
+}

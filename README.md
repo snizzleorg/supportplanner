@@ -7,7 +7,7 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
 - View and manage support schedules
 - Drag-and-drop event rescheduling
 - Real-time updates
-- Mobile-responsive design
+- Mobile phone-optimized UI
 - Leaflet-based map with per-location markers and group-colored pins
 - Accessible edit modal (focus on open, Escape to close, focus trap)
 - Quick-zoom timeline controls (Month, Quarter)
@@ -24,6 +24,18 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
 - **Quarter**: Sets the visible timeline window to today−1 week .. today+3 months (no data reload).
 
 The Month/Quarter buttons only change the visible window. The loaded range (From/To) remains unchanged until you explicitly Refresh.
+
+### Mobile UX specifics
+
+- Off-canvas panels for Controls (left) and Map (right); both are hidden by default on phones and slide over content when opened.
+- Floating side tabs ("Controls" and "Map") that do not consume layout space on phones.
+- Only one panel can be open at a time; backdrop tap closes any open panel.
+- Device detection: mobile layout is applied for real phones (UA + touch), not just small widths.
+- Landscape-only guidance: a rotate overlay appears in portrait on phones.
+- Timeline touch behavior:
+  - Pinch-zoom inside the timeline (native page zoom disabled globally).
+  - Single tap on an event shows a tooltip; long-press (~550ms) opens the edit modal.
+  - Double-tap zoom is suppressed in the timeline area.
 
 ## Authentication and RBAC (Optional)
 
@@ -385,6 +397,10 @@ docker-compose up -d --build
 ```
 
 The application will be available at `http://localhost:5175`.
+
+Notes for mobile testing
+- iOS/Android device emulation or real device recommended.
+- Native page zoom is disabled via viewport meta for consistent timeline gestures.
 
 ## Tests
 

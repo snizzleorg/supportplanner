@@ -55,6 +55,10 @@ const clearSearchBtn = document.getElementById('clearSearch');
 const timelineEl = document.getElementById('timeline');
 const userInfoEl = document.getElementById('userInfo');
 const logoutBtn = document.getElementById('logoutBtn');
+// Mobile toggles
+const filtersToggleBtn = document.getElementById('filtersToggle');
+const mapToggleBtn = document.getElementById('mapToggle');
+const mobileBackdrop = document.getElementById('mobileBackdrop');
 let timeline;
 let groups = new DataSet([]);
 let items = new DataSet([]);
@@ -77,6 +81,85 @@ let currentUserRole = 'reader';
 
 function setStatus(msg) {
   statusEl.textContent = msg || '';
+}
+
+// --- Mobile toggles setup ---
+function setupMobileToggles() {
+  const body = document.body;
+  const small = () => (window.innerWidth || 0) <= 640;
+  const headerEl = document.querySelector('header');
+
+  function setHeaderTopVar() {
+    try {
+      const h = headerEl ? headerEl.offsetHeight : 0;
+      document.documentElement.style.setProperty('--header-top', h + 'px');
+    } catch (_) {}
+  }
+
+  function updateOverlayState() {
+    const anyOpen = body.classList.contains('filters-open') || body.classList.contains('map-open');
+    body.classList.toggle('overlay-open', anyOpen);
+    if (mobileBackdrop) mobileBackdrop.setAttribute('aria-hidden', anyOpen ? 'false' : 'true');
+  }
+
+  function applyInitial() {
+    if (!small()) {
+      body.classList.remove('filters-open', 'map-open', 'overlay-open');
+      if (filtersToggleBtn) { filtersToggleBtn.setAttribute('aria-pressed', 'false'); filtersToggleBtn.textContent = 'Show Controls'; }
+      if (mapToggleBtn) { mapToggleBtn.setAttribute('aria-pressed', 'false'); mapToggleBtn.textContent = 'Show Map'; }
+      if (mobileBackdrop) mobileBackdrop.setAttribute('aria-hidden', 'true');
+      return;
+    }
+    // Default hidden on small screens (both panels closed)
+    body.classList.remove('filters-open', 'map-open');
+    if (filtersToggleBtn) { filtersToggleBtn.setAttribute('aria-pressed', 'false'); filtersToggleBtn.textContent = 'Show Filters'; }
+    if (mapToggleBtn) { mapToggleBtn.setAttribute('aria-pressed', 'false'); mapToggleBtn.textContent = 'Show Map'; }
+    if (mobileBackdrop) mobileBackdrop.setAttribute('aria-hidden', 'true');
+    updateOverlayState();
+  }
+  setHeaderTopVar();
+  applyInitial();
+  // Bind toggle handlers
+  if (filtersToggleBtn) {
+    filtersToggleBtn.addEventListener('click', () => {
+      const open = body.classList.toggle('filters-open');
+      // closing map if filters open (single panel at a time)
+      if (open) body.classList.remove('map-open');
+      filtersToggleBtn.setAttribute('aria-pressed', open ? 'true' : 'false');
+      filtersToggleBtn.textContent = open ? 'Hide Controls' : 'Show Controls';
+      if (mapToggleBtn) { mapToggleBtn.setAttribute('aria-pressed', 'false'); mapToggleBtn.textContent = 'Show Map'; }
+      updateOverlayState();
+      setHeaderTopVar();
+    });
+  }
+  if (mapToggleBtn) {
+    mapToggleBtn.addEventListener('click', () => {
+      const open = body.classList.toggle('map-open');
+      // closing filters if map open (single panel at a time)
+      if (open) body.classList.remove('filters-open');
+      mapToggleBtn.setAttribute('aria-pressed', open ? 'true' : 'false');
+      mapToggleBtn.textContent = open ? 'Hide Map' : 'Show Map';
+      if (filtersToggleBtn) { filtersToggleBtn.setAttribute('aria-pressed', 'false'); filtersToggleBtn.textContent = 'Show Filters'; }
+      updateOverlayState();
+      // Resize map when showing
+      try { if (open && window.map && map.invalidateSize) setTimeout(() => map.invalidateSize(false), 0); } catch (_) {}
+    });
+  }
+  // Backdrop click closes any open panel
+  if (mobileBackdrop) {
+    mobileBackdrop.addEventListener('click', () => {
+      body.classList.remove('filters-open', 'map-open');
+      if (filtersToggleBtn) { filtersToggleBtn.setAttribute('aria-pressed', 'false'); filtersToggleBtn.textContent = 'Show Filters'; }
+      if (mapToggleBtn) { mapToggleBtn.setAttribute('aria-pressed', 'false'); mapToggleBtn.textContent = 'Show Map'; }
+      updateOverlayState();
+    });
+  }
+  // Adjust on resize (debounced)
+  let t;
+  window.addEventListener('resize', () => {
+    clearTimeout(t);
+    t = setTimeout(() => { setHeaderTopVar(); applyInitial(); }, 150);
+  });
 }
 
 async function hydrateAuthBox() {
@@ -280,6 +363,17 @@ function initTimeline() {
 
 // Build modal controller with dependencies
 const modalCtl = createModalController({ setStatus, refresh, isoWeekNumber, items, urlToGroupId, forceRefreshCache, dayjs });
+
+// Mobile: open edit modal when tooltip requests it (single tap shows tooltip, long-press opens modal)
+try {
+  window.addEventListener('timeline:openEdit', async (e) => {
+    try {
+      const uid = e && e.detail && e.detail.uid;
+      if (!uid) return;
+      await modalCtl.openEditModal(uid);
+    } catch (_) {}
+  });
+} catch (_) {}
 
 // Dynamically size the timeline to its content while leaving room for the map
 function adjustTimelineHeight() {
@@ -1204,6 +1298,11 @@ function initTimelineEvents() {
           setStatus('Read-only: editing disabled');
           return;
         }
+        // On mobile phones, single tap should NOT open modal (tooltip handles tap). Use long-press.
+        try {
+          const isMobileTap = document.body.classList.contains('mobile-device') || (navigator.maxTouchPoints || 0) > 0;
+          if (isMobileTap) return;
+        } catch (_) {}
         modalCtl.openEditModal(uid);
       } else {
         console.error('Could not extract UID from item ID:', properties.item);
@@ -1276,7 +1375,22 @@ function initTimelineEvents() {
 }
 
 (async function main() {
+  // Detect real mobile phones (UA + touch), not just screen size
+  try {
+    const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+    const isIphone = /iPhone/.test(ua);
+    const isAndroidPhone = /Android/.test(ua) && /Mobile/.test(ua);
+    const isWindowsPhone = /Windows Phone/.test(ua);
+    const isMobileSafari = /Mobile\/.+Safari/.test(ua) && !/iPad|Tablet/.test(ua);
+    const touchOK = (navigator.maxTouchPoints || 0) > 0;
+    const isMobilePhone = (isIphone || isAndroidPhone || isWindowsPhone || isMobileSafari) && touchOK;
+    if (isMobilePhone) document.body.classList.add('mobile-device');
+    else document.body.classList.remove('mobile-device');
+  } catch (_) {}
+
   setDefaults();
+  // Initialize off-canvas mobile UI (filters/map)
+  try { setupMobileToggles(); } catch (_) {}
   wireEvents();
   await initTimeline();
   // Initialize timeline events after timeline is created
