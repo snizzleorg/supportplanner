@@ -125,6 +125,7 @@ app.use(helmet({
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'none'"],
+      upgradeInsecureRequests: null, // Don't force HTTPS upgrades (we're running on HTTP)
     },
   },
   crossOriginEmbedderPolicy: false, // Allow loading external resources
