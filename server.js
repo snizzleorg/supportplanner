@@ -475,6 +475,31 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
+// Validation middleware helper
+const validate = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ 
+      error: 'Validation failed', 
+      details: errors.array().map(e => ({ field: e.path, message: e.msg }))
+    });
+  }
+  next();
+};
+
+// Common validation rules
+const eventValidation = [
+  body('summary').optional().trim().isLength({ min: 1, max: 500 }).withMessage('Summary must be 1-500 characters'),
+  body('description').optional().trim().isLength({ max: 5000 }).withMessage('Description must be max 5000 characters'),
+  body('location').optional().trim().isLength({ max: 500 }).withMessage('Location must be max 500 characters'),
+  body('start').optional().isISO8601().withMessage('Start must be a valid ISO date'),
+  body('end').optional().isISO8601().withMessage('End must be a valid ISO date'),
+];
+
+const uidValidation = [
+  param('uid').trim().isLength({ min: 1, max: 200 }).withMessage('UID must be 1-200 characters'),
+];
+
 // Create a new all-day event (inclusive start/end dates)
 app.post('/api/events/all-day', requireRole('editor'), [
   body('calendarUrl').trim().isURL().withMessage('Valid calendar URL required'),
@@ -903,31 +928,6 @@ app.post('/api/refresh-caldav', requireRole('reader'), async (req, res) => {
 function isValidDate(dateString) {
   return !isNaN(Date.parse(dateString));
 }
-
-// Validation middleware helper
-const validate = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ 
-      error: 'Validation failed', 
-      details: errors.array().map(e => ({ field: e.path, message: e.msg }))
-    });
-  }
-  next();
-};
-
-// Common validation rules
-const eventValidation = [
-  body('summary').optional().trim().isLength({ min: 1, max: 500 }).withMessage('Summary must be 1-500 characters'),
-  body('description').optional().trim().isLength({ max: 5000 }).withMessage('Description must be max 5000 characters'),
-  body('location').optional().trim().isLength({ max: 500 }).withMessage('Location must be max 500 characters'),
-  body('start').optional().isISO8601().withMessage('Start must be a valid ISO date'),
-  body('end').optional().isISO8601().withMessage('End must be a valid ISO date'),
-];
-
-const uidValidation = [
-  param('uid').trim().isLength({ min: 1, max: 200 }).withMessage('UID must be 1-200 characters'),
-];
 
 // Update an event by UID
 app.put('/api/events/:uid', requireRole('editor'), uidValidation, eventValidation, validate, async (req, res) => {
