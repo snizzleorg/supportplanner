@@ -5,8 +5,6 @@ import { geocodeLocation } from './geocode.js';
 
 let map; // Leaflet map instance
 let markersLayer; // Layer group for markers
-const geocodeCache = new Map(); // in-memory cache for geocoding
-let rerenderTimer = null; // debounce re-render when UI overlays are open
 
 function escapeHtml(unsafe) {
   if (unsafe === undefined || unsafe === null) return '';
@@ -86,20 +84,6 @@ function makePinIcon(color) {
 }
 
 export async function renderMapMarkers(allServerItems, groups) {
-  // Avoid heavy work while modal is open; retry shortly after
-  try {
-    const modalOpen = !!document.querySelector('.modal.show');
-    if (modalOpen) {
-      if (!rerenderTimer) {
-        rerenderTimer = setTimeout(() => {
-          rerenderTimer = null;
-          try { renderMapMarkers(allServerItems, groups); } catch (_) {}
-        }, 500);
-      }
-      return;
-    }
-  } catch (_) {}
-
   initMapOnce();
   if (!map || !markersLayer) return;
   try { if (window.__MAP_TESTING) console.log('[map] renderMapMarkers start', (allServerItems||[]).length); } catch (_) {}
@@ -128,63 +112,42 @@ export async function renderMapMarkers(allServerItems, groups) {
     inner.get(gid).push(it);
   }
 
-  // Geocode all unique locations with caching, in parallel
-  const locEntries = Array.from(byLocThenGroup.entries());
-  const geocodeCached = async (loc) => {
-    if (geocodeCache.has(loc)) return geocodeCache.get(loc);
-    const p = geocodeLocation(loc).catch(() => null);
-    geocodeCache.set(loc, p);
-    const res = await p; // resolve to a value for future synchronous reads
-    geocodeCache.set(loc, res);
-    return res;
+  const addOffset = (lat, lon, index, total) => {
+    if (total <= 1) return { lat, lon };
+    const radiusMeters = 12;
+    const angle = (2 * Math.PI * index) / total;
+    const dLat = (radiusMeters * Math.sin(angle)) / 111111;
+    const dLon = (radiusMeters * Math.cos(angle)) / (111111 * Math.max(0.1, Math.cos(lat * Math.PI / 180)));
+    return { lat: lat + dLat, lon: lon + dLon };
   };
-  const results = await Promise.all(
-    locEntries.map(async ([loc]) => [loc, await geocodeCached(loc)])
-  );
 
-  // Prepare marker creation tasks
-  const tasks = [];
   for (const [loc, inner] of byLocThenGroup.entries()) {
-    const latlon = results.find(r => r[0] === loc)?.[1];
+    // Geocode the location string
+    let latlon = await geocodeLocation(loc);
     if (!latlon) continue;
     const entries = Array.from(inner.entries());
     const total = entries.length;
     entries.forEach(([gid, evs], idx) => {
       const color = getGroupColor(gid);
       const { lat, lon } = addOffset(latlon.lat, latlon.lon, idx, total);
-      tasks.push({ loc, gid, evs, lat, lon, color });
-    });
-  }
-
-  // Create markers in chunks to keep UI responsive
-  const CHUNK = 60;
-  let i = 0;
-  const step = () => {
-    const end = Math.min(i + CHUNK, tasks.length);
-    for (; i < end; i++) {
-      const t = tasks[i];
-      const marker = L.marker([t.lat, t.lon], { icon: makePinIcon(t.color) }).addTo(markersLayer);
+      const marker = L.marker([lat, lon], { icon: makePinIcon(color) }).addTo(markersLayer);
       try {
         if (window.__MAP_TESTING) {
           window.__mapMarkerAddedCount = (window.__mapMarkerAddedCount||0) + 1;
-          console.log('[map] marker added', t.loc, t.gid, t.lat, t.lon);
+          console.log('[map] marker added', loc, gid, lat, lon);
         }
       } catch (_) {}
-      bounds.push([t.lat, t.lon]);
-      const list = t.evs.slice(0, 5)
+      bounds.push([lat, lon]);
+      const list = evs.slice(0, 5)
         .map(e => `<li>${escapeHtml(e.content || e.summary || 'Untitled')} (${escapeHtml(e.start)} → ${escapeHtml(e.end)})</li>`)
         .join('');
-      const more = t.evs.length > 5 ? `<div>…and ${t.evs.length - 5} more</div>` : '';
-      const who = (groups.get(t.gid)?.content) || '';
-      marker.bindPopup(`<div><strong>${escapeHtml(t.loc)}</strong><div>${escapeHtml(who)}</div><ul>${list}</ul>${more}</div>`);
-    }
-    if (i < tasks.length) {
-      requestAnimationFrame(step);
-    } else {
-      if (bounds.length) {
-        map.fitBounds(bounds, { padding: [20, 20] });
-      }
-    }
-  };
-  step();
+      const more = evs.length > 5 ? `<div>…and ${evs.length - 5} more</div>` : '';
+      const who = (groups.get(gid)?.content) || '';
+      marker.bindPopup(`<div><strong>${escapeHtml(loc)}</strong><div>${escapeHtml(who)}</div><ul>${list}</ul>${more}</div>`);
+    });
+  }
+
+  if (bounds.length) {
+    map.fitBounds(bounds, { padding: [20, 20] });
+  }
 }
