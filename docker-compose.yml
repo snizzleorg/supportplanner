@@ -4,6 +4,8 @@ services:
     container_name: support-planner
     env_file:
       - .env
+    environment:
+      - SKIP_SESSION_SECRET_CHECK=true
     ports:
       - "5175:5173"
     restart: unless-stopped

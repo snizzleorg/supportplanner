@@ -125,11 +125,13 @@ const EDITOR_GROUPS = (process.env.EDITOR_GROUPS || '').split(',').map(s => s.tr
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 const EDITOR_EMAILS = (process.env.EDITOR_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
-// Validate session secret in production (but allow default for local Docker dev)
-const isLocalDev = NEXTCLOUD_URL?.includes('localhost') || NEXTCLOUD_URL?.includes('127.0.0.1');
-if (process.env.NODE_ENV === 'production' && SESSION_SECRET === 'supportplanner_dev_session' && !isLocalDev) {
+// Validate session secret in production
+// Skip validation if SKIP_SESSION_SECRET_CHECK=true (for local Docker dev)
+const skipSecretCheck = process.env.SKIP_SESSION_SECRET_CHECK === 'true';
+if (process.env.NODE_ENV === 'production' && SESSION_SECRET === 'supportplanner_dev_session' && !skipSecretCheck) {
   console.error('FATAL: SESSION_SECRET must be set to a secure value in production!');
   console.error('Set SESSION_SECRET environment variable to a random string.');
+  console.error('Or set SKIP_SESSION_SECRET_CHECK=true for local development only.');
   process.exit(1);
 }
 if (SESSION_SECRET === 'supportplanner_dev_session') {
