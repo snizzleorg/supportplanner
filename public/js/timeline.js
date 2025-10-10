@@ -14,7 +14,7 @@ export function initTimeline(timelineEl, items, groups) {
     stack: true,
     stackSubgroups: false,
     height: 'auto',
-    minHeight: '500px',
+    minHeight: '600px',
     verticalScroll: true,
     horizontalScroll: false,
     zoomable: true,
