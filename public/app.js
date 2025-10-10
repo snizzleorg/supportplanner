@@ -274,8 +274,8 @@ function initTimeline() {
   try { window.groups = groups; window.items = items; } catch (_) {}
   // Create timeline via module
   timeline = initTimelineCore(timelineEl, items, groups);
-  // Initialize search module with items dataset
-  try { initSearch(items); } catch (_) {}
+  // Initialize search module with items and groups datasets (to search calendar names)
+  try { initSearch(items, groups); } catch (_) {}
 }
 
 // Build modal controller with dependencies
@@ -625,7 +625,11 @@ async function handleSubmit(e) {
                 content: eventData.summary,
                 start: startVal,
                 end: endVal,
-                allDay: isAllDay
+                allDay: isAllDay,
+                className: `group-${resolvedGroupId}`,
+                // Enrich for search by calendar name
+                calendarName: (groups.get(resolvedGroupId)?.content) || '',
+                calendarUrl: (groups.get(resolvedGroupId)?.calendarUrl) || ''
               });
             }
           } catch (optErr) {
@@ -940,7 +944,17 @@ async function refresh() {
         groupIdMap.set(g.id, newId);
         // Preserve original calendar URL (prefer explicit g.url if provided by server)
         const originalUrl = g.url || g.id;
-        allGroups.push({ ...g, id: newId, calendarUrl: originalUrl });
+        // Ensure the group's visible label (content) is the human-readable calendar name
+        const displayName = g.displayName || g.content || g.name || originalUrl;
+        const groupObj = { 
+          ...g, 
+          id: newId, 
+          url: originalUrl, 
+          calendarUrl: originalUrl, 
+          content: displayName, 
+          displayName 
+        };
+        allGroups.push(groupObj);
         groupReverseMap.set(newId, originalUrl);
         urlToGroupId.set(originalUrl, newId);
       });
@@ -958,11 +972,18 @@ async function refresh() {
           adjustedEnd = dayjs(item.end).add(1, 'day').format('YYYY-MM-DD');
         }
 
+        const augmentedClass = item.className ? `${item.className} group-${newGroup}` : `group-${newGroup}`;
+        const groupObj = groups.get(newGroup);
+        const calendarName = (groupObj && (groupObj.displayName || groupObj.content)) || '';
+        const calendarUrl = (groupObj && (groupObj.calendarUrl || groupObj.url)) || '';
         allItems.push({
           ...item,
           end: adjustedEnd,
           group: newGroup,
-          id: `${newGroup}-${item.id}`
+          id: `${newGroup}-${item.id}`,
+          className: augmentedClass,
+          calendarName,
+          calendarUrl
         });
       });
       
@@ -1050,6 +1071,8 @@ async function refresh() {
     setStatus(`Loaded ${allItems.length} items in ${allGroups.length} calendars | Window: ${w.start.toISOString().slice(0,10)} → ${w.end.toISOString().slice(0,10)}`);
     // Repaint week bar after data load
     try { renderWeekBar(timeline); } catch (_) {}
+    // Re-apply search filter if there is an active query so calendar-name matches take effect
+    try { applySearchFilter(); } catch (_) {}
     // Fixed height; nothing to adjust
   } catch (e) {
     if (gen !== refreshGen) return;
