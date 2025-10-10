@@ -14,6 +14,7 @@ services:
     build:
       context: .
       dockerfile: tests/runner/Dockerfile
+    platform: linux/arm64  # Use native architecture on Apple Silicon
     container_name: support-planner-tests
     environment:
       - APP_URL=http://support-planner:5173
