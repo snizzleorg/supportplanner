@@ -13,6 +13,13 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
 - Quick-zoom timeline controls (Month, Quarter)
 - OIDC login with roles (admin/editor/reader) and logout
 - Search filter with calendar-name support (type a calendar name to highlight its events)
+- **Security hardening** (v0.3.1):
+  - Rate limiting on API and auth endpoints
+  - Input validation with express-validator
+  - Security headers with helmet (CSP, X-Frame-Options, etc.)
+  - Session secret validation for production
+  - CORS origin restrictions
+  - Health and readiness endpoints for monitoring
 
 ## UI Controls
 
@@ -64,6 +71,45 @@ If OIDC is configured, users must sign in. The header shows the signed-in user a
 Roles can be mapped via IdP groups or user email (emails take precedence). Configure via environment variables (see below).
 
 ## API Endpoints
+
+### Health and Monitoring
+
+#### Health Check
+Returns application health status, version, and service checks.
+
+```http
+GET /health
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "timestamp": "2025-10-10T17:08:42.528Z",
+  "uptime": 12.46,
+  "version": "0.3.0",
+  "environment": "production",
+  "checks": {
+    "calendarCache": "initialized",
+    "auth": "disabled"
+  }
+}
+```
+
+#### Readiness Probe
+Stricter check for Kubernetes readiness probes.
+
+```http
+GET /ready
+```
+
+**Response:**
+```json
+{
+  "status": "ready",
+  "calendars": 11
+}
+```
 
 ### Get All Calendars
 
@@ -326,10 +372,13 @@ All error responses follow this format:
 ```
 
 Common HTTP status codes:
-- `400 Bad Request`: Invalid input data
+- `400 Bad Request`: Invalid input data or validation failed
 - `401 Unauthorized`: Authentication required
+- `403 Forbidden`: Insufficient permissions (role-based)
 - `404 Not Found`: Resource not found
+- `429 Too Many Requests`: Rate limit exceeded
 - `500 Internal Server Error`: Server error
+- `503 Service Unavailable`: Service not ready (readiness probe)
 
 ## Environment Variables
 
@@ -340,6 +389,10 @@ NEXTCLOUD_URL=https://your-nextcloud-instance.com
 NEXTCLOUD_USERNAME=your-username
 NEXTCLOUD_PASSWORD=your-password
 PORT=5173
+
+# Security (v0.3.1+)
+SESSION_SECRET=your-random-secret-here  # REQUIRED in production
+ALLOWED_ORIGINS=http://localhost:5175,http://localhost:5173  # Optional, defaults to localhost
 ```
 
 OIDC authentication and roles configuration (place in `.env`):
@@ -412,8 +465,19 @@ This repo includes a lightweight browser test harness and a headless runner.
 docker compose run --rm -e RUNNER_BRIEF=1 support-planner-tests
 ```
 
+**Test suites included:**
+- Security tests (health, readiness, headers, validation, rate limits) - 23 tests
+- API tests (CRUD operations, calendar fetching)
+- Search functionality tests
+- Timeline interaction tests
+- Map rendering tests
+- Modal and tooltip tests
+- Accessibility tests
+- CSS audit
+
 ### Focus a specific harness
 
+- Security: `RUN_ONLY=security`
 - Map markers: `RUN_ONLY=map`
 - A11y modal: `RUN_ONLY=a11y`
 - Tooltip: `RUN_ONLY=tooltip`

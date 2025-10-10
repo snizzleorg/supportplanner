@@ -6,6 +6,9 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import session from 'express-session';
 import { Issuer, generators } from 'openid-client';
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
+import { body, param, validationResult } from 'express-validator';
 import { calendarCache } from './services/calendarCache.js';
 
 dotenv.config();
@@ -78,12 +81,64 @@ function loadEventTypesConfig() {
   }
 }
 
-// Initial load at startup
 loadEventTypesConfig();
 
 const app = express();
-app.use(cors());
+
+// CORS configuration - restrict origins in production
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : [
+      'http://localhost:5175', 
+      'http://localhost:5173',
+      'http://support-planner:5173', // Docker internal hostname for tests
+    ];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g., mobile apps, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json({ limit: '2mb' }));
+
+// Security headers with helmet
+// Note: upgrade-insecure-requests is disabled for local HTTP development
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: false, // Don't use helmet's defaults which include upgrade-insecure-requests
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: [
+        "'self'",
+        "https://nominatim.openstreetmap.org", // Geocoding API
+        "https://*.tile.openstreetmap.org",     // Map tiles
+        "https://cdn.jsdelivr.net",             // CDN for libraries and source maps
+        "https://unpkg.com",                    // CDN for libraries and source maps
+      ],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'self'"],
+      scriptSrcAttr: ["'none'"],
+      // upgradeInsecureRequests: [] is intentionally omitted for HTTP development
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow loading external resources
+}));
 
 // Initialize calendar cache and optional auth config
 const {
@@ -107,6 +162,19 @@ const EDITOR_GROUPS = (process.env.EDITOR_GROUPS || '').split(',').map(s => s.tr
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 const EDITOR_EMAILS = (process.env.EDITOR_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
+// Validate session secret in production
+// Skip validation if SKIP_SESSION_SECRET_CHECK=true (for local Docker dev)
+const skipSecretCheck = process.env.SKIP_SESSION_SECRET_CHECK === 'true';
+if (process.env.NODE_ENV === 'production' && SESSION_SECRET === 'supportplanner_dev_session' && !skipSecretCheck) {
+  console.error('FATAL: SESSION_SECRET must be set to a secure value in production!');
+  console.error('Set SESSION_SECRET environment variable to a random string.');
+  console.error('Or set SKIP_SESSION_SECRET_CHECK=true for local development only.');
+  process.exit(1);
+}
+if (SESSION_SECRET === 'supportplanner_dev_session') {
+  console.warn('WARNING: Using default SESSION_SECRET. Set a secure value for production deployments.');
+}
+
 // Session (required for OIDC)
 app.use(session({
   secret: SESSION_SECRET,
@@ -118,6 +186,38 @@ app.use(session({
     secure: false // set true when behind HTTPS/terminating proxy
   }
 }));
+
+// Rate limiting to prevent abuse
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 login attempts per windowMs
+  message: 'Too many login attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Don't count successful logins
+});
+
+const refreshLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 10, // Limit refresh to 10 times per 5 minutes
+  message: 'Too many refresh requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiters
+app.use('/api/', apiLimiter);
+app.use('/auth/login', authLimiter);
+app.use('/auth/callback', authLimiter);
+app.use('/api/refresh-caldav', refreshLimiter);
 
 // Optional OIDC initialization
 const authEnabled = Boolean(OIDC_ISSUER_URL && OIDC_CLIENT_ID && OIDC_CLIENT_SECRET && OIDC_REDIRECT_URI);
@@ -391,8 +491,39 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
+// Validation middleware helper
+const validate = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ 
+      error: 'Validation failed', 
+      details: errors.array().map(e => ({ field: e.path, message: e.msg }))
+    });
+  }
+  next();
+};
+
+// Common validation rules
+const eventValidation = [
+  body('summary').optional().trim().isLength({ min: 1, max: 500 }).withMessage('Summary must be 1-500 characters'),
+  body('description').optional().trim().isLength({ max: 5000 }).withMessage('Description must be max 5000 characters'),
+  body('location').optional().trim().isLength({ max: 500 }).withMessage('Location must be max 500 characters'),
+  body('start').optional().isISO8601().withMessage('Start must be a valid ISO date'),
+  body('end').optional().isISO8601().withMessage('End must be a valid ISO date'),
+];
+
+const uidValidation = [
+  param('uid').trim().isLength({ min: 1, max: 200 }).withMessage('UID must be 1-200 characters'),
+];
+
 // Create a new all-day event (inclusive start/end dates)
-app.post('/api/events/all-day', requireRole('editor'), async (req, res) => {
+app.post('/api/events/all-day', requireRole('editor'), [
+  body('calendarUrl').trim().isURL().withMessage('Valid calendar URL required'),
+  body('summary').trim().isLength({ min: 1, max: 500 }).withMessage('Summary required (1-500 chars)'),
+  body('start').isISO8601().withMessage('Valid start date required'),
+  body('end').isISO8601().withMessage('Valid end date required'),
+  ...eventValidation,
+], validate, async (req, res) => {
   try {
     const { calendarUrl, summary, description, location, start, end, meta } = req.body || {};
     if (!calendarUrl || !summary || !start || !end) {
@@ -425,7 +556,7 @@ app.post('/api/events/all-day', requireRole('editor'), async (req, res) => {
 });
 
 // Delete an event by UID
-app.delete('/api/events/:uid', requireRole('editor'), async (req, res) => {
+app.delete('/api/events/:uid', requireRole('editor'), uidValidation, validate, async (req, res) => {
   try {
     const { uid } = req.params;
     if (!uid) {
@@ -548,7 +679,7 @@ app.post('/api/events', async (req, res) => {
           from,
           to,
           calendarCount: 0,
-          eventCount: 0,
+          version: '0.3.0',
           occurrenceCount: 0,
           isEmpty: true,
           source: 'cache',
@@ -809,113 +940,13 @@ app.post('/api/refresh-caldav', requireRole('reader'), async (req, res) => {
   }
 });
 
-// Update event endpoint
-app.put('/api/events/:uid', requireRole('editor'), async (req, res) => {
-  try {
-    const { uid } = req.params;
-    const updateData = req.body;
-
-    console.log(`[updateEvent] Request to update event ${uid} with data:`, updateData);
-
-    // Basic validation
-    if (!uid) {
-      return res.status(400).json({ error: 'Event UID is required' });
-    }
-
-    if (!updateData || Object.keys(updateData).length === 0) {
-      return res.status(400).json({ error: 'No update data provided' });
-    }
-
-    // Validate date formats if provided
-    if (updateData.start && !isValidDate(updateData.start)) {
-      return res.status(400).json({ error: 'Invalid start date' });
-    }
-
-    if (updateData.end && !isValidDate(updateData.end)) {
-      return res.status(400).json({ error: 'Invalid end date' });
-    }
-
-    try {
-      // Update the event using the server's credentials
-      const updatedEvent = await calendarCache.updateEvent(uid, updateData);
-      
-      res.json({
-        success: true,
-        message: 'Event updated successfully',
-        event: updatedEvent
-      });
-    } catch (error) {
-      console.error('Error in calendarCache.updateEvent:', error);
-      res.status(500).json({ 
-        error: 'Failed to update event',
-        details: error.message 
-      });
-    }
-
-  } catch (error) {
-    console.error('Error updating event:', error);
-    res.status(500).json({ 
-      error: 'Failed to update event',
-      details: error.message 
-    });
-  }
-});
-
 // Helper function to validate date strings
 function isValidDate(dateString) {
   return !isNaN(Date.parse(dateString));
 }
 
-// Get a single event by UID
-app.get('/api/events/:uid', async (req, res) => {
-  try {
-    const { uid } = req.params;
-    console.log(`[getEvent] Fetching event with UID: ${uid}`);
-    
-    if (!uid) {
-      return res.status(400).json({ success: false, error: 'Event UID is required' });
-    }
-    
-    // Get the authorization header for the calendar cache
-    const authHeader = req.headers.authorization || '';
-    
-    // Get all calendar URLs
-    const calendars = calendarCache.getAllCalendars();
-    const calendarUrls = calendars.map(c => c.url);
-    
-    if (!calendarUrls.length) {
-      console.log('[getEvent] No calendars available');
-      return res.status(404).json({ success: false, error: 'No calendars available' });
-    }
-    
-    console.log(`[getEvent] Searching in ${calendarUrls.length} calendars`);
-    
-    // Get the event directly using the getEvent method
-    const event = await calendarCache.getEvent(uid);
-    
-    if (!event) {
-      console.log(`[getEvent] Event not found with UID: ${uid}`);
-      return res.status(404).json({ success: false, error: 'Event not found' });
-    }
-    
-    console.log(`[getEvent] Found event:`, event);
-    res.json({
-      success: true,
-      event
-    });
-    
-  } catch (error) {
-    console.error('Error fetching event:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to fetch event',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-  }
-});
-
 // Update an event by UID
-app.put('/api/events/:uid', requireRole('editor'), async (req, res) => {
+app.put('/api/events/:uid', requireRole('editor'), uidValidation, eventValidation, validate, async (req, res) => {
   try {
     const { uid } = req.params;
     const updateData = req.body;
@@ -967,7 +998,7 @@ app.put('/api/events/:uid', requireRole('editor'), async (req, res) => {
 });
 
 // Get event by UID
-app.get('/api/events/:uid', async (req, res) => {
+app.get('/api/events/:uid', uidValidation, validate, async (req, res) => {
   try {
     const { uid } = req.params;
     
@@ -1038,22 +1069,46 @@ app.post('/api/client-log', (req, res) => {
   const { level, message, extra } = req.body;
   const logMessage = `[CLIENT ${level.toUpperCase()}] ${message}${extra ? ' ' + JSON.stringify(extra) : ''}`;
   
-  switch (level) {
-    case 'error':
-      console.error(logMessage);
-      break;
-    case 'warn':
-      console.warn(logMessage);
-      break;
-    case 'info':
-    default:
-      console.log(logMessage);
+  if (level === 'error') {
+    console.error(logMessage);
+  } else {
+    console.log(logMessage);
   }
   
-  res.status(200).json({ status: 'ok' });
+  res.json({ success: true });
 });
 
-// Start the server
+// Health check endpoint for Docker/K8s
+app.get('/health', (req, res) => {
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: '0.3.0',
+    environment: process.env.NODE_ENV || 'development',
+    checks: {
+      calendarCache: calendarCache.isInitialized ? 'initialized' : 'pending',
+      auth: authEnabled ? 'enabled' : 'disabled'
+    }
+  };
+  
+  // Return 503 if critical services aren't ready
+  if (!calendarCache.isInitialized) {
+    return res.status(503).json({ ...health, status: 'unavailable' });
+  }
+  
+  res.json(health);
+});
+
+// Readiness probe (stricter than health)
+app.get('/ready', (req, res) => {
+  if (calendarCache.isInitialized && calendarCache.getAllCalendars().length > 0) {
+    res.json({ status: 'ready', calendars: calendarCache.getAllCalendars().length });
+  } else {
+    res.status(503).json({ status: 'not ready', reason: 'Calendar cache not initialized or no calendars loaded' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`SupportPlanner server running at http://localhost:${PORT}`);
 });

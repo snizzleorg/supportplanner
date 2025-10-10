@@ -12,6 +12,7 @@ import { renderWeekBar, applyGroupLabelColors } from './js/timeline-ui.js';
 import { initSearch, applySearchFilter } from './js/search.js';
 import { fetchCalendars as apiFetchCalendars, refreshCaldav, clientLog as apiClientLog, getEvent, updateEvent as apiUpdateEvent, deleteEvent as apiDeleteEvent, createAllDayEvent, me as apiMe, logout as apiLogout } from './js/api.js';
 import { renderLocationHelp, debouncedLocationValidate, setModalLoading, closeModal, createModalController } from './js/modal.js';
+import { MOBILE_BREAKPOINT, TOUCH } from './js/constants.js';
 
 // DOM Elements
 const modal = document.getElementById('eventModal');
@@ -86,7 +87,7 @@ function setStatus(msg) {
 // --- Mobile toggles setup ---
 function setupMobileToggles() {
   const body = document.body;
-  const small = () => (window.innerWidth || 0) <= 640;
+  const small = () => (window.innerWidth || 0) <= MOBILE_BREAKPOINT;
   const headerEl = document.querySelector('header');
 
   function setHeaderTopVar() {
@@ -1276,7 +1277,7 @@ function initTimelineEvents() {
   // Timeline event click handler
   timeline.on('click', async (properties) => {
     // Ignore clicks right after a user drag/pan
-    if (isPanning || (Date.now() - lastPanEnd) < 350) {
+    if (isPanning || (Date.now() - lastPanEnd) < TOUCH.PAN_DEBOUNCE) {
       return;
     }
     console.log('Timeline click event:', properties);
