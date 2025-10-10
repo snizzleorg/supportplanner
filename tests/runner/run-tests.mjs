@@ -335,6 +335,10 @@ async function runMapBrowserHarness(page) {
 
 async function runSecurityBrowserHarness(page) {
   let triedAlt = false;
+  const logs = [];
+  const onConsole = (msg) => { try { logs.push(`[console] ${msg.type?.()} ${msg.text?.() || msg.text}`); } catch { logs.push(`[console] ${msg.type?.()} ${String(msg)}`); } };
+  page.on('console', onConsole);
+  
   try {
     await page.goto(url('/tests/security-tests.html'));
     await page.waitForSelector('#runSecurityTests', { timeout: 20000 });
@@ -343,13 +347,30 @@ async function runSecurityBrowserHarness(page) {
     await page.goto(url('/public/tests/security-tests.html'));
     await page.waitForSelector('#runSecurityTests', { timeout: 20000 });
   }
-  await page.click('#runSecurityTests');
-  await page.waitForFunction(() => {
-    const s = document.querySelector('#summary');
-    return s && /Passed \d+\/\d+ security tests/.test(s.textContent || '');
-  }, { timeout: 20000 });
-  const summary = await page.$eval('#summary', el => el.textContent);
-  return { name: 'security-browser-harness', ok: /Passed/.test(summary), summary, triedAlt };
+  
+  try {
+    await page.click('#runSecurityTests');
+    // Wait longer for async tests to complete
+    await page.waitForFunction(() => {
+      const s = document.querySelector('#summary');
+      return s && /Passed \d+\/\d+ security tests/.test(s.textContent || '');
+    }, { timeout: 30000 });
+    const summary = await page.$eval('#summary', el => el.textContent);
+    return { name: 'security-browser-harness', ok: /Passed/.test(summary), summary, triedAlt };
+  } catch (e) {
+    // Get current state for debugging
+    const summaryText = await page.$eval('#summary', el => el.textContent).catch(() => 'no summary');
+    const resultsCount = await page.$$eval('#results > div', divs => divs.length).catch(() => 0);
+    return { 
+      name: 'security-browser-harness', 
+      ok: false, 
+      summary: `Timeout: summary="${summaryText}", results=${resultsCount}`,
+      triedAlt,
+      logs
+    };
+  } finally {
+    try { page.off('console', onConsole); } catch (_) {}
+  }
 }
 
 (async function main() {
