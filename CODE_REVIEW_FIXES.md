@@ -7,28 +7,28 @@ This branch addresses issues identified in the code review of v0.3.0.
 ### 1. Duplicate Route Definitions ✅
 **File**: `server.js`
 **Lines**: 813-862 (first PUT), 870-915 (first GET), 918-967 (second PUT), 970-996 (second GET)
-**Status**: TODO
-**Description**: Remove duplicate route handlers for `PUT /api/events/:uid` and `GET /api/events/:uid`. Only the last definitions are active.
+**Status**: DONE (commit d8c16d8)
+**Description**: Removed duplicate route handlers for `PUT /api/events/:uid` and `GET /api/events/:uid`. Kept the more complete implementations with better error handling.
 
 ## High Priority Issues
 
 ### 2. Version Mismatch ✅
 **File**: `package.json`
 **Line**: 3
-**Status**: TODO
-**Description**: Update version from "0.1.0" to "0.3.0"
+**Status**: DONE (commit d8c16d8)
+**Description**: Updated version from "0.1.0" to "0.3.0"
 
 ### 3. Session Secret in Production ✅
 **File**: `server.js`
 **Line**: 94
-**Status**: TODO
-**Description**: Add validation to require SESSION_SECRET in production environment
+**Status**: DONE (commit e779133)
+**Description**: Added validation to require SESSION_SECRET in production environment. App exits with error if default value is used in production.
 
 ### 4. CORS Configuration ✅
 **File**: `server.js`
 **Line**: 85
-**Status**: TODO
-**Description**: Configure CORS with proper origin restrictions instead of allowing all origins
+**Status**: DONE (commit e779133)
+**Description**: Configured CORS with origin whitelist via ALLOWED_ORIGINS env var. Defaults to localhost in dev, requires explicit configuration in production.
 
 ## Medium Priority Issues
 
@@ -81,8 +81,8 @@ This branch addresses issues identified in the code review of v0.3.0.
 
 ## Progress Tracking
 
-- [ ] Critical issues fixed
-- [ ] High priority issues fixed
+- [x] Critical issues fixed (duplicate routes, version bump)
+- [x] High priority issues fixed (session secret, CORS)
 - [ ] Medium priority issues addressed
 - [ ] Tests added for fixes
-- [ ] Documentation updated
+- [x] Documentation updated (.env.example)
