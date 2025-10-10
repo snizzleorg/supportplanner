@@ -7,6 +7,8 @@ import fs from 'fs';
 import session from 'express-session';
 import { Issuer, generators } from 'openid-client';
 import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
+import { body, param, validationResult } from 'express-validator';
 import { calendarCache } from './services/calendarCache.js';
 
 dotenv.config();
@@ -103,6 +105,24 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '2mb' }));
+
+// Security headers with helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow loading external resources
+}));
 
 // Initialize calendar cache and optional auth config
 const {
@@ -456,7 +476,13 @@ process.on('SIGINT', async () => {
 });
 
 // Create a new all-day event (inclusive start/end dates)
-app.post('/api/events/all-day', requireRole('editor'), async (req, res) => {
+app.post('/api/events/all-day', requireRole('editor'), [
+  body('calendarUrl').trim().isURL().withMessage('Valid calendar URL required'),
+  body('summary').trim().isLength({ min: 1, max: 500 }).withMessage('Summary required (1-500 chars)'),
+  body('start').isISO8601().withMessage('Valid start date required'),
+  body('end').isISO8601().withMessage('Valid end date required'),
+  ...eventValidation,
+], validate, async (req, res) => {
   try {
     const { calendarUrl, summary, description, location, start, end, meta } = req.body || {};
     if (!calendarUrl || !summary || !start || !end) {
@@ -489,7 +515,7 @@ app.post('/api/events/all-day', requireRole('editor'), async (req, res) => {
 });
 
 // Delete an event by UID
-app.delete('/api/events/:uid', requireRole('editor'), async (req, res) => {
+app.delete('/api/events/:uid', requireRole('editor'), uidValidation, validate, async (req, res) => {
   try {
     const { uid } = req.params;
     if (!uid) {
@@ -878,8 +904,33 @@ function isValidDate(dateString) {
   return !isNaN(Date.parse(dateString));
 }
 
+// Validation middleware helper
+const validate = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ 
+      error: 'Validation failed', 
+      details: errors.array().map(e => ({ field: e.path, message: e.msg }))
+    });
+  }
+  next();
+};
+
+// Common validation rules
+const eventValidation = [
+  body('summary').optional().trim().isLength({ min: 1, max: 500 }).withMessage('Summary must be 1-500 characters'),
+  body('description').optional().trim().isLength({ max: 5000 }).withMessage('Description must be max 5000 characters'),
+  body('location').optional().trim().isLength({ max: 500 }).withMessage('Location must be max 500 characters'),
+  body('start').optional().isISO8601().withMessage('Start must be a valid ISO date'),
+  body('end').optional().isISO8601().withMessage('End must be a valid ISO date'),
+];
+
+const uidValidation = [
+  param('uid').trim().isLength({ min: 1, max: 200 }).withMessage('UID must be 1-200 characters'),
+];
+
 // Update an event by UID
-app.put('/api/events/:uid', requireRole('editor'), async (req, res) => {
+app.put('/api/events/:uid', requireRole('editor'), uidValidation, eventValidation, validate, async (req, res) => {
   try {
     const { uid } = req.params;
     const updateData = req.body;
@@ -931,7 +982,7 @@ app.put('/api/events/:uid', requireRole('editor'), async (req, res) => {
 });
 
 // Get event by UID
-app.get('/api/events/:uid', async (req, res) => {
+app.get('/api/events/:uid', uidValidation, validate, async (req, res) => {
   try {
     const { uid } = req.params;
     
