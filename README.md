@@ -351,6 +351,15 @@ OIDC_POST_LOGOUT_REDIRECT_URI=http://localhost:5175/logged-out
 # EDITOR_EMAILS=
 ```
 
+### No-auth mode (OIDC disabled)
+
+If any OIDC variable is missing, authentication is disabled. You can choose the effective role applied to all requests:
+
+```
+# Allowed: reader | editor | admin (default: admin)
+AUTH_DISABLED_DEFAULT_ROLE=admin
+```
+
 ## Running the Application
 
 1. Install dependencies:
