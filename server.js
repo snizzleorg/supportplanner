@@ -43,6 +43,10 @@ import {
   uidValidation
 } from './src/middleware/index.js';
 
+// Import services and utilities
+import { getEventType } from './src/services/index.js';
+import { isValidDate, escapeHtml } from './src/utils/index.js';
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -306,18 +310,6 @@ app.post('/api/events', async (req, res) => {
           console.log(`Event ${event.summary} has description:`, event.description);
         }
 
-        // Helper function to escape HTML
-        const escapeHtml = (unsafe) => {
-          if (!unsafe) return '';
-          return unsafe
-            .toString()
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-        };
-
         // Format the date and time
         const formatDate = (dateString) => {
           if (!dateString) return '';
@@ -482,31 +474,6 @@ app.post('/api/events', async (req, res) => {
   }
 });
 
-// Helper function to get event type based on summary
-function getEventType(summary) {
-  if (!summary) return 'default';
-  
-  const lowerSummary = summary.toLowerCase();
-  const eventTypes = getEventTypes();
-  
-  // Check for event types in the configuration
-  for (const [type, config] of Object.entries(eventTypes)) {
-    if (type === '_default') continue;
-    
-    const patterns = Array.isArray(config.patterns) 
-      ? config.patterns 
-      : [config.patterns];
-      
-    if (patterns.some(pattern => 
-      pattern && new RegExp(pattern, 'i').test(lowerSummary)
-    )) {
-      return type;
-    }
-  }
-  
-  return 'default';
-}
-
 // Force refresh CalDAV data
 app.post('/api/refresh-caldav', requireRole('reader'), async (req, res) => {
   try {
@@ -526,11 +493,6 @@ app.post('/api/refresh-caldav', requireRole('reader'), async (req, res) => {
     });
   }
 });
-
-// Helper function to validate date strings
-function isValidDate(dateString) {
-  return !isNaN(Date.parse(dateString));
-}
 
 // Update an event by UID
 app.put('/api/events/:uid', requireRole('editor'), uidValidation, eventValidation, validate, async (req, res) => {
