@@ -62,10 +62,9 @@ export function initTimeline(timelineEl, items, groups) {
   // Prevent native page pinch/double-tap zoom from conflicting with vis pinch-zoom inside the timeline area
   if (isTouch) {
     try {
-      // Ensure JS receives all touch gestures
-      timelineEl.style.touchAction = 'none';
-      const root = timelineEl.closest('.vis-timeline') || timelineEl;
-      if (root && root.style) root.style.touchAction = 'none';
+      // Ensure JS receives all touch gestures on the actual vis DOM (child), not ancestors
+      const visRoot = timelineEl.querySelector('.vis-timeline') || timelineEl;
+      [timelineEl, visRoot].forEach(el => { try { if (el && el.style) el.style.touchAction = 'none'; } catch (_) {} });
 
       const cancelIfMultiTouch = (e) => {
         try { if ((e.touches && e.touches.length > 1) || (e.scale && e.scale !== 1)) e.preventDefault(); } catch (_) {}
@@ -81,15 +80,20 @@ export function initTimeline(timelineEl, items, groups) {
         };
       })();
 
-      // iOS Safari older gesture events (safe to ignore if unsupported)
-      timelineEl.addEventListener('gesturestart', (e) => { try { e.preventDefault(); } catch (_) {} }, { passive: false });
-      timelineEl.addEventListener('gesturechange', (e) => { try { e.preventDefault(); } catch (_) {} }, { passive: false });
-      timelineEl.addEventListener('gestureend', (e) => { try { e.preventDefault(); } catch (_) {} }, { passive: false });
-
-      // Standard touch events
-      timelineEl.addEventListener('touchstart', cancelIfMultiTouch, { passive: false });
-      timelineEl.addEventListener('touchmove', cancelIfMultiTouch, { passive: false });
-      timelineEl.addEventListener('touchend', cancelIfDoubleTap, { passive: false });
+      // Bind helpers on both container and vis root to reliably intercept inside timeline
+      const bind = (el) => {
+        if (!el) return;
+        // iOS Safari older gesture events (safe to ignore if unsupported)
+        el.addEventListener('gesturestart', (e) => { try { e.preventDefault(); } catch (_) {} }, { passive: false });
+        el.addEventListener('gesturechange', (e) => { try { e.preventDefault(); } catch (_) {} }, { passive: false });
+        el.addEventListener('gestureend', (e) => { try { e.preventDefault(); } catch (_) {} }, { passive: false });
+        // Standard touch events
+        el.addEventListener('touchstart', cancelIfMultiTouch, { passive: false });
+        el.addEventListener('touchmove', cancelIfMultiTouch, { passive: false });
+        el.addEventListener('touchend', cancelIfDoubleTap, { passive: false });
+      };
+      bind(timelineEl);
+      bind(visRoot);
     } catch (_) {}
   }
 
