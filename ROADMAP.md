@@ -12,7 +12,7 @@
   - Timeline touch: single tap shows tooltip; long-press opens edit modal
   - Disable native page zoom; prevent pinch/double-tap conflicts inside timeline
   - Map panel invalidate-size fix when opening
-- [2025-10-10] v0.3.1: Security hardening and code quality improvements
+- [2025-10-10] v0.3.1 (pending): Security hardening and code quality improvements
   - Fixed duplicate route handlers (removed 102 lines of dead code)
   - Session secret validation with production enforcement
   - CORS origin restrictions with whitelist configuration
@@ -103,6 +103,10 @@
 - [ ] Add TypeScript support
 - [ ] Implement proper state management
 - [ ] Update dependencies
-- [ ] Replace console.log with proper logging library (winston/pino)
+- [ ] **Replace console.log with proper logging library** (winston/pino)
+  - Currently ~50+ console.log/error/warn statements throughout codebase
+  - Should include: structured logging, log levels, log rotation, request ID tracking
+  - Deferred from v0.3.1 code review (issue #8) - non-critical improvement
+  - Consider combining with monitoring/observability improvements
 - [ ] Add server-side input sanitization library (DOMPurify or similar)
 - [ ] Consider adding request ID tracking for better debugging
