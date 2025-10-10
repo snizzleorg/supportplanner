@@ -337,7 +337,11 @@ async function runSecurityBrowserHarness(page) {
   let triedAlt = false;
   const logs = [];
   const onConsole = (msg) => { try { logs.push(`[console] ${msg.type?.()} ${msg.text?.() || msg.text}`); } catch { logs.push(`[console] ${msg.type?.()} ${String(msg)}`); } };
+  const onRequest = (req) => { logs.push(`[request] ${req.method()} ${req.url()}`); };
+  const onResponse = (res) => { logs.push(`[response] ${res.status()} ${res.url()}`); };
   page.on('console', onConsole);
+  page.on('request', onRequest);
+  page.on('response', onResponse);
   
   try {
     const response = await page.goto(url('/tests/security-tests.html?autorun=1'));
@@ -376,7 +380,11 @@ async function runSecurityBrowserHarness(page) {
       logs
     };
   } finally {
-    try { page.off('console', onConsole); } catch (_) {}
+    try { 
+      page.off('console', onConsole);
+      page.off('request', onRequest);
+      page.off('response', onResponse);
+    } catch (_) {}
   }
 }
 
