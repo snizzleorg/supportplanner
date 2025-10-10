@@ -340,16 +340,16 @@ async function runSecurityBrowserHarness(page) {
   page.on('console', onConsole);
   
   try {
-    await page.goto(url('/tests/security-tests.html'));
+    await page.goto(url('/tests/security-tests.html?autorun=1'));
     await page.waitForSelector('#runSecurityTests', { timeout: 20000 });
   } catch (e) {
     triedAlt = true;
-    await page.goto(url('/public/tests/security-tests.html'));
+    await page.goto(url('/public/tests/security-tests.html?autorun=1'));
     await page.waitForSelector('#runSecurityTests', { timeout: 20000 });
   }
   
   try {
-    await page.click('#runSecurityTests');
+    // Tests will auto-run due to ?autorun=1 parameter
     // Wait longer for async tests to complete
     await page.waitForFunction(() => {
       const s = document.querySelector('#summary');

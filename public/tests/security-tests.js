@@ -158,6 +158,10 @@ async function runAllTests() {
 const btn = document.getElementById('runSecurityTests');
 if (btn) {
   btn.addEventListener('click', runAllTests);
+  // Auto-run for automated test runners
+  if (window.location.search.includes('autorun=1')) {
+    setTimeout(runAllTests, 100);
+  }
 } else {
   console.error('runSecurityTests button not found');
 }
