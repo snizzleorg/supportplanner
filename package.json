@@ -12,6 +12,7 @@
     "dayjs": "^1.11.13",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^7.4.1",
     "express-session": "^1.17.3",
     "ical-expander": "^3.1.0",
     "node-cache": "^5.1.2",

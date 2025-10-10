@@ -39,14 +39,20 @@ This branch addresses issues identified in the code review of v0.3.0.
 
 ### 6. No Rate Limiting
 **File**: `server.js`
-**Status**: TODO
-**Description**: Add express-rate-limit middleware for API endpoints
+**Status**: DONE (commit pending)
+**Description**: Added express-rate-limit middleware:
+  - API endpoints: 100 req/15min per IP
+  - Auth endpoints: 5 attempts/15min per IP
+  - Refresh endpoint: 10 req/5min per IP
 
 ### 7. Touch Event Passive Flag
-**File**: `public/custom-tooltip.js`
+**File**: `public/custom-tooltip.js`, `public/js/timeline.js`
 **Lines**: 255-293
-**Status**: TODO
-**Description**: Fix passive flag on touch handlers that need preventDefault
+**Status**: VERIFIED OK
+**Description**: Touch handlers are correctly configured:
+  - timeline.js: { passive: false } (calls preventDefault)
+  - custom-tooltip.js: { passive: true } (no preventDefault)
+  - No changes needed
 
 ## Low Priority / Future Improvements
 
