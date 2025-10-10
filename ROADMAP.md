@@ -12,7 +12,7 @@
   - Timeline touch: single tap shows tooltip; long-press opens edit modal
   - Disable native page zoom; prevent pinch/double-tap conflicts inside timeline
   - Map panel invalidate-size fix when opening
-- [2025-10-10] v0.3.1 (pending): Security hardening and code quality improvements
+- [2025-10-10] v0.3.1: Security hardening and code quality improvements
   - Fixed duplicate route handlers (removed 102 lines of dead code)
   - Session secret validation with production enforcement
   - CORS origin restrictions with whitelist configuration
