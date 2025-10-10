@@ -437,6 +437,20 @@ MIT
 
 ## What's New
 
+### v0.3.0 (2025-10-10)
+
+- Mobile-first improvements:
+  - Off-canvas panels for Controls (left) and Map (right), backdrop, single-panel open state.
+  - Floating side tabs that don’t consume layout; always reachable when a panel is open.
+  - Device-based mobile detection (`body.mobile-device`) independent of width.
+  - Landscape-only overlay on phones; portrait is blocked with guidance.
+  - Modal becomes full-screen on phones with sticky header/actions; smoother scrolling.
+- Timeline gestures on touch:
+  - Single tap shows tooltip; long-press (~550ms) opens edit modal.
+  - Native page zoom disabled globally; prevent pinch/double-tap conflicts within the timeline.
+- Map panel: ensure proper rendering by calling `invalidateSize` when opening.
+- Terminology: “Filters” renamed to “Controls”.
+
 ### v0.2.0 (2025-10-10)
 
 - Search matches calendar names and URLs in addition to event text.
