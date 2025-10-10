@@ -114,7 +114,11 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
-      connectSrc: ["'self'"],
+      connectSrc: [
+        "'self'",
+        "https://nominatim.openstreetmap.org", // Geocoding API
+        "https://*.tile.openstreetmap.org",     // Map tiles
+      ],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
