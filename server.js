@@ -1,15 +1,39 @@
 import express from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import fs from 'fs';
-import session from 'express-session';
 import { Issuer, generators } from 'openid-client';
-import rateLimit from 'express-rate-limit';
-import helmet from 'helmet';
 import { body, param, validationResult } from 'express-validator';
 import { calendarCache } from './services/calendarCache.js';
+
+// Import configuration
+import {
+  corsMiddleware,
+  helmetMiddleware,
+  sessionMiddleware,
+  apiLimiter,
+  authLimiter,
+  refreshLimiter,
+  loadEventTypesConfig,
+  getEventTypes,
+  NEXTCLOUD_URL,
+  NEXTCLOUD_USERNAME,
+  NEXTCLOUD_PASSWORD,
+  PORT,
+  OIDC_ISSUER_URL,
+  OIDC_CLIENT_ID,
+  OIDC_CLIENT_SECRET,
+  OIDC_REDIRECT_URI,
+  OIDC_SCOPES,
+  OIDC_TOKEN_AUTH_METHOD,
+  OIDC_POST_LOGOUT_REDIRECT_URI,
+  ADMIN_GROUPS,
+  EDITOR_GROUPS,
+  ADMIN_EMAILS,
+  EDITOR_EMAILS,
+  authEnabled,
+  AUTH_DISABLED_DEFAULT_ROLE
+} from './src/config/index.js';
 
 dotenv.config();
 
@@ -17,212 +41,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load event types configuration
-const BASE_EVENT_TYPES = {
-  _default: {
-    color: '#e0e0e0',  // Light gray
-    borderColor: '#bdbdbd',
-    textColor: '#000000'
-  },
-  vacation: {
-    color: '#a5d6a7',  // Light green
-    borderColor: '#81c784',
-    textColor: '#000000',
-    patterns: ['vacation', 'holiday', 'urlaub', 'ferien']
-  },
-  support: {
-    color: '#ffcdd2',  // Light red
-    borderColor: '#ef9a9a',
-    textColor: '#000000',
-    patterns: ['support', 'on-call', 'on call', 'standby']
-  },
-  meeting: {
-    color: '#bbdefb',  // Light blue
-    borderColor: '#90caf9',
-    textColor: '#000000',
-    patterns: ['meeting', 'conference', 'call', 'standup']
-  },
-  dr: {
-    color: '#e1bee7',  // Light purple
-    borderColor: '#ce93d8',
-    textColor: '#000000',
-    patterns: ['dr', 'disaster recovery', 'disaster-recovery']
-  },
-  sick: {
-    color: '#ffcc80',  // Light orange
-    borderColor: '#ffb74d',
-    textColor: '#000000',
-    patterns: ['sick', 'krank', 'illness']
-  },
-  training: {
-    color: '#b2dfdb',  // Light teal
-    borderColor: '#80cbc4',
-    textColor: '#000000',
-    patterns: ['training', 'workshop', 'seminar']
-  },
-  business: {
-    color: '#cfd8dc',  // Light blue-gray
-    borderColor: '#b0bec5',
-    textColor: '#000000',
-    patterns: ['business', 'travel', 'dienstreise']
-  }
-};
-let eventTypes = { ...BASE_EVENT_TYPES };
-
-function loadEventTypesConfig() {
-  try {
-    const p = path.join(__dirname, 'event-types.json');
-    const raw = fs.readFileSync(p, 'utf8');
-    const cfg = JSON.parse(raw);
-    // Rebuild from immutable base defaults on each load
-    eventTypes = { ...BASE_EVENT_TYPES, ...(cfg && cfg.eventTypes ? cfg.eventTypes : {}) };
-    console.log('Loaded event types configuration');
-  } catch (err) {
-    console.error('Failed to load event-types.json, using default colors', err.message);
-  }
-}
-
 loadEventTypesConfig();
 
 const app = express();
 
-// CORS configuration - restrict origins in production
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : [
-      'http://localhost:5175', 
-      'http://localhost:5173',
-      'http://support-planner:5173', // Docker internal hostname for tests
-    ];
-
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (e.g., mobile apps, Postman)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
-
+// Apply middleware
+app.use(corsMiddleware);
 app.use(express.json({ limit: '2mb' }));
-
-// Security headers with helmet
-// Note: upgrade-insecure-requests is disabled for local HTTP development
-app.use(helmet({
-  contentSecurityPolicy: {
-    useDefaults: false, // Don't use helmet's defaults which include upgrade-insecure-requests
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
-      imgSrc: ["'self'", "data:", "https:", "blob:"],
-      connectSrc: [
-        "'self'",
-        "https://nominatim.openstreetmap.org", // Geocoding API
-        "https://*.tile.openstreetmap.org",     // Map tiles
-        "https://cdn.jsdelivr.net",             // CDN for libraries and source maps
-        "https://unpkg.com",                    // CDN for libraries and source maps
-      ],
-      fontSrc: ["'self'", "data:"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-      baseUri: ["'self'"],
-      formAction: ["'self'"],
-      frameAncestors: ["'self'"],
-      scriptSrcAttr: ["'none'"],
-      // upgradeInsecureRequests: [] is intentionally omitted for HTTP development
-    },
-  },
-  crossOriginEmbedderPolicy: false, // Allow loading external resources
-}));
-
-// Initialize calendar cache and optional auth config
-const {
-  NEXTCLOUD_URL,
-  NEXTCLOUD_USERNAME,
-  NEXTCLOUD_PASSWORD,
-  PORT = 5173,
-  SESSION_SECRET = 'supportplanner_dev_session',
-  OIDC_ISSUER_URL,
-  OIDC_CLIENT_ID,
-  OIDC_CLIENT_SECRET,
-  OIDC_REDIRECT_URI,
-  OIDC_SCOPES = 'openid profile email',
-  OIDC_TOKEN_AUTH_METHOD = 'client_secret_post',
-  OIDC_POST_LOGOUT_REDIRECT_URI
-} = process.env;
-
-// RBAC group mapping (comma-separated group names from IdP claims) — case-insensitive
-const ADMIN_GROUPS = (process.env.ADMIN_GROUPS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-const EDITOR_GROUPS = (process.env.EDITOR_GROUPS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-const EDITOR_EMAILS = (process.env.EDITOR_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-
-// Validate session secret in production
-// Skip validation if SKIP_SESSION_SECRET_CHECK=true (for local Docker dev)
-const skipSecretCheck = process.env.SKIP_SESSION_SECRET_CHECK === 'true';
-if (process.env.NODE_ENV === 'production' && SESSION_SECRET === 'supportplanner_dev_session' && !skipSecretCheck) {
-  console.error('FATAL: SESSION_SECRET must be set to a secure value in production!');
-  console.error('Set SESSION_SECRET environment variable to a random string.');
-  console.error('Or set SKIP_SESSION_SECRET_CHECK=true for local development only.');
-  process.exit(1);
-}
-if (SESSION_SECRET === 'supportplanner_dev_session') {
-  console.warn('WARNING: Using default SESSION_SECRET. Set a secure value for production deployments.');
-}
-
-// Session (required for OIDC)
-app.use(session({
-  secret: SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: false // set true when behind HTTPS/terminating proxy
-  }
-}));
-
-// Rate limiting to prevent abuse
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 login attempts per windowMs
-  message: 'Too many login attempts, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: true, // Don't count successful logins
-});
-
-const refreshLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 10, // Limit refresh to 10 times per 5 minutes
-  message: 'Too many refresh requests, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+app.use(helmetMiddleware);
+app.use(sessionMiddleware);
 
 // Apply rate limiters
 app.use('/api/', apiLimiter);
 app.use('/auth/login', authLimiter);
 app.use('/auth/callback', authLimiter);
 app.use('/api/refresh-caldav', refreshLimiter);
-
-// Optional OIDC initialization
-const authEnabled = Boolean(OIDC_ISSUER_URL && OIDC_CLIENT_ID && OIDC_CLIENT_SECRET && OIDC_REDIRECT_URI);
-// Default role when authentication is disabled (configurable via env, defaults to 'admin')
-const AUTH_DISABLED_DEFAULT_ROLE = (process.env.AUTH_DISABLED_DEFAULT_ROLE || 'admin').toLowerCase();
 // Trust proxy to ensure correct secure cookies/redirects when behind reverse proxy (safe for local, does nothing harmful)
 app.set('trust proxy', 1);
 let oidcClientPromise = null;
@@ -901,6 +734,7 @@ function getEventType(summary) {
   if (!summary) return 'default';
   
   const lowerSummary = summary.toLowerCase();
+  const eventTypes = getEventTypes();
   
   // Check for event types in the configuration
   for (const [type, config] of Object.entries(eventTypes)) {
