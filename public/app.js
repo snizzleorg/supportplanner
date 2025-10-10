@@ -364,6 +364,17 @@ function initTimeline() {
 // Build modal controller with dependencies
 const modalCtl = createModalController({ setStatus, refresh, isoWeekNumber, items, urlToGroupId, forceRefreshCache, dayjs });
 
+// Mobile: open edit modal when tooltip requests it (single tap shows tooltip, long-press opens modal)
+try {
+  window.addEventListener('timeline:openEdit', async (e) => {
+    try {
+      const uid = e && e.detail && e.detail.uid;
+      if (!uid) return;
+      await modalCtl.openEditModal(uid);
+    } catch (_) {}
+  });
+} catch (_) {}
+
 // Dynamically size the timeline to its content while leaving room for the map
 function adjustTimelineHeight() {
   try {
@@ -1287,6 +1298,11 @@ function initTimelineEvents() {
           setStatus('Read-only: editing disabled');
           return;
         }
+        // On mobile phones, single tap should NOT open modal (tooltip handles tap). Use long-press.
+        try {
+          const isMobileTap = document.body.classList.contains('mobile-device') || (navigator.maxTouchPoints || 0) > 0;
+          if (isMobileTap) return;
+        } catch (_) {}
         modalCtl.openEditModal(uid);
       } else {
         console.error('Could not extract UID from item ID:', properties.item);

@@ -16,6 +16,7 @@ class CustomTooltip {
     this.hide();
     this.isOverTooltip = false;
     this.hideTimer = null;
+    this.lastItem = null;
 
     // Keep tooltip open when mouse is over it
     this.tooltip.addEventListener('mouseenter', () => {
@@ -30,6 +31,31 @@ class CustomTooltip {
       // Delay hide slightly to allow moving back to the item
       this.scheduleHide(150);
     });
+
+    // On mobile, tapping the tooltip should open the edit modal (delegated via custom event)
+    this.tooltip.addEventListener('click', () => {
+      try {
+        if (!this.lastItem) return;
+        const uid = this.extractUid(this.lastItem);
+        if (!uid) return;
+        window.dispatchEvent(new CustomEvent('timeline:openEdit', { detail: { uid } }));
+        this.hide();
+      } catch (_) {}
+    });
+  }
+
+  extractUid(item) {
+    if (!item) return null;
+    // Prefer explicit fields if present
+    if (item.uid) return item.uid;
+    if (item.eventUid) return item.eventUid;
+    // Fallback: parse from id (assumes UID is after the final '/')
+    try {
+      const id = String(item.id || '');
+      const idx = id.lastIndexOf('/');
+      if (idx >= 0 && idx < id.length - 1) return id.slice(idx + 1);
+    } catch (_) {}
+    return null;
   }
 
   show(event, item) {
@@ -37,6 +63,8 @@ class CustomTooltip {
       this.hide();
       return;
     }
+
+    this.lastItem = item;
 
     // Parse dates safely: treat YYYY-MM-DD as local date to avoid TZ shifts
     const safeParse = (value) => {
@@ -200,6 +228,71 @@ function setupTooltipHandlers(timeline) {
       tooltip.position(event);
     }
   });
+
+  // Mobile: tap an item to show tooltip, tap tooltip to open edit modal
+  try {
+    const isMobile = document.body.classList.contains('mobile-device') || (navigator.maxTouchPoints || 0) > 0;
+    if (isMobile) {
+      timeline.on('click', (properties) => {
+        try {
+          if (!properties || !properties.item) return;
+          const item = timeline.itemsData.get(properties.item);
+          if (!item) return;
+          const evt = properties.event || { clientX: (properties.pageX||0), clientY: (properties.pageY||0) };
+          tooltip.show(evt, item);
+          // Auto-hide after a short delay if not tapped
+          tooltip.scheduleHide(2500);
+        } catch (_) {}
+      });
+
+      // Long-press on an item opens edit modal directly
+      let lpTimer = null;
+      let startX = 0, startY = 0;
+      const LONG_MS = 550;
+      const MOVE_TOL = 10; // px
+
+      const clearLp = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
+      document.addEventListener('touchstart', (e) => {
+        try {
+          const t = e.touches && e.touches[0];
+          if (!t) return;
+          // Only start if touch begins over the timeline
+          const inTimeline = e.target && e.target.closest && e.target.closest('.vis-timeline');
+          if (!inTimeline) return;
+          startX = t.clientX; startY = t.clientY;
+          clearLp();
+          lpTimer = setTimeout(() => {
+            try {
+              // Find the vis item under the original touch point
+              const el = document.elementFromPoint(startX, startY);
+              const itemEl = el && el.closest && el.closest('.vis-item');
+              let uid = null;
+              if (itemEl) {
+                const id = itemEl.getAttribute('data-id') || itemEl.getAttribute('data-itemid') || itemEl.id || '';
+                let item = null;
+                try { if (id) item = timeline.itemsData.get(id); } catch (_) {}
+                uid = tooltip.extractUid(item || tooltip.lastItem || null);
+              }
+              if (uid) {
+                window.dispatchEvent(new CustomEvent('timeline:openEdit', { detail: { uid } }));
+                tooltip.hide();
+              }
+            } catch (_) {}
+          }, LONG_MS);
+        } catch (_) {}
+      }, { passive: true });
+      document.addEventListener('touchmove', (e) => {
+        try {
+          if (!lpTimer) return;
+          const t = e.touches && e.touches[0];
+          if (!t) return clearLp();
+          if (Math.abs(t.clientX - startX) > MOVE_TOL || Math.abs(t.clientY - startY) > MOVE_TOL) clearLp();
+        } catch (_) { clearLp(); }
+      }, { passive: true });
+      document.addEventListener('touchend', clearLp, { passive: true });
+      document.addEventListener('touchcancel', clearLp, { passive: true });
+    }
+  } catch (_) {}
 }
 
 export { setupTooltipHandlers };
