@@ -121,10 +121,28 @@ app.use(session({
 
 // Optional OIDC initialization
 const authEnabled = Boolean(OIDC_ISSUER_URL && OIDC_CLIENT_ID && OIDC_CLIENT_SECRET && OIDC_REDIRECT_URI);
+// Default role when authentication is disabled (configurable via env, defaults to 'admin')
+const AUTH_DISABLED_DEFAULT_ROLE = (process.env.AUTH_DISABLED_DEFAULT_ROLE || 'admin').toLowerCase();
 // Trust proxy to ensure correct secure cookies/redirects when behind reverse proxy (safe for local, does nothing harmful)
 app.set('trust proxy', 1);
 let oidcClientPromise = null;
 let oidcEndSessionEndpoint = null;
+// When auth is disabled, inject a default role so RBAC-protected endpoints work
+if (!authEnabled) {
+  app.use((req, _res, next) => {
+    try {
+      req.session = req.session || {};
+      if (!req.session.user || !req.session.user.role) {
+        req.session.user = { role: AUTH_DISABLED_DEFAULT_ROLE };
+      }
+    } catch (_) {}
+    next();
+  });
+  // Provide a simple /api/me for diagnostics when auth is disabled
+  app.get('/api/me', (req, res) => {
+    res.json({ authEnabled: false, authenticated: false, user: { role: AUTH_DISABLED_DEFAULT_ROLE } });
+  });
+}
 if (authEnabled) {
   oidcClientPromise = (async () => {
     const issuer = await Issuer.discover(OIDC_ISSUER_URL);
