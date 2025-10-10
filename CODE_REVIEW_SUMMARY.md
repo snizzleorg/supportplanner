@@ -82,13 +82,19 @@ This branch addresses **11 out of 12** issues identified in the comprehensive co
 
 ### Manual Testing
 - ✅ Docker build and startup successful
-- ✅ Health endpoint returns correct status
+- ✅ Health endpoint returns correct status (`/health`)
+- ✅ Readiness endpoint returns correct status (`/ready`)
+- ✅ Security headers present (CSP, X-Frame-Options, etc.)
+- ✅ Input validation working (rejects invalid data)
 - ✅ App loads and functions normally
 - ✅ Mobile UI works (off-canvas panels, touch gestures)
+- ✅ Geocoding works without CSP errors
 
 ### Automated Testing
-- Existing test suite passes (browser harnesses, Puppeteer runner)
-- No new tests added (deferred to future work)
+- ✅ New security test harness created (`/tests/security-tests.html`)
+- ✅ Tests health, readiness, security headers, validation, rate limits
+- ⚠️ Automated test runner has timeout issues (manual testing recommended)
+- To test manually: Open `http://localhost:5175/tests/security-tests.html` and click "Run security tests"
 
 ## Breaking Changes
 
