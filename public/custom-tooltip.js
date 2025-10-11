@@ -1,4 +1,6 @@
 // Custom tooltip implementation for vis-timeline
+import { TOUCH } from './js/constants.js';
+
 function escapeHtml(unsafe) {
   if (unsafe === undefined || unsafe === null) return '';
   return String(unsafe)
@@ -230,15 +232,13 @@ function setupTooltipHandlers(timeline) {
           const evt = properties.event || { clientX: (properties.pageX||0), clientY: (properties.pageY||0) };
           tooltip.show(evt, item);
           // Auto-hide after a short delay if not tapped
-          tooltip.scheduleHide(2500);
+          tooltip.scheduleHide(TOUCH.TOOLTIP_AUTO_HIDE);
         } catch (_) {}
       });
 
       // Long-press on an item opens edit modal directly
       let lpTimer = null;
       let startX = 0, startY = 0;
-      const LONG_MS = 550;
-      const MOVE_TOL = 10; // px
 
       const clearLp = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
       document.addEventListener('touchstart', (e) => {
@@ -267,7 +267,7 @@ function setupTooltipHandlers(timeline) {
                 tooltip.hide();
               }
             } catch (_) {}
-          }, LONG_MS);
+          }, TOUCH.LONG_PRESS_DURATION);
         } catch (_) {}
       }, { passive: true });
       document.addEventListener('touchmove', (e) => {
@@ -275,7 +275,7 @@ function setupTooltipHandlers(timeline) {
           if (!lpTimer) return;
           const t = e.touches && e.touches[0];
           if (!t) return clearLp();
-          if (Math.abs(t.clientX - startX) > MOVE_TOL || Math.abs(t.clientY - startY) > MOVE_TOL) clearLp();
+          if (Math.abs(t.clientX - startX) > TOUCH.MOVEMENT_TOLERANCE || Math.abs(t.clientY - startY) > TOUCH.MOVEMENT_TOLERANCE) clearLp();
         } catch (_) { clearLp(); }
       }, { passive: true });
       document.addEventListener('touchend', clearLp, { passive: true });

@@ -1,0 +1,47 @@
+/**
+ * CORS (Cross-Origin Resource Sharing) configuration
+ * 
+ * Restricts which origins can access the API. In production, only
+ * origins listed in ALLOWED_ORIGINS environment variable are permitted.
+ * 
+ * @module config/cors
+ */
+
+import cors from 'cors';
+
+/**
+ * List of allowed origins for CORS requests
+ * Configured via ALLOWED_ORIGINS environment variable (comma-separated)
+ * Falls back to localhost URLs for development
+ * 
+ * @type {string[]}
+ */
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : [
+      'http://localhost:5175', 
+      'http://localhost:5173',
+      'http://support-planner:5173', // Docker internal hostname for tests
+    ];
+
+/**
+ * CORS middleware configured with origin validation
+ * 
+ * - Validates origin against allowedOrigins list
+ * - Allows requests with no origin (mobile apps, Postman)
+ * - Enables credentials (cookies, authorization headers)
+ * 
+ * @type {import('express').RequestHandler}
+ */
+export const corsMiddleware = cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g., mobile apps, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+});

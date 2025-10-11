@@ -1,10 +1,25 @@
-// Timeline initialization module
-// Creates a vis-timeline instance with provided datasets and wires UI behaviors
+/**
+ * Timeline Initialization Module
+ * 
+ * Creates and configures a vis-timeline instance with provided datasets.
+ * Handles timeline options, tooltips, and UI behaviors.
+ * 
+ * @module timeline
+ */
 
 import { Timeline } from 'https://cdn.jsdelivr.net/npm/vis-timeline@7.7.3/standalone/esm/vis-timeline-graph2d.min.js';
 import { setupTooltipHandlers } from '../custom-tooltip.js';
 import { applyGroupLabelColors, renderWeekBar } from './timeline-ui.js';
+import { TIMELINE, TOUCH } from './constants.js';
 
+/**
+ * Initializes a vis-timeline instance with the provided configuration
+ * @param {HTMLElement} timelineEl - DOM element to render timeline in
+ * @param {Object} items - vis-timeline items DataSet
+ * @param {Object} groups - vis-timeline groups DataSet
+ * @returns {Timeline} Configured vis-timeline instance
+ * @throws {Error} If required parameters are missing
+ */
 export function initTimeline(timelineEl, items, groups) {
   if (!timelineEl) throw new Error('timelineEl is required');
   if (!items || !groups) throw new Error('items and groups DataSets are required');
@@ -16,7 +31,7 @@ export function initTimeline(timelineEl, items, groups) {
     stack: true,
     stackSubgroups: false,
     height: 'auto',
-    minHeight: '600px',
+    minHeight: `${TIMELINE.MIN_HEIGHT}px`,
     verticalScroll: true,
     horizontalScroll: isTouch, // allow native scroll on touch devices
     zoomable: true,
@@ -71,11 +86,11 @@ export function initTimeline(timelineEl, items, groups) {
         try { if ((e.touches && e.touches.length > 1) || (e.scale && e.scale !== 1)) e.preventDefault(); } catch (_) {}
       };
       const cancelIfDoubleTap = (() => {
-        let last = 0; const TH = 300;
+        let last = 0;
         return (e) => {
           try {
             const now = Date.now();
-            if (now - last < TH) { e.preventDefault(); }
+            if (now - last < TOUCH.DOUBLE_TAP_THRESHOLD) { e.preventDefault(); }
             last = now;
           } catch (_) {}
         };

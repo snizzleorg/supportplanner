@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Puppeteer runner: opens the browser harness pages to run tests and reads results
+// Frontend test runner: runs Puppeteer-based integration tests
 // Usage: APP_URL=http://app:3000 node run-tests.mjs
 
 import puppeteer from 'puppeteer';
@@ -7,19 +7,25 @@ import { spawn } from 'node:child_process';
 
 const APP_URL = process.env.APP_URL || process.argv[2] || '';
 const BRIEF = process.env.RUNNER_BRIEF === '1' || process.argv.includes('--brief');
+
 if (!APP_URL) {
   console.error('APP_URL env or first arg required, e.g. http://localhost:3000');
   process.exit(2);
 }
 
-function runNodeScript(cmd, args, env = {}) {
+function runNodeScript(cmd, args, env = {}, showProgress = false) {
   return new Promise((resolve) => {
     const start = Date.now();
-    const child = spawn(cmd, args, { env: { ...process.env, ...env } });
+    const child = spawn(cmd, args, { 
+      env: { ...process.env, ...env },
+      stdio: showProgress ? 'inherit' : 'pipe'
+    });
     let out = '';
     let err = '';
-    child.stdout.on('data', (d) => { out += d.toString(); });
-    child.stderr.on('data', (d) => { err += d.toString(); });
+    if (!showProgress) {
+      child.stdout?.on('data', (d) => { out += d.toString(); });
+      child.stderr?.on('data', (d) => { err += d.toString(); });
+    }
     child.on('close', (code) => {
       resolve({ code, out, err, ms: Date.now() - start });
     });
@@ -333,6 +339,61 @@ async function runMapBrowserHarness(page) {
   }
 }
 
+async function runSecurityBrowserHarness(page) {
+  let triedAlt = false;
+  const logs = [];
+  const onConsole = (msg) => { try { logs.push(`[console] ${msg.type?.()} ${msg.text?.() || msg.text}`); } catch { logs.push(`[console] ${msg.type?.()} ${String(msg)}`); } };
+  const onRequest = (req) => { logs.push(`[request] ${req.method()} ${req.url()}`); };
+  const onResponse = (res) => { logs.push(`[response] ${res.status()} ${res.url()}`); };
+  page.on('console', onConsole);
+  page.on('request', onRequest);
+  page.on('response', onResponse);
+  
+  try {
+    const response = await page.goto(url('/tests/security-tests.html?autorun=1'));
+    if (!response.ok()) {
+      console.log(`Page load failed: ${response.status()} ${response.statusText()}`);
+    }
+    await page.waitForSelector('#runSecurityTests', { timeout: 20000 });
+  } catch (e) {
+    console.log(`First attempt failed: ${e.message}, trying alternate path`);
+    triedAlt = true;
+    const response = await page.goto(url('/public/tests/security-tests.html?autorun=1'));
+    if (!response.ok()) {
+      console.log(`Alt page load failed: ${response.status()} ${response.statusText()}`);
+    }
+    await page.waitForSelector('#runSecurityTests', { timeout: 20000 });
+  }
+  
+  try {
+    // Tests will auto-run due to ?autorun=1 parameter
+    // Wait longer for async tests to complete
+    await page.waitForFunction(() => {
+      const s = document.querySelector('#summary');
+      return s && /Passed \d+\/\d+ security tests/.test(s.textContent || '');
+    }, { timeout: 30000 });
+    const summary = await page.$eval('#summary', el => el.textContent);
+    return { name: 'security-browser-harness', ok: /Passed/.test(summary), summary, triedAlt };
+  } catch (e) {
+    // Get current state for debugging
+    const summaryText = await page.$eval('#summary', el => el.textContent).catch(() => 'no summary');
+    const resultsCount = await page.$$eval('#results > div', divs => divs.length).catch(() => 0);
+    return { 
+      name: 'security-browser-harness', 
+      ok: false, 
+      summary: `Timeout: summary="${summaryText}", results=${resultsCount}`,
+      triedAlt,
+      logs
+    };
+  } finally {
+    try { 
+      page.off('console', onConsole);
+      page.off('request', onRequest);
+      page.off('response', onResponse);
+    } catch (_) {}
+  }
+}
+
 (async function main() {
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
   const page = await browser.newPage();
@@ -353,7 +414,11 @@ async function runMapBrowserHarness(page) {
     } else if (process.env.RUN_ONLY === 'map') {
       const res = await runMapBrowserHarness(page);
       outputs.push(res);
+    } else if (process.env.RUN_ONLY === 'security') {
+      const res = await runSecurityBrowserHarness(page);
+      outputs.push(res);
     } else {
+      outputs.push(await runSecurityBrowserHarness(page));
       outputs.push(await runApiBrowserHarness(page));
       outputs.push(await runSearchBrowserHarness(page));
       outputs.push(await runTimelineBrowserHarness(page));

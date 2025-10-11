@@ -1,10 +1,26 @@
-// Holidays helper module
-// Fetches German (Berlin) public holidays and filters them by range
+/**
+ * Holidays Module
+ * 
+ * Fetches German (Berlin) public holidays from external API and filters them by date range.
+ * Implements caching to minimize API calls.
+ * 
+ * @module holidays
+ */
 
 import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1.11.13/+esm';
 
-const holidaysCache = new Map(); // year -> holidays array
+/**
+ * Cache for holidays by year
+ * @type {Map<number, Array>}
+ */
+const holidaysCache = new Map();
 
+/**
+ * Fetches holidays for a specific year from the Nager.Date API
+ * @private
+ * @param {number} year - The year to fetch holidays for
+ * @returns {Promise<Array>} Array of holiday objects for Berlin
+ */
 async function getHolidaysForYear(year) {
   if (holidaysCache.has(year)) return holidaysCache.get(year);
   try {
@@ -21,6 +37,12 @@ async function getHolidaysForYear(year) {
   }
 }
 
+/**
+ * Gets all holidays within a date range
+ * @param {string|Date} start - Start date
+ * @param {string|Date} end - End date
+ * @returns {Promise<Array<{date: Date, name: string, global: boolean}>>} Array of holidays in range
+ */
 export async function getHolidaysInRange(start, end) {
   const startYear = dayjs(start).year();
   const endYear = dayjs(end).year();

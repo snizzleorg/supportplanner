@@ -1,11 +1,32 @@
-// Map rendering module using Leaflet
-// Exports renderMapMarkers(allServerItems, groups) which initializes the map once and renders clustered pins per location/calendar
+/**
+ * Map Rendering Module
+ * 
+ * Provides Leaflet map integration for visualizing event locations.
+ * Handles marker clustering, geocoding, and custom pin icons.
+ * 
+ * @module map
+ */
 
 import { geocodeLocation } from './geocode.js';
 
-let map; // Leaflet map instance
-let markersLayer; // Layer group for markers
+/**
+ * Leaflet map instance
+ * @type {Object|null}
+ */
+let map;
 
+/**
+ * Layer group for map markers
+ * @type {Object|null}
+ */
+let markersLayer;
+
+/**
+ * Escapes HTML special characters
+ * @private
+ * @param {*} unsafe - Value to escape
+ * @returns {string} HTML-escaped string
+ */
 function escapeHtml(unsafe) {
   if (unsafe === undefined || unsafe === null) return '';
   return String(unsafe)
@@ -16,6 +37,11 @@ function escapeHtml(unsafe) {
     .replace(/'/g, '&#039;');
 }
 
+/**
+ * Initializes the Leaflet map instance (once)
+ * @private
+ * @returns {void}
+ */
 function initMapOnce() {
   if (map) return;
   const mapEl = document.getElementById('map');
@@ -34,6 +60,12 @@ function initMapOnce() {
   } catch (_) {}
 }
 
+/**
+ * Parses a hex color string to RGB components
+ * @private
+ * @param {string} color - Hex color string
+ * @returns {{r: number, g: number, b: number}|null} RGB object or null
+ */
 function parseHex(color) {
   const m = String(color).trim().match(/^#?([a-fA-F0-9]{6})$/);
   if (!m) return null;
@@ -44,11 +76,32 @@ function parseHex(color) {
     b: parseInt(h.slice(4,6), 16)
   };
 }
+/**
+ * Clamps a value between min and max
+ * @private
+ * @param {number} v - Value to clamp
+ * @param {number} [min=0] - Minimum value
+ * @param {number} [max=255] - Maximum value
+ * @returns {number} Clamped value
+ */
 function clamp(v, min=0, max=255) { return Math.max(min, Math.min(max, v)); }
+
+/**
+ * Converts RGB object to hex color string
+ * @private
+ * @param {{r: number, g: number, b: number}} rgb - RGB object
+ * @returns {string} Hex color string
+ */
 function toHex({r,g,b}) {
   const h = (n)=> clamp(Math.round(n)).toString(16).padStart(2,'0');
   return `#${h(r)}${h(g)}${h(b)}`;
 }
+/**
+ * Strengthens a color by increasing saturation and darkening
+ * @private
+ * @param {string} color - Hex color string
+ * @returns {string} Strengthened hex color string
+ */
 function strengthenColor(color) {
   const rgb = parseHex(color);
   if (!rgb) return color;
@@ -56,6 +109,12 @@ function strengthenColor(color) {
   const darken = (c)=> clamp(c * 0.85);
   return toHex({ r: darken(boost(rgb.r)), g: darken(boost(rgb.g)), b: darken(boost(rgb.b)) });
 }
+/**
+ * Creates a custom pin icon SVG for map markers
+ * @private
+ * @param {string} color - Hex color for the pin
+ * @returns {Object} Leaflet divIcon object
+ */
 function makePinIcon(color) {
   const base = color || '#3b82f6';
   const stroke = '#1f2937';
@@ -83,6 +142,13 @@ function makePinIcon(color) {
   return L.icon({ iconUrl: url, iconSize: [30, 44], iconAnchor: [15, 43], popupAnchor: [0, -34]});
 }
 
+/**
+ * Renders map markers for all events with locations
+ * Geocodes addresses and clusters markers by location
+ * @param {Array} allServerItems - Array of event items from server
+ * @param {Object} groups - vis-timeline groups DataSet
+ * @returns {Promise<void>}
+ */
 export async function renderMapMarkers(allServerItems, groups) {
   initMapOnce();
   if (!map || !markersLayer) return;

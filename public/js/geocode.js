@@ -1,17 +1,48 @@
-// Geocoding helpers and queue management
-// Uses Nominatim for address geocoding and supports coordinate parsing
+/**
+ * Geocoding Module
+ * 
+ * Provides geocoding services using OpenStreetMap Nominatim API.
+ * Implements rate limiting, caching, and coordinate parsing.
+ * 
+ * @module geocode
+ */
 
-const geocodeCache = new Map(); // key (lowercased query) -> {lat, lon}
+/**
+ * Cache for geocoded locations
+ * @type {Map<string, {lat: number, lon: number}>}
+ */
+const geocodeCache = new Map();
+
+/**
+ * Queue for pending geocode requests
+ * @type {Array<{query: string, resolve: Function}>}
+ */
 let geocodeQueue = [];
+
+/**
+ * Timer for processing geocode queue
+ * @type {number|null}
+ */
 let geocodeTimer = null;
 
+/**
+ * Adds a geocode request to the queue
+ * @private
+ * @param {string} query - Location query string
+ * @param {Function} resolve - Promise resolve function
+ */
 function enqueueGeocode(query, resolve) {
   geocodeQueue.push({ query, resolve });
   if (!geocodeTimer) {
-    geocodeTimer = setInterval(processGeocodeQueue, 350); // ~3 req/sec
+    geocodeTimer = setInterval(processGeocodeQueue, 350); // ~3 req/sec rate limit
   }
 }
 
+/**
+ * Processes queued geocode requests in batches
+ * @private
+ * @returns {Promise<void>}
+ */
 async function processGeocodeQueue() {
   if (geocodeQueue.length === 0) {
     clearInterval(geocodeTimer);
@@ -38,6 +69,13 @@ async function processGeocodeQueue() {
   }));
 }
 
+/**
+ * Attempts to parse latitude/longitude coordinates from text
+ * Supports format: "lat, lon" (e.g., "52.52, 13.405")
+ * 
+ * @param {string} text - Text to parse for coordinates
+ * @returns {{lat: number, lon: number}|null} Parsed coordinates or null if invalid
+ */
 export function tryParseLatLon(text) {
   const m = String(text).trim().match(/^\s*([+-]?\d{1,2}(?:\.\d+)?)\s*,\s*([+-]?\d{1,3}(?:\.\d+)?)\s*$/);
   if (!m) return null;
@@ -48,6 +86,13 @@ export function tryParseLatLon(text) {
   return { lat, lon };
 }
 
+/**
+ * Geocodes an address using Nominatim API (direct, not queued)
+ * 
+ * @param {string} q - Address query string
+ * @returns {Promise<{lat: number, lon: number, displayName: string, osmId: string, osmType: string}|null>} Geocode result or null
+ * @throws {Error} If the geocode request fails
+ */
 export async function geocodeAddress(q) {
   const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
   const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
@@ -58,6 +103,13 @@ export async function geocodeAddress(q) {
   return { lat: parseFloat(hit.lat), lon: parseFloat(hit.lon), displayName: hit.display_name, osmId: hit.osm_id, osmType: hit.osm_type };
 }
 
+/**
+ * Geocodes a location string (coordinates or address)
+ * First tries to parse as coordinates, then geocodes as address with caching and rate limiting
+ * 
+ * @param {string} locationStr - Location string (coordinates or address)
+ * @returns {Promise<{lat: number, lon: number}|null>} Geocoded coordinates or null
+ */
 export async function geocodeLocation(locationStr) {
   const coords = tryParseLatLon(locationStr);
   if (coords) return coords;
