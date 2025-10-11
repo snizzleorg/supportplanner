@@ -20,7 +20,7 @@ import { getEventType } from '../services/event-type.js';
 import { geocodeLocations } from '../services/geocoding.js';
 import { escapeHtml } from '../utils/html.js';
 import { requireRole, validate, eventValidation, uidValidation } from '../middleware/index.js';
-import { getEventTypes } from '../config/index.js';
+import { loadEventTypesConfig, getEventTypes } from '../config/index.js';
 
 const requireEditor = requireRole('editor');
 
