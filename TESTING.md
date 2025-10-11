@@ -8,11 +8,17 @@ This document describes the testing strategy for SupportPlanner.
 Location: `src/**/__tests__/*.test.js`
 
 Tests individual modules in isolation:
-- **Utilities**: Date validation, HTML escaping
-- **Services**: Event type classification, calendar operations
-- **Config**: Environment variables, event types
-- **Middleware**: Validation, authentication
-- **Routes**: API endpoints (integration-style)
+- **Utilities**: Date validation, HTML escaping (7 tests)
+- **Services**: Event type classification, calendar operations (23 tests)
+- **Config**: Environment variables, event types, middleware configs (18 tests)
+- **Middleware**: Validation, authentication (8 tests)
+- **Routes**: API endpoints (9 tests)
+- **Total**: 16 test files, 86 test cases
+
+**Run in Docker (recommended):**
+```bash
+docker compose run --rm backend-tests
+```
 
 **Run locally:**
 ```bash
@@ -22,21 +28,30 @@ npm run test:watch       # Watch mode
 npm run test:coverage    # With coverage
 ```
 
-**Note**: Backend unit tests run locally, not in Docker, to avoid dependency conflicts.
-
 ### 2. Frontend Integration Tests (Puppeteer)
 Location: `tests/runner/`, `public/tests/`
 
 Tests the complete application flow in a real browser:
-- Calendar loading and display
-- Event creation and editing
+- Security tests (CSP, XSS, headers)
+- API integration tests
+- Search functionality
 - Timeline interactions
-- Authentication flows
-- UI responsiveness
+- Holiday display
+- Tooltips and modals
+- Accessibility
+- Map integration
+- Drag and drop
+- CSS audit
+- **Total**: 13 test suites
 
 **Run in Docker:**
 ```bash
-docker compose run --rm support-planner-tests
+docker compose run --rm frontend-tests
+```
+
+### 3. Run All Tests
+```bash
+./run-all-tests.sh       # Runs backend + frontend in sequence
 ```
 
 ## Test Coverage Goals

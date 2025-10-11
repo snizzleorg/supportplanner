@@ -1,21 +1,14 @@
 #!/usr/bin/env node
-// Test runner: runs backend unit tests + frontend integration tests
+// Frontend test runner: runs Puppeteer-based integration tests
 // Usage: APP_URL=http://app:3000 node run-tests.mjs
 
+import puppeteer from 'puppeteer';
 import { spawn } from 'node:child_process';
 
 const APP_URL = process.env.APP_URL || process.argv[2] || '';
 const BRIEF = process.env.RUNNER_BRIEF === '1' || process.argv.includes('--brief');
-const BACKEND_ONLY = process.env.BACKEND_ONLY === '1';
-const FRONTEND_ONLY = process.env.FRONTEND_ONLY === '1';
 
-// Only import puppeteer if we need it
-let puppeteer;
-if (!BACKEND_ONLY) {
-  puppeteer = (await import('puppeteer')).default;
-}
-
-if (!APP_URL && !BACKEND_ONLY) {
+if (!APP_URL) {
   console.error('APP_URL env or first arg required, e.g. http://localhost:3000');
   process.exit(2);
 }
@@ -402,49 +395,9 @@ async function runSecurityBrowserHarness(page) {
 }
 
 (async function main() {
-  const outputs = [];
-  
-  // Run backend unit tests FIRST (before browser tests)
-  if (!process.env.RUN_ONLY && !FRONTEND_ONLY) {
-    console.log('🧪 Running Backend Unit Tests...\n');
-    const backendTests = await runNodeScript('npx', ['vitest', 'run', '--reporter=verbose'], {}, true);
-    const backendOk = backendTests.code === 0;
-    const backendSummary = backendOk ? 'All backend tests passed' : 'Backend tests failed';
-    console.log(backendOk ? '\n✅ Backend tests passed!\n' : '\n❌ Backend tests failed!\n');
-    outputs.push({ 
-      name: 'backend-unit-tests', 
-      ok: backendOk, 
-      ms: backendTests.ms, 
-      summary: backendSummary
-    });
-    
-    // If backend tests fail, stop here
-    if (!backendOk) {
-      console.error('❌ Backend tests failed. Skipping frontend tests.');
-      console.log(`RESULT: FAIL - 0/1 passed`);
-      if (!BRIEF) {
-        console.log(JSON.stringify({ ok: false, outputs }, null, 2));
-      }
-      process.exit(1);
-    }
-  }
-  
-  // If backend-only mode, exit now
-  if (BACKEND_ONLY) {
-    const ok = outputs.every(o => o.ok);
-    const passed = outputs.filter(o => o.ok).length;
-    const total = outputs.length;
-    console.log(`RESULT: ${ok ? 'ALL OK' : 'FAIL'} - ${passed}/${total} passed`);
-    if (!BRIEF) {
-      console.log(JSON.stringify({ ok, outputs }, null, 2));
-    }
-    process.exit(ok ? 0 : 1);
-  }
-  
-  // Now run frontend tests
-  console.log('🌐 Running Frontend Integration Tests...\n');
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
   const page = await browser.newPage();
+  const outputs = [];
   try {
     if (process.env.RUN_ONLY === 'modal') {
       const res = await runModalBrowserHarness(page);
@@ -465,29 +418,18 @@ async function runSecurityBrowserHarness(page) {
       const res = await runSecurityBrowserHarness(page);
       outputs.push(res);
     } else {
-      console.log('  → Running security tests...');
       outputs.push(await runSecurityBrowserHarness(page));
-      console.log('  → Running API tests...');
       outputs.push(await runApiBrowserHarness(page));
-      console.log('  → Running search tests...');
       outputs.push(await runSearchBrowserHarness(page));
-      console.log('  → Running timeline tests...');
       outputs.push(await runTimelineBrowserHarness(page));
-      console.log('  → Running holiday tests...');
       outputs.push(await runHolidayBrowserHarness(page));
-      console.log('  → Running tooltip tests...');
       outputs.push(await runTooltipBrowserHarness(page));
-      console.log('  → Running accessibility tests...');
       outputs.push(await runA11yModalBrowserHarness(page));
-      console.log('  → Running map tests...');
       outputs.push(await runMapBrowserHarness(page));
-      console.log('  → Running modal tests...');
       outputs.push(await runModalBrowserHarness(page));
-      console.log('  → Running drag tests...');
       outputs.push(await runTimelineDragE2E(page));
     }
-    
-    if (!BACKEND_ONLY) {
+    if (!process.env.RUN_ONLY) {
       // Run headless Node tests as well
       const apiSmoke = await runNodeScript('node', ['public/tests/api-smoke.mjs', '--api', APP_URL]);
       outputs.push({ name: 'api-smoke', ok: apiSmoke.code === 0, ms: apiSmoke.ms, out: apiSmoke.out, err: apiSmoke.err });
