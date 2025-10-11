@@ -47,21 +47,31 @@ src/
 ```
 public/
 ├── index.html          # Main HTML structure
-├── app.js              # Application initialization & state
+├── app.js              # Application initialization (1,159 lines)
 ├── styles.css          # Global styles & responsive design
 └── js/
+    ├── dom.js          # DOM element references
+    ├── state.js        # Application state management
+    ├── auth.js         # Authentication & authorization
+    ├── controls.js     # UI controls & timeline management
+    ├── events.js       # Event operations & interactions
     ├── api.js          # API client & data fetching
-    ├── timeline.js     # vis-timeline integration & gestures
+    ├── constants.js    # Application constants
+    ├── geocode.js      # Geocoding & location services
+    ├── holidays.js     # Holiday data fetching
+    ├── holidays-ui.js  # Holiday UI rendering
     ├── map.js          # Leaflet map & location markers
     ├── modal.js        # Event create/edit modal
     ├── search.js       # Search & filter functionality
-    ├── mobile.js       # Mobile-specific UI (panels, gestures)
-    └── utils.js        # DOM helpers & utilities
+    ├── timeline.js     # vis-timeline integration
+    ├── timeline-ui.js  # Timeline UI enhancements
+    └── __tests__/      # Unit tests (15 files, 173 tests)
 ```
 
+- **18.5% code reduction** in app.js (1,423 → 1,159 lines)
+- **100% JSDoc documentation** for all 15 modules
+- **173 unit tests** (100% passing) + 13 integration tests
 - **Mobile-first design** with off-canvas panels and touch gestures
-- **Progressive enhancement** - works without JavaScript for basic viewing
-- **13 integration tests** covering UI, accessibility, and security
 - **No build step** - vanilla JavaScript for simplicity
 
 ### Testing Infrastructure
@@ -69,14 +79,22 @@ public/
 ```
 tests/
 ├── backend/
-│   └── Dockerfile      # Backend unit tests (Vitest, 86 tests)
-└── frontend/
-    ├── Dockerfile      # Frontend integration tests (Puppeteer, 13 suites)
-    ├── run-tests.mjs   # Test runner
-    └── css-audit.mjs   # CSS coverage analysis
+│   └── Dockerfile          # Backend unit tests (Vitest, 86 tests)
+├── frontend/
+│   ├── Dockerfile          # Frontend integration tests (Puppeteer, 13 suites)
+│   ├── run-tests.mjs       # Test runner
+│   └── css-audit.mjs       # CSS coverage analysis
+└── frontend-unit/
+    ├── Dockerfile          # Frontend unit tests (Vitest + jsdom, 173 tests)
+    └── README.md           # Testing documentation
 ```
 
-See [docs/REFACTORING.md](docs/REFACTORING.md) for detailed architecture documentation.
+**Total Test Coverage**: 272+ tests (100% passing)
+- Backend: 86 unit tests
+- Frontend Unit: 173 tests
+- Frontend Integration: 13 E2E suites
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture documentation.
 
 ## UI Controls
 
