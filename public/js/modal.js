@@ -1,9 +1,19 @@
-// Modal helpers module: handles modal UI state and location validation UI
+/**
+ * Modal Management Module
+ * 
+ * Handles modal UI state, event editing, location validation, and form management.
+ * Provides a controller pattern for modal operations.
+ * 
+ * @module modal
+ */
 
 import { tryParseLatLon, geocodeAddress } from './geocode.js';
 import { fetchCalendars as apiFetchCalendars, getEvent, updateEvent as apiUpdateEvent, deleteEvent as apiDeleteEvent, createAllDayEvent } from './api.js';
 
-// DOM references
+/**
+ * DOM element references for modal
+ * @private
+ */
 const modal = document.getElementById('eventModal');
 const modalContent = document.querySelector('#eventModal .modal-content');
 const eventForm = document.getElementById('eventForm');
@@ -25,6 +35,14 @@ const eventStartDateInput = document.getElementById('eventStartDate');
 const eventEndDateInput = document.getElementById('eventEndDate');
 const eventCalendarSelect = document.getElementById('eventCalendar');
 
+/**
+ * Renders location validation help text in the modal
+ * @param {Object|null} state - Validation state object
+ * @param {string} [state.status] - Status: 'searching', 'ok', 'coords', 'error'
+ * @param {Object} [state.result] - Geocode result with lat, lon, displayName
+ * @param {string} [state.message] - Error message
+ * @returns {void}
+ */
 export function renderLocationHelp(state) {
   if (!eventLocationHelp) return;
   if (!state || !state.status) { eventLocationHelp.textContent = ''; eventLocationHelp.className = 'help-text'; return; }
@@ -48,6 +66,13 @@ export function renderLocationHelp(state) {
   if (state.status === 'error') { eventLocationHelp.textContent = state.message || 'Could not validate address'; eventLocationHelp.className = 'help-text error'; }
 }
 
+/**
+ * Creates a debounced version of a function
+ * @private
+ * @param {Function} fn - Function to debounce
+ * @param {number} ms - Debounce delay in milliseconds
+ * @returns {Function} Debounced function
+ */
 function debounce(fn, ms) {
   let t;
   return (...args) => {
@@ -56,7 +81,17 @@ function debounce(fn, ms) {
   };
 }
 
+/**
+ * Last geocode result
+ * @type {Object|null}
+ */
 let lastGeocode = null;
+
+/**
+ * Debounced location validation function
+ * Validates location input and updates help text
+ * @type {Function}
+ */
 export const debouncedLocationValidate = debounce(async () => {
   lastGeocode = null;
   const q = (eventLocationInput?.value || '').trim();
@@ -69,6 +104,12 @@ export const debouncedLocationValidate = debounce(async () => {
   catch (e) { renderLocationHelp({ status: 'error', message: 'Validation error' }); }
 }, 450);
 
+/**
+ * Sets the modal loading state
+ * @param {boolean} isLoading - Whether modal is loading
+ * @param {string} [action='save'] - Action type: 'save' or 'delete'
+ * @returns {void}
+ */
 export function setModalLoading(isLoading, action = 'save') {
   if (!modalContent) return;
   if (isLoading) {
@@ -91,6 +132,10 @@ export function setModalLoading(isLoading, action = 'save') {
   }
 }
 
+/**
+ * Closes the event modal
+ * @returns {void}
+ */
 export function closeModal() {
   if (!modal) return;
   modal.classList.remove('show');
@@ -109,6 +154,18 @@ export function closeModal() {
 }
 
 // Controller factory to encapsulate modal flows and dependencies
+/**
+ * Creates a modal controller with dependency injection
+ * @param {Object} deps - Dependencies object
+ * @param {Function} deps.setStatus - Status message function
+ * @param {Function} deps.refresh - Refresh data function
+ * @param {Function} deps.isoWeekNumber - ISO week number function
+ * @param {Object} deps.items - Timeline items DataSet
+ * @param {Map} deps.urlToGroupId - URL to group ID mapping
+ * @param {Function} deps.forceRefreshCache - Force cache refresh function
+ * @param {Object} deps.dayjs - Day.js instance
+ * @returns {Object} Modal controller with methods
+ */
 export function createModalController({ setStatus, refresh, isoWeekNumber, items, urlToGroupId, forceRefreshCache, dayjs }) {
   let currentEvent = null;
   let currentCreateGroupId = null;
