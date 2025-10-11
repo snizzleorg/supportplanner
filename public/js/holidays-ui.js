@@ -1,10 +1,23 @@
-// Helpers to manage holiday background items on the timeline
-// Usage: upsertHolidayBackgrounds(items, from, to, getHolidaysInRange, dayjs)
-// - items: vis DataSet-like with get(), getIds(filter?), add(), remove()
-// - from/to: YYYY-MM-DD strings defining the window
-// - getHolidaysInRange: async (from, to) => [{ date: 'YYYY-MM-DD', name: 'Holiday' }, ...]
-// - dayjs: dayjs instance
+/**
+ * Holiday UI Module
+ * 
+ * Manages holiday background items on the timeline.
+ * Creates visual indicators for public holidays.
+ * 
+ * @module holidays-ui
+ */
 
+/**
+ * Updates or inserts holiday background items on the timeline
+ * Removes existing holiday backgrounds and adds new ones for the specified date range
+ * 
+ * @param {Object} items - vis-timeline DataSet with get(), getIds(), add(), remove() methods
+ * @param {string} from - Start date in YYYY-MM-DD format
+ * @param {string} to - End date in YYYY-MM-DD format
+ * @param {Function} getHolidaysInRange - Async function to fetch holidays: (from, to) => Promise<Array>
+ * @param {Object} dayjs - Day.js instance for date manipulation
+ * @returns {Promise<void>}
+ */
 export async function upsertHolidayBackgrounds(items, from, to, getHolidaysInRange, dayjs) {
   if (!items || !getHolidaysInRange || !dayjs) return;
 

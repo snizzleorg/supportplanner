@@ -5,80 +5,89 @@ import { DataSet, Timeline } from 'https://cdn.jsdelivr.net/npm/vis-timeline@7.7
 import { setupTooltipHandlers } from './custom-tooltip.js';
 import { getHolidaysInRange } from './js/holidays.js';
 import { upsertHolidayBackgrounds } from './js/holidays-ui.js';
-import { geocodeLocation, tryParseLatLon, geocodeAddress } from './js/geocode.js';
+// geocode functions moved to modal.js - not needed here
 import { renderMapMarkers } from './js/map.js';
 import { initTimeline as initTimelineCore } from './js/timeline.js';
 import { renderWeekBar, applyGroupLabelColors } from './js/timeline-ui.js';
 import { initSearch, applySearchFilter } from './js/search.js';
-import { fetchCalendars as apiFetchCalendars, refreshCaldav, clientLog as apiClientLog, getEvent, updateEvent as apiUpdateEvent, deleteEvent as apiDeleteEvent, createAllDayEvent, me as apiMe, logout as apiLogout } from './js/api.js';
-import { renderLocationHelp, debouncedLocationValidate, setModalLoading, closeModal, createModalController } from './js/modal.js';
+import { fetchCalendars as apiFetchCalendars, refreshCaldav, clientLog as apiClientLog, getEvent, updateEvent as apiUpdateEvent, deleteEvent as apiDeleteEvent, createAllDayEvent } from './js/api.js';
+// me and logout moved to auth.js - not needed here
+import { debouncedLocationValidate, setModalLoading, closeModal, createModalController } from './js/modal.js';
+// renderLocationHelp only used in modal.js - not needed here
 import { MOBILE_BREAKPOINT, TOUCH } from './js/constants.js';
+// Import DOM elements from centralized module
+import * as DOM from './js/dom.js';
+// Import state management
+import * as State from './js/state.js';
+// Import authentication
+import { initAuth, isReader } from './js/auth.js';
+// Import controls
+import {
+  setDateInputBounds, updateDateDisplays, applyWindow, updateAxisDensity,
+  clampToWindow, getWindowBounds, initTimelineControls, initDateInputs, 
+  initResizeHandler, initTimelinePanEvents
+} from './js/controls.js';
+// Import events
+import { initTimelineEvents as initTimelineEventsModule } from './js/events.js';
 
-// DOM Elements
-const modal = document.getElementById('eventModal');
-const modalContent = document.querySelector('#eventModal .modal-content');
-const eventForm = document.getElementById('eventForm');
-const closeBtn = document.querySelector('.close-btn');
-const cancelBtn = document.getElementById('cancelEdit');
-const saveBtn = document.getElementById('saveEvent');
-const deleteBtn = document.getElementById('deleteEvent');
-const eventIdInput = document.getElementById('eventId');
-const eventTitleInput = document.getElementById('eventTitle');
-const eventStartDateInput = document.getElementById('eventStartDate');
-const eventEndDateInput = document.getElementById('eventEndDate');
-const eventAllDayInput = document.getElementById('eventAllDay');
-const eventDescriptionInput = document.getElementById('eventDescription');
-const eventLocationInput = document.getElementById('eventLocation');
-const eventCalendarSelect = document.getElementById('eventCalendar');
-// Structured metadata inputs
-const eventOrderNumberInput = document.getElementById('eventOrderNumber');
-const eventTicketLinkInput = document.getElementById('eventTicketLink');
-const eventSystemTypeInput = document.getElementById('eventSystemType');
-const eventLocationHelp = document.getElementById('eventLocationHelp');
-let lastGeocode = null;
-let currentEvent = null;
+// Create aliases for DOM elements (for backward compatibility)
+const modal = DOM.modal;
+const modalContent = DOM.modalContent;
+const eventForm = DOM.eventForm;
+const closeBtn = DOM.closeBtn;
+const cancelBtn = DOM.cancelBtn;
+const saveBtn = DOM.saveBtn;
+const deleteBtn = DOM.deleteBtn;
+const eventIdInput = DOM.eventIdInput;
+const eventTitleInput = DOM.eventTitleInput;
+const eventStartDateInput = DOM.eventStartDateInput;
+const eventEndDateInput = DOM.eventEndDateInput;
+const eventAllDayInput = DOM.eventAllDayInput;
+const eventDescriptionInput = DOM.eventDescriptionInput;
+const eventLocationInput = DOM.eventLocationInput;
+const eventCalendarSelect = DOM.eventCalendarSelect;
+const eventOrderNumberInput = DOM.eventOrderNumberInput;
+const eventTicketLinkInput = DOM.eventTicketLinkInput;
+const eventSystemTypeInput = DOM.eventSystemTypeInput;
+const eventLocationHelp = DOM.eventLocationHelp;
+const statusEl = DOM.statusEl;
+const fromEl = DOM.fromEl;
+const toEl = DOM.toEl;
+const fromDateDisplay = DOM.fromDateDisplay;
+const toDateDisplay = DOM.toDateDisplay;
+const refreshBtn = DOM.refreshBtn;
+const fitBtn = DOM.fitBtn;
+const todayBtn = DOM.todayBtn;
+const monthViewBtn = DOM.monthViewBtn;
+const quarterViewBtn = DOM.quarterViewBtn;
+const zoomInBtn = DOM.zoomInBtn;
+const zoomOutBtn = DOM.zoomOutBtn;
+const showRangeBtn = DOM.showRangeBtn;
+const searchBox = DOM.searchBox;
+const clearSearchBtn = DOM.clearSearchBtn;
+const timelineEl = DOM.timelineEl;
+const userInfoEl = DOM.userInfoEl;
+const logoutBtn = DOM.logoutBtn;
+const filtersToggleBtn = DOM.filtersToggleBtn;
+const mapToggleBtn = DOM.mapToggleBtn;
+const mobileBackdrop = DOM.mobileBackdrop;
 
-const statusEl = document.getElementById('status');
-const fromEl = document.getElementById('fromDate');
-const toEl = document.getElementById('toDate');
-const fromDateDisplay = document.getElementById('fromDateDisplay');
-const toDateDisplay = document.getElementById('toDateDisplay');
-const refreshBtn = document.getElementById('refreshBtn');
-const fitBtn = document.getElementById('fitBtn');
-const todayBtn = document.getElementById('todayBtn');
-const monthViewBtn = document.getElementById('monthViewBtn');
-const quarterViewBtn = document.getElementById('quarterViewBtn');
-const zoomInBtn = document.getElementById('zoomInBtn');
-const zoomOutBtn = document.getElementById('zoomOutBtn');
-const showRangeBtn = document.getElementById('showRangeBtn');
-const searchBox = document.getElementById('searchBox');
-const clearSearchBtn = document.getElementById('clearSearch');
-const timelineEl = document.getElementById('timeline');
-const userInfoEl = document.getElementById('userInfo');
-const logoutBtn = document.getElementById('logoutBtn');
-// Mobile toggles
-const filtersToggleBtn = document.getElementById('filtersToggle');
-const mapToggleBtn = document.getElementById('mapToggle');
-const mobileBackdrop = document.getElementById('mobileBackdrop');
-let timeline;
-let groups = new DataSet([]);
-let items = new DataSet([]);
-// Suppress click-after-drag: track user panning state
-let isPanning = false;
-let lastPanEnd = 0;
-let labelObserver = null;
-let refreshGen = 0; // generation guard for in-flight refreshes
-let weekBarEl = null; // overlay container for week numbers at bottom
-// Map timeline group IDs (cal-1, cal-2, ...) back to original server group IDs (calendar URLs)
-const groupReverseMap = new Map();
-// Map calendar URL -> timeline group id for quick lookup when adding items
-const urlToGroupId = new Map();
-// Track the group id used for the current create flow (for optimistic insert)
-let currentCreateGroupId = null;
-// Toggle to show/hide extra UI debug messages
-const DEBUG_UI = false;
-// Current user's role, used to gate editing features on the client
-let currentUserRole = 'reader';
+// Create aliases for state variables (for backward compatibility)
+let lastGeocode = State.lastGeocode;
+let currentEvent = State.currentEvent;
+let timeline = State.timeline;
+let groups = State.groups;
+let items = State.items;
+let isPanning = State.isPanning;
+let lastPanEnd = State.lastPanEnd;
+let labelObserver = State.labelObserver;
+let refreshGen = State.refreshGen;
+let weekBarEl = State.weekBarEl;
+const groupReverseMap = State.groupReverseMap;
+const urlToGroupId = State.urlToGroupId;
+let currentCreateGroupId = State.currentCreateGroupId;
+const DEBUG_UI = State.DEBUG_UI;
+let currentUserRole = State.currentUserRole;
 
 function setStatus(msg) {
   statusEl.textContent = msg || '';
@@ -163,35 +172,8 @@ function setupMobileToggles() {
   });
 }
 
-async function hydrateAuthBox() {
-  try {
-    const info = await apiMe();
-    const show = info && info.authEnabled && info.authenticated;
-    currentUserRole = (info && info.user && info.user.role) ? info.user.role : 'reader';
-    if (userInfoEl) {
-      if (show) {
-        const name = info.user?.name || info.user?.preferred_username || info.user?.email || 'Signed in';
-        const role = info.user?.role ? ` (${info.user.role})` : '';
-        userInfoEl.textContent = name + role;
-        userInfoEl.style.display = '';
-      } else {
-        userInfoEl.style.display = 'none';
-      }
-    }
-    if (logoutBtn) {
-      logoutBtn.style.display = show ? '' : 'none';
-      if (!logoutBtn._bound) {
-        logoutBtn.addEventListener('click', () => {
-          // Let the server initiate RP logout with the IdP and redirect back
-          location.href = '/auth/logout';
-        });
-        logoutBtn._bound = true;
-      }
-    }
-  } catch (err) {
-    // ignore auth box errors
-  }
-}
+// Authentication is now handled by auth.js module
+// hydrateAuthBox() replaced by initAuth() from auth.js
 
 // --- Search wiring moved to './js/search.js' ---
 
@@ -357,7 +339,8 @@ function initTimeline() {
   items = new DataSet({ type: { start: 'ISODate', end: 'ISODate' } });
   try { window.groups = groups; window.items = items; } catch (_) {}
   // Create timeline via module
-  timeline = initTimelineCore(timelineEl, items, groups);
+  State.setTimeline(initTimelineCore(timelineEl, items, groups));
+  timeline = State.timeline;
   // Initialize search module with items and groups datasets (to search calendar names)
   try { initSearch(items, groups); } catch (_) {}
 }
@@ -400,89 +383,7 @@ function adjustTimelineHeight() {
   } catch (_) { /* ignore */ }
 }
 
-function parseDateInput(value) {
-  // Try strict ISO first
-  let d = dayjs(value, 'YYYY-MM-DD', true);
-  if (d.isValid()) return d;
-  // Fallbacks for common locales (e.g., 1.9.2025 or 01.09.2025)
-  d = dayjs(value, 'D.M.YYYY', true);
-  if (d.isValid()) return d;
-  d = dayjs(value, 'DD.MM.YYYY', true);
-  if (d.isValid()) return d;
-  // Last resort: native parse
-  d = dayjs(value);
-  return d;
-}
-
-// --- Date window constraints: -3 months .. +12 months relative to now ---
-const WINDOW_PAST_MONTHS = 3;
-const WINDOW_FUTURE_MONTHS = 12;
-function getWindowBounds() {
-  const minDay = dayjs().subtract(WINDOW_PAST_MONTHS, 'month').startOf('day');
-  const maxDay = dayjs().add(WINDOW_FUTURE_MONTHS, 'month').endOf('day');
-  return { minDay, maxDay };
-}
-function setDateInputBounds() {
-  const { minDay, maxDay } = getWindowBounds();
-  const min = minDay.format('YYYY-MM-DD');
-  const max = maxDay.format('YYYY-MM-DD');
-  if (fromEl) { fromEl.min = min; fromEl.max = max; }
-  if (toEl) { toEl.min = min; toEl.max = max; }
-}
-function clampToWindow(dateStr) {
-  const d = parseDateInput(dateStr);
-  if (!d || !d.isValid()) return null;
-  const { minDay, maxDay } = getWindowBounds();
-  let x = d;
-  if (x.isBefore(minDay)) x = minDay;
-  if (x.isAfter(maxDay)) x = maxDay;
-  return x.format('YYYY-MM-DD');
-}
-
-function formatForDisplay(value) {
-  // Accept YYYY-MM-DD or DD.MM.YYYY inputs; output fixed dd.mm.yyyy
-  const d = parseDateInput(value);
-  if (!d || !d.isValid()) return value || '';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(d.date())}.${pad(d.month() + 1)}.${d.year()}`;
-}
-
-function updateDateDisplays() {
-  if (fromDateDisplay) fromDateDisplay.textContent = formatForDisplay(fromEl.value);
-  if (toDateDisplay) toDateDisplay.textContent = formatForDisplay(toEl.value);
-}
-
-function applyWindow(from, to) {
-  if (!timeline) return;
-  const fromDay = parseDateInput(from);
-  const toDay = parseDateInput(to);
-  if (!fromDay.isValid() || !toDay.isValid()) {
-    setStatus('Invalid date input. Please use YYYY-MM-DD or DD.MM.YYYY');
-    return;
-  }
-  // Clamp to allowed window
-  const { minDay, maxDay } = getWindowBounds();
-  let f = fromDay;
-  let t = toDay;
-  if (f.isBefore(minDay)) f = minDay;
-  if (t.isAfter(maxDay)) t = maxDay;
-  // Ensure ordering
-  if (t.isBefore(f)) t = f;
-  // Reflect any clamping back to inputs
-  const fStr = f.format('YYYY-MM-DD');
-  const tStr = t.format('YYYY-MM-DD');
-  if (fromEl && fromEl.value !== fStr) fromEl.value = fStr;
-  if (toEl && toEl.value !== tStr) toEl.value = tStr;
-
-  const fromDate = f.startOf('day').toDate();
-  const toDate = t.endOf('day').toDate();
-  const minDate = dayjs(fromDate).subtract(7, 'day').toDate();
-  const maxDate = dayjs(toDate).add(7, 'day').toDate();
-  timeline.setOptions({ start: fromDate, end: toDate, min: minDate, max: maxDate });
-  timeline.setWindow(fromDate, toDate, { animation: false });
-  timeline.redraw();
-  updateAxisDensity(fStr, tStr);
-}
+// Date and window control functions moved to controls.js
 
 async function fetchCalendars() {
   try {
@@ -537,7 +438,8 @@ async function openEditModal(eventId) {
     
     if (!eventData.success) throw new Error(eventData.error || 'Failed to load event');
     
-    currentEvent = eventData.event;
+    State.setCurrentEvent(eventData.event);
+    currentEvent = State.currentEvent;
     console.log('Current event set:', currentEvent);
     
     // Populate form fields
@@ -905,7 +807,7 @@ function initModal() {
 
 async function refresh() {
   // Update auth box first
-  await hydrateAuthBox();
+  await initAuth();
   // Always fetch all calendars
   const allCalendars = await fetchCalendars();
   const allCalendarUrls = allCalendars.map(c => c.url);
@@ -1195,184 +1097,30 @@ function wireEvents() {
   // Initialize modal event listeners via controller
   modalCtl.initModal();
   
-  // Initialize button event listeners that don't depend on the timeline
-  // Refresh button should force a server-side cache refresh to fetch latest data
-  refreshBtn.addEventListener('click', async () => {
-    refreshBtn.disabled = true;
-    try {
-      await forceRefreshCache(); // This will also call refresh() on success
-    } finally {
-      refreshBtn.disabled = false;
-    }
-  });
+  // Initialize date input event listeners (from controls.js)
+  initDateInputs(refresh);
+  
+  // Initialize resize handler (from controls.js)
+  initResizeHandler();
   
   // Make events appear clickable
   document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('events-clickable');
   });
-  
-  window.addEventListener('resize', () => {
-    if (!timeline) return;
-    // Re-apply window after resize to prevent drift
-    requestAnimationFrame(() => applyWindow(fromEl.value, toEl.value));
-    requestAnimationFrame(() => updateAxisDensity(fromEl.value, toEl.value));
-    // Repaint week labels to current positions
-    try { requestAnimationFrame(() => renderWeekBar(timeline)); } catch (_) {}
-    // Ensure Leaflet map resizes to new container dimensions
-    try {
-      if (typeof map !== 'undefined' && map && map.invalidateSize) {
-        setTimeout(() => map.invalidateSize(false), 0);
-      }
-    } catch (_) {}
-  });
-  
-  // Only apply/clamp and refresh when input loses focus or Enter is pressed
-  function applyDateInputs() {
-    const fromClamped = clampToWindow(fromEl.value);
-    if (fromClamped) fromEl.value = fromClamped;
-    const toClamped = clampToWindow(toEl.value);
-    if (toClamped) toEl.value = toClamped;
-    // keep ordering
-    if (dayjs(toEl.value).isBefore(dayjs(fromEl.value))) toEl.value = fromEl.value;
-    refresh();
-  }
-  fromEl.addEventListener('blur', applyDateInputs);
-  toEl.addEventListener('blur', applyDateInputs);
-  [fromEl, toEl].forEach(el => {
-    el.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        // Trigger apply when user confirms with Enter
-        applyDateInputs();
-        el.blur();
-      }
-    });
-  });
-  // While typing, only update the human-friendly display text, do not refresh
-  fromEl.addEventListener('input', updateDateDisplays);
-  toEl.addEventListener('input', updateDateDisplays);
 }
 
 // Initialize timeline event handlers after the timeline is created
 function initTimelineEvents() {
   if (!timeline) return;
   
-  // Track user panning/zooming to suppress accidental click after drag
-  timeline.on('rangechange', (props) => {
-    try {
-      if (props && props.byUser) {
-        isPanning = true;
-      }
-    } catch (_) {}
-  });
-  timeline.on('rangechanged', (props) => {
-    try {
-      if (props && props.byUser) {
-        isPanning = false;
-        lastPanEnd = Date.now();
-      }
-    } catch (_) {}
-  });
-
-  // Timeline event click handler
-  timeline.on('click', async (properties) => {
-    // Ignore clicks right after a user drag/pan
-    if (isPanning || (Date.now() - lastPanEnd) < TOUCH.PAN_DEBOUNCE) {
-      return;
-    }
-    console.log('Timeline click event:', properties);
-    if (properties.item) {
-      console.log('Item clicked, item ID:', properties.item);
-      // Get the event data from the clicked item
-      const item = items.get(properties.item);
-      console.log('Item data:', item);
-      
-      // Extract UID from the item's ID (format: 'cal-X-https://.../calendars/.../UID')
-      // The UID is everything after the last '/' in the item ID
-      const parts = properties.item.split('/');
-      const uid = parts[parts.length - 1];
-      
-      if (uid) {
-        console.log('Extracted UID:', uid);
-        // Readers are not allowed to edit
-        if (currentUserRole === 'reader') {
-          setStatus('Read-only: editing disabled');
-          return;
-        }
-        // On mobile phones, single tap should NOT open modal (tooltip handles tap). Use long-press.
-        try {
-          const isMobileTap = document.body.classList.contains('mobile-device') || (navigator.maxTouchPoints || 0) > 0;
-          if (isMobileTap) return;
-        } catch (_) {}
-        modalCtl.openEditModal(uid);
-      } else {
-        console.error('Could not extract UID from item ID:', properties.item);
-        setStatus('Error: Could not identify event. Please try again.');
-      }
-    } else {
-      console.log('Click was not on an item');
-      // Quick-create all-day event when clicking on empty space within a person's row
-      // Requirements:
-      //  - must have a group (not the special "weeks" group)
-      //  - must have a time
-      const g = properties.group;
-      const t = properties.time;
-      if (!g || g === 'weeks' || !t) return;
-
-      // Readers are not allowed to create
-      if (currentUserRole === 'reader') {
-        setStatus('Read-only: creation disabled');
-        return;
-      }
-
-      // Prefer the stored original URL on the group object
-      const groupObj = groups.get(g);
-      const calendarUrl = (groupObj && groupObj.calendarUrl) || groupReverseMap.get(g) || null;
-      console.log('Quick-create click', { groupId: g, groupObj, resolvedCalendarUrl: calendarUrl });
-      if (!calendarUrl) return;
-      // Validate it's a proper CalDAV URL, not a client group id
-      if (!/^https?:\/\//.test(calendarUrl)) {
-        setStatus(`Cannot create: invalid calendar URL resolved for group ${g}`);
-        return;
-      }
-
-      // Compute ISO week range (Mon..Sun) for clicked date
-      const clicked = dayjs(t);
-      // day(): 0=Sun..6=Sat, so shift to Monday-based
-      const offsetToMonday = (clicked.day() + 6) % 7; // 0 if Monday
-      const weekStart = clicked.subtract(offsetToMonday, 'day').startOf('day');
-      // Set end date to Friday (4 days after Monday)
-      const weekEnd = weekStart.add(4, 'day').startOf('day'); // Monday to Friday
-
-      const startStr = weekStart.format('YYYY-MM-DD');
-      const endStr = weekEnd.format('YYYY-MM-DD');
-
-      // Open modal in create mode so we reuse the stable edit flow (no flicker)
-      await modalCtl.openCreateWeekModal(calendarUrl, startStr, endStr, g);
-    }
-  });
+  // Initialize timeline panning event handlers (from controls.js)
+  initTimelinePanEvents();
   
-  // Timeline control buttons
-  fitBtn.addEventListener('click', () => timeline.fit());
-  todayBtn.addEventListener('click', () => {
-    timeline.moveTo(dayjs().valueOf());
-  });
-  // Quick zoom: today-1w .. today+4w
-  monthViewBtn?.addEventListener('click', () => {
-    const now = dayjs();
-    const start = now.subtract(1, 'week').startOf('day').toDate();
-    const end = now.add(4, 'week').endOf('day').toDate();
-    timeline.setWindow(start, end, { animation: false });
-    updateAxisDensity(dayjs(start), dayjs(end));
-  });
-  // Quick zoom: today-1w .. today+3m
-  quarterViewBtn?.addEventListener('click', () => {
-    const now = dayjs();
-    const start = now.subtract(1, 'week').startOf('day').toDate();
-    const end = now.add(3, 'month').endOf('day').toDate();
-    timeline.setWindow(start, end, { animation: false });
-    updateAxisDensity(dayjs(start), dayjs(end));
-  });
+  // Initialize timeline event click handlers (from events.js)
+  initTimelineEventsModule(modalCtl);
+  
+  // Initialize timeline control buttons (from controls.js)
+  initTimelineControls(forceRefreshCache);
 }
 
 (async function main() {
@@ -1402,16 +1150,7 @@ function initTimelineEvents() {
   updateDateDisplays();
 })();
 
-function updateAxisDensity(from, to) {
-  if (!timeline) return;
-  const spanDays = dayjs(to).diff(dayjs(from), 'day') + 1;
-  const condensed = spanDays > 45;
-  if (condensed) {
-    document.body.classList.add('axis-condensed');
-  } else {
-    document.body.classList.remove('axis-condensed');
-  }
-}
+// updateAxisDensity moved to controls.js
 
 function isoWeekNumber(jsDate) {
   const d = new Date(Date.UTC(jsDate.getFullYear(), jsDate.getMonth(), jsDate.getDate()));

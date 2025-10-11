@@ -1,11 +1,10 @@
-# Multi-arch Puppeteer base image that bundles a compatible Chromium
-# This avoids architecture mismatches on Apple Silicon vs. x86 hosts
+# Frontend test runner - Puppeteer base image with Chromium
 FROM ghcr.io/puppeteer/puppeteer:22.12.1
 
 WORKDIR /runner
 
 # Copy test runner package and install deps
-COPY tests/runner/package.json tests/runner/package-lock.json* ./
+COPY tests/frontend/package.json tests/frontend/package-lock.json* ./
 # Use npm ci when lockfile exists, else npm install. Disable audit/fund to reduce noise.
 RUN if [ -f package-lock.json ]; then \
       npm ci --no-audit --no-fund; \
@@ -14,8 +13,8 @@ RUN if [ -f package-lock.json ]; then \
     fi
 
 # Copy runner script and public tests
-COPY tests/runner/run-tests.mjs ./run-tests.mjs
-COPY tests/runner/css-audit.mjs ./css-audit.mjs
+COPY tests/frontend/run-tests.mjs ./run-tests.mjs
+COPY tests/frontend/css-audit.mjs ./css-audit.mjs
 COPY public/tests ./public/tests
 COPY public/js ./public/js
 COPY public/styles.css ./public/styles.css
