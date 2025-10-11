@@ -19,6 +19,12 @@ import * as DOM from './js/dom.js';
 import * as State from './js/state.js';
 // Import authentication
 import { initAuth, isReader } from './js/auth.js';
+// Import controls
+import {
+  setDateInputBounds, updateDateDisplays, applyWindow, updateAxisDensity,
+  clampToWindow, getWindowBounds, initTimelineControls, initDateInputs, 
+  initResizeHandler, initTimelinePanEvents
+} from './js/controls.js';
 
 // Create aliases for DOM elements (for backward compatibility)
 const modal = DOM.modal;
@@ -373,89 +379,7 @@ function adjustTimelineHeight() {
   } catch (_) { /* ignore */ }
 }
 
-function parseDateInput(value) {
-  // Try strict ISO first
-  let d = dayjs(value, 'YYYY-MM-DD', true);
-  if (d.isValid()) return d;
-  // Fallbacks for common locales (e.g., 1.9.2025 or 01.09.2025)
-  d = dayjs(value, 'D.M.YYYY', true);
-  if (d.isValid()) return d;
-  d = dayjs(value, 'DD.MM.YYYY', true);
-  if (d.isValid()) return d;
-  // Last resort: native parse
-  d = dayjs(value);
-  return d;
-}
-
-// --- Date window constraints: -3 months .. +12 months relative to now ---
-const WINDOW_PAST_MONTHS = 3;
-const WINDOW_FUTURE_MONTHS = 12;
-function getWindowBounds() {
-  const minDay = dayjs().subtract(WINDOW_PAST_MONTHS, 'month').startOf('day');
-  const maxDay = dayjs().add(WINDOW_FUTURE_MONTHS, 'month').endOf('day');
-  return { minDay, maxDay };
-}
-function setDateInputBounds() {
-  const { minDay, maxDay } = getWindowBounds();
-  const min = minDay.format('YYYY-MM-DD');
-  const max = maxDay.format('YYYY-MM-DD');
-  if (fromEl) { fromEl.min = min; fromEl.max = max; }
-  if (toEl) { toEl.min = min; toEl.max = max; }
-}
-function clampToWindow(dateStr) {
-  const d = parseDateInput(dateStr);
-  if (!d || !d.isValid()) return null;
-  const { minDay, maxDay } = getWindowBounds();
-  let x = d;
-  if (x.isBefore(minDay)) x = minDay;
-  if (x.isAfter(maxDay)) x = maxDay;
-  return x.format('YYYY-MM-DD');
-}
-
-function formatForDisplay(value) {
-  // Accept YYYY-MM-DD or DD.MM.YYYY inputs; output fixed dd.mm.yyyy
-  const d = parseDateInput(value);
-  if (!d || !d.isValid()) return value || '';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(d.date())}.${pad(d.month() + 1)}.${d.year()}`;
-}
-
-function updateDateDisplays() {
-  if (fromDateDisplay) fromDateDisplay.textContent = formatForDisplay(fromEl.value);
-  if (toDateDisplay) toDateDisplay.textContent = formatForDisplay(toEl.value);
-}
-
-function applyWindow(from, to) {
-  if (!timeline) return;
-  const fromDay = parseDateInput(from);
-  const toDay = parseDateInput(to);
-  if (!fromDay.isValid() || !toDay.isValid()) {
-    setStatus('Invalid date input. Please use YYYY-MM-DD or DD.MM.YYYY');
-    return;
-  }
-  // Clamp to allowed window
-  const { minDay, maxDay } = getWindowBounds();
-  let f = fromDay;
-  let t = toDay;
-  if (f.isBefore(minDay)) f = minDay;
-  if (t.isAfter(maxDay)) t = maxDay;
-  // Ensure ordering
-  if (t.isBefore(f)) t = f;
-  // Reflect any clamping back to inputs
-  const fStr = f.format('YYYY-MM-DD');
-  const tStr = t.format('YYYY-MM-DD');
-  if (fromEl && fromEl.value !== fStr) fromEl.value = fStr;
-  if (toEl && toEl.value !== tStr) toEl.value = tStr;
-
-  const fromDate = f.startOf('day').toDate();
-  const toDate = t.endOf('day').toDate();
-  const minDate = dayjs(fromDate).subtract(7, 'day').toDate();
-  const maxDate = dayjs(toDate).add(7, 'day').toDate();
-  timeline.setOptions({ start: fromDate, end: toDate, min: minDate, max: maxDate });
-  timeline.setWindow(fromDate, toDate, { animation: false });
-  timeline.redraw();
-  updateAxisDensity(fStr, tStr);
-}
+// Date and window control functions moved to controls.js
 
 async function fetchCalendars() {
   try {
@@ -1169,87 +1093,24 @@ function wireEvents() {
   // Initialize modal event listeners via controller
   modalCtl.initModal();
   
-  // Initialize button event listeners that don't depend on the timeline
-  // Refresh button should force a server-side cache refresh to fetch latest data
-  refreshBtn.addEventListener('click', async () => {
-    refreshBtn.disabled = true;
-    try {
-      await forceRefreshCache(); // This will also call refresh() on success
-    } finally {
-      refreshBtn.disabled = false;
-    }
-  });
+  // Initialize date input event listeners (from controls.js)
+  initDateInputs(refresh);
+  
+  // Initialize resize handler (from controls.js)
+  initResizeHandler();
   
   // Make events appear clickable
   document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('events-clickable');
   });
-  
-  window.addEventListener('resize', () => {
-    if (!timeline) return;
-    // Re-apply window after resize to prevent drift
-    requestAnimationFrame(() => applyWindow(fromEl.value, toEl.value));
-    requestAnimationFrame(() => updateAxisDensity(fromEl.value, toEl.value));
-    // Repaint week labels to current positions
-    try { requestAnimationFrame(() => renderWeekBar(timeline)); } catch (_) {}
-    // Ensure Leaflet map resizes to new container dimensions
-    try {
-      if (typeof map !== 'undefined' && map && map.invalidateSize) {
-        setTimeout(() => map.invalidateSize(false), 0);
-      }
-    } catch (_) {}
-  });
-  
-  // Only apply/clamp and refresh when input loses focus or Enter is pressed
-  function applyDateInputs() {
-    const fromClamped = clampToWindow(fromEl.value);
-    if (fromClamped) fromEl.value = fromClamped;
-    const toClamped = clampToWindow(toEl.value);
-    if (toClamped) toEl.value = toClamped;
-    // keep ordering
-    if (dayjs(toEl.value).isBefore(dayjs(fromEl.value))) toEl.value = fromEl.value;
-    refresh();
-  }
-  fromEl.addEventListener('blur', applyDateInputs);
-  toEl.addEventListener('blur', applyDateInputs);
-  [fromEl, toEl].forEach(el => {
-    el.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        // Trigger apply when user confirms with Enter
-        applyDateInputs();
-        el.blur();
-      }
-    });
-  });
-  // While typing, only update the human-friendly display text, do not refresh
-  fromEl.addEventListener('input', updateDateDisplays);
-  toEl.addEventListener('input', updateDateDisplays);
 }
 
 // Initialize timeline event handlers after the timeline is created
 function initTimelineEvents() {
   if (!timeline) return;
   
-  // Track user panning/zooming to suppress accidental click after drag
-  timeline.on('rangechange', (props) => {
-    try {
-      if (props && props.byUser) {
-        State.setIsPanning(true);
-        isPanning = State.isPanning;
-      }
-    } catch (_) {}
-  });
-  timeline.on('rangechanged', (props) => {
-    try {
-      if (props && props.byUser) {
-        State.setIsPanning(false);
-        State.setLastPanEnd(Date.now());
-        isPanning = State.isPanning;
-        lastPanEnd = State.lastPanEnd;
-      }
-    } catch (_) {}
-  });
+  // Initialize timeline panning event handlers (from controls.js)
+  initTimelinePanEvents();
 
   // Timeline event click handler
   timeline.on('click', async (properties) => {
@@ -1329,27 +1190,8 @@ function initTimelineEvents() {
     }
   });
   
-  // Timeline control buttons
-  fitBtn.addEventListener('click', () => timeline.fit());
-  todayBtn.addEventListener('click', () => {
-    timeline.moveTo(dayjs().valueOf());
-  });
-  // Quick zoom: today-1w .. today+4w
-  monthViewBtn?.addEventListener('click', () => {
-    const now = dayjs();
-    const start = now.subtract(1, 'week').startOf('day').toDate();
-    const end = now.add(4, 'week').endOf('day').toDate();
-    timeline.setWindow(start, end, { animation: false });
-    updateAxisDensity(dayjs(start), dayjs(end));
-  });
-  // Quick zoom: today-1w .. today+3m
-  quarterViewBtn?.addEventListener('click', () => {
-    const now = dayjs();
-    const start = now.subtract(1, 'week').startOf('day').toDate();
-    const end = now.add(3, 'month').endOf('day').toDate();
-    timeline.setWindow(start, end, { animation: false });
-    updateAxisDensity(dayjs(start), dayjs(end));
-  });
+  // Initialize timeline control buttons (from controls.js)
+  initTimelineControls(forceRefreshCache);
 }
 
 (async function main() {
@@ -1379,16 +1221,7 @@ function initTimelineEvents() {
   updateDateDisplays();
 })();
 
-function updateAxisDensity(from, to) {
-  if (!timeline) return;
-  const spanDays = dayjs(to).diff(dayjs(from), 'day') + 1;
-  const condensed = spanDays > 45;
-  if (condensed) {
-    document.body.classList.add('axis-condensed');
-  } else {
-    document.body.classList.remove('axis-condensed');
-  }
-}
+// updateAxisDensity moved to controls.js
 
 function isoWeekNumber(jsDate) {
   const d = new Date(Date.UTC(jsDate.getFullYear(), jsDate.getMonth(), jsDate.getDate()));
