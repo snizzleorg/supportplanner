@@ -1,3 +1,20 @@
+/**
+ * Calendar cache service
+ * 
+ * Manages CalDAV calendar data with caching, event CRUD operations,
+ * and recurring event expansion.
+ * 
+ * Features:
+ * - CalDAV client for Nextcloud integration
+ * - 30-minute cache with automatic refresh
+ * - Recurring event expansion using ical-expander
+ * - Event CRUD operations (create, read, update, delete, move)
+ * - YAML metadata extraction from event descriptions
+ * - Calendar ordering and color management
+ * 
+ * @module services/calendar
+ */
+
 import { DAVClient } from 'tsdav';
 import IcalExpander from 'ical-expander';
 import dayjs from 'dayjs';
@@ -6,13 +23,21 @@ import isSameOrAfter from 'dayjs/plugin/isSameOrAfter.js';
 import NodeCache from 'node-cache';
 import { randomUUID } from 'crypto';
 import YAML from 'yaml';
-import { calendarOrder, calendarExclude } from '../config/calendar-order.js';
-import { calendarColorOverrides } from '../config/calendar-colors.js';
+import { calendarOrder, calendarExclude } from '../../config/calendar-order.js';
+import { calendarColorOverrides } from '../../config/calendar-colors.js';
 
 // Enable required Dayjs plugins for comparison helpers used below
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
+/**
+ * Calendar cache class
+ * 
+ * Provides caching layer for CalDAV calendar data with automatic refresh.
+ * Handles event CRUD operations and recurring event expansion.
+ * 
+ * @class CalendarCache
+ */
 export class CalendarCache {
   constructor() {
     // Cache with 30 minute TTL and check for expired items every 5 minutes
@@ -30,7 +55,16 @@ export class CalendarCache {
     this.refreshInProgress = false;
   }
 
-  // --- YAML helpers ---
+  /**
+   * Extract YAML metadata from event description
+   * 
+   * Looks for fenced YAML blocks (```yaml ... ```) at the end of descriptions.
+   * Parses the YAML and returns both the cleaned text and parsed metadata.
+   * 
+   * @param {string} description - Event description that may contain YAML
+   * @returns {{text: string, meta: Object|null, rawYaml: string}} Parsed result
+   * @private
+   */
   extractYaml(description) {
     const result = { text: description || '', meta: null, rawYaml: '' };
     if (!description) return result;
@@ -52,6 +86,17 @@ export class CalendarCache {
     return result;
   }
 
+  /**
+   * Build event description with YAML metadata
+   * 
+   * Combines text description with YAML metadata block.
+   * Appends YAML as fenced code block at the end.
+   * 
+   * @param {string} text - Plain text description
+   * @param {Object} meta - Metadata object to serialize as YAML
+   * @returns {string} Combined description with YAML block
+   * @private
+   */
   buildDescription(text, meta) {
     const base = (text || '').trimEnd();
     if (meta && Object.keys(meta).length > 0) {
@@ -165,6 +210,17 @@ export class CalendarCache {
     };
   }
 
+  /**
+   * Initialize the calendar cache
+   * 
+   * Connects to CalDAV server, discovers calendars, and starts automatic refresh.
+   * Sets up individual clients for each calendar and begins periodic refresh cycle.
+   * 
+   * @param {string} serverUrl - Nextcloud server URL
+   * @param {string} username - Nextcloud username
+   * @param {string} password - Nextcloud password
+   * @returns {Promise<void>}
+   */
   async initialize(serverUrl, username, password) {
     if (this.isInitialized) return;
     
@@ -196,6 +252,15 @@ export class CalendarCache {
     }
   }
 
+  /**
+   * Refresh all calendars from CalDAV server
+   * 
+   * Fetches latest calendar data for all discovered calendars.
+   * Expands recurring events and updates cache.
+   * Prevents concurrent refreshes.
+   * 
+   * @returns {Promise<void>}
+   */
   async refreshAllCalendars() {
     if (this.refreshInProgress) {
       console.log('Refresh already in progress, skipping');
@@ -227,6 +292,16 @@ export class CalendarCache {
     }
   }
 
+  /**
+   * Refresh a single calendar
+   * 
+   * Fetches calendar objects from CalDAV, parses iCal data,
+   * expands recurring events, and caches the results.
+   * 
+   * @param {Object} calendar - Calendar object with url and displayName
+   * @returns {Promise<void>}
+   * @private
+   */
   async refreshCalendar(calendar) {
     const cacheKey = `calendar:${calendar.url}`;
     const now = dayjs();
@@ -366,12 +441,27 @@ export class CalendarCache {
     }
   }
 
+  /**
+   * Get calendar data from cache
+   * 
+   * @param {string} calendarUrl - Calendar URL
+   * @returns {Object|undefined} Cached calendar data or undefined
+   */
   getCalendar(calendarUrl) {
     const cacheKey = `calendar:${calendarUrl}`;
     return this.cache.get(cacheKey);
   }
 
-  // Generate a consistent color based on the display name
+  /**
+   * Generate a consistent color based on display name
+   * 
+   * Uses string hashing to generate deterministic HSL colors.
+   * Ensures same calendar always gets same color.
+   * 
+   * @param {string} displayName - Calendar display name
+   * @returns {string} Hex color code
+   * @private
+   */
   getCalendarColor(displayName) {
     if (!displayName) return '#3b82f6'; // Default blue if no name
 
@@ -396,6 +486,14 @@ export class CalendarCache {
     return hslToHex(hue, sat, light);
   }
 
+  /**
+   * Get all calendars with ordering and exclusions applied
+   * 
+   * Returns calendars sorted by configured order, with exclusions filtered out.
+   * Applies color overrides and generates colors for calendars.
+   * 
+   * @returns {Array<Object>} Array of calendar objects with id, content, url, color
+   */
   getAllCalendars() {
     // Apply exclusion rules first (by exact display name, extracted firstname, or URL; case-insensitive)
     const excluded = new Set((calendarExclude || []).map(x => String(x || '').toLowerCase()));
@@ -440,6 +538,17 @@ export class CalendarCache {
     });
   }
 
+  /**
+   * Get events from specified calendars within date range
+   * 
+   * Retrieves cached events for given calendars and date range.
+   * Returns both calendar metadata and filtered events.
+   * 
+   * @param {string[]} calendarUrls - Array of calendar URLs to fetch events from
+   * @param {string} start - Start date (ISO format)
+   * @param {string} end - End date (ISO format)
+   * @returns {{calendars: Array<Object>, events: Array<Object>}} Calendars and events
+   */
   getEvents(calendarUrls, start, end) {
     const startDate = dayjs(start).startOf('day');
     const endDate = dayjs(end).endOf('day');
@@ -521,6 +630,13 @@ export class CalendarCache {
     };
   }
 
+  /**
+   * Get cache status information
+   * 
+   * Returns metadata about cache state for monitoring and debugging.
+   * 
+   * @returns {{isInitialized: boolean, lastRefresh: string|null, calendars: number, cacheKeys: number}} Status object
+   */
   getStatus() {
     return {
       isInitialized: this.isInitialized,
@@ -531,6 +647,14 @@ export class CalendarCache {
     };
   }
 
+  /**
+   * Stop the calendar cache
+   * 
+   * Clears refresh interval and marks as uninitialized.
+   * Call this during graceful shutdown.
+   * 
+   * @returns {Promise<void>}
+   */
   async stop() {
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);

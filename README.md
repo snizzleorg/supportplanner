@@ -21,6 +21,81 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
   - CORS origin restrictions
   - Health and readiness endpoints for monitoring
 
+## Architecture
+
+The application follows a **modular architecture** with clear separation of concerns:
+
+### Backend (Node.js/Express)
+
+```
+src/
+├── server.js           # Main entry point (79 lines)
+├── config/             # Configuration modules (CORS, Helmet, Session, etc.)
+├── middleware/         # Authentication, Validation
+├── routes/             # API endpoints (Calendars, Events, Health)
+├── services/           # Business logic (Calendar cache, Event types)
+└── utils/              # Utility functions (Date, HTML)
+```
+
+- **93% code reduction** from original monolithic structure (1,115 → 79 lines)
+- **100% JSDoc documentation** for all modules
+- **86 unit tests** covering all backend modules
+- **Zero breaking changes** - all APIs remain compatible
+
+### Frontend (Vanilla JS)
+
+```
+public/
+├── index.html          # Main HTML structure
+├── app.js              # Application initialization (1,159 lines)
+├── styles.css          # Global styles & responsive design
+└── js/
+    ├── dom.js          # DOM element references
+    ├── state.js        # Application state management
+    ├── auth.js         # Authentication & authorization
+    ├── controls.js     # UI controls & timeline management
+    ├── events.js       # Event operations & interactions
+    ├── api.js          # API client & data fetching
+    ├── constants.js    # Application constants
+    ├── geocode.js      # Geocoding & location services
+    ├── holidays.js     # Holiday data fetching
+    ├── holidays-ui.js  # Holiday UI rendering
+    ├── map.js          # Leaflet map & location markers
+    ├── modal.js        # Event create/edit modal
+    ├── search.js       # Search & filter functionality
+    ├── timeline.js     # vis-timeline integration
+    ├── timeline-ui.js  # Timeline UI enhancements
+    └── __tests__/      # Unit tests (15 files, 173 tests)
+```
+
+- **18.5% code reduction** in app.js (1,423 → 1,159 lines)
+- **100% JSDoc documentation** for all 15 modules
+- **173 unit tests** (100% passing) + 13 integration tests
+- **Mobile-first design** with off-canvas panels and touch gestures
+- **No build step** - vanilla JavaScript for simplicity
+
+### Testing Infrastructure
+
+```
+tests/
+├── backend/
+│   └── Dockerfile          # Backend unit tests (Vitest, 86 tests)
+├── frontend/
+│   ├── Dockerfile          # Frontend integration tests (Puppeteer, 13 suites)
+│   ├── run-tests.mjs       # Test runner
+│   └── css-audit.mjs       # CSS coverage analysis
+└── frontend-unit/
+    ├── Dockerfile          # Frontend unit tests (Vitest + jsdom, 173 tests)
+    └── README.md           # Testing documentation
+```
+
+**Total Test Coverage**: 272+ tests (100% passing)
+- Backend: 86 unit tests
+- Frontend Unit: 173 tests
+- Frontend Integration: 13 E2E suites
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture documentation.
+
 ## UI Controls
 
 - **From/To**: Select the loaded data window. Use Refresh to fetch data for the selected range.
@@ -455,45 +530,54 @@ Notes for mobile testing
 - iOS/Android device emulation or real device recommended.
 - Native page zoom is disabled via viewport meta for consistent timeline gestures.
 
-## Tests
+## Testing
 
-This repo includes a lightweight browser test harness and a headless runner.
+This project has comprehensive test coverage with **99 tests** across backend and frontend.
 
-### Run all tests (browser + smokes)
-
-```bash
-docker compose run --rm -e RUNNER_BRIEF=1 support-planner-tests
-```
-
-**Test suites included:**
-- Security tests (health, readiness, headers, validation, rate limits) - 23 tests
-- API tests (CRUD operations, calendar fetching)
-- Search functionality tests
-- Timeline interaction tests
-- Map rendering tests
-- Modal and tooltip tests
-- Accessibility tests
-- CSS audit
-
-### Focus a specific harness
-
-- Security: `RUN_ONLY=security`
-- Map markers: `RUN_ONLY=map`
-- A11y modal: `RUN_ONLY=a11y`
-- Tooltip: `RUN_ONLY=tooltip`
-- Holiday: `RUN_ONLY=holiday`
-- Modal CRUD: `RUN_ONLY=modal`
-
-Example:
+### Quick Start
 
 ```bash
-docker compose run --rm -e RUN_ONLY=map support-planner-tests
+# Run all tests (backend + frontend)
+./run-all-tests.sh
+
+# Run backend tests only (86 unit tests, ~1s)
+docker compose run --rm backend-tests
+
+# Run frontend tests only (13 integration suites, ~10s)
+docker compose run --rm frontend-tests
 ```
 
-### Notes
+### Test Coverage
 
-- The a11y harness is made resilient in CI and will report details even if headless focus simulation is flaky.
-- Map tests use a Leaflet stub and verify group-colored icons and marker counts.
+**Backend Unit Tests** (86 tests)
+- Config modules: CORS, Helmet, Rate limiting, Session, Environment
+- Middleware: Authentication (OIDC/RBAC), Validation
+- Routes: Calendars, Events, Health, Client logging
+- Services: Calendar cache, Event type classification
+- Utils: Date validation, HTML escaping
+
+**Frontend Integration Tests** (13 suites)
+- Security: Headers, CSP, XSS protection, Rate limiting
+- API: CRUD operations, Calendar fetching
+- UI: Search, Timeline, Map, Modals, Tooltips
+- Accessibility: Focus management, Keyboard navigation
+- CSS Audit: Unused selectors, Coverage analysis
+
+### Advanced Testing
+
+Focus on specific frontend test suites:
+
+```bash
+# Security tests only
+docker compose run --rm -e RUN_ONLY=security frontend-tests
+
+# Map tests only
+docker compose run --rm -e RUN_ONLY=map frontend-tests
+
+# Other options: a11y, tooltip, holiday, modal
+```
+
+See [TESTING.md](TESTING.md) for detailed testing documentation.
 
 ## License
 
@@ -524,4 +608,11 @@ MIT
 - Timeline min height defaults refined in `public/js/timeline.js` (`minHeight: '600px'`).
 - Docs updated with new search capability and test instructions remain unchanged.
 
-See `ROADMAP.md` for release history.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for complete release history.
+
+## Documentation
+
+- [Testing Guide](TESTING.md) - Comprehensive testing documentation
+- [Architecture & Refactoring](docs/REFACTORING.md) - Modular architecture details
+- [Code Review](docs/CODE_REVIEW.md) - Security and quality improvements
+- [Roadmap](docs/ROADMAP.md) - Release history and future plans

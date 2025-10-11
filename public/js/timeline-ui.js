@@ -1,8 +1,23 @@
-// Timeline UI helpers: label coloring and week number overlay
+/**
+ * Timeline UI Helpers Module
+ * 
+ * Provides UI enhancements for the timeline including label coloring and week number overlay.
+ * 
+ * @module timeline-ui
+ */
 
-// Palette for label background fallback
+/**
+ * Color palette for group label backgrounds
+ * @type {Array<string>}
+ * @constant
+ */
 const LABEL_PALETTE = ['#e0f2fe','#fce7f3','#dcfce7','#fff7ed','#ede9fe','#f1f5f9','#fef9c3','#fee2e2','#e9d5ff','#cffafe'];
 
+/**
+ * Applies background colors to timeline group labels
+ * @param {Object} groups - vis-timeline groups DataSet
+ * @returns {void}
+ */
 export function applyGroupLabelColors(groups) {
   try {
     const labelNodes = document.querySelectorAll('.vis-timeline .vis-labelset .vis-label');
@@ -26,7 +41,17 @@ export function applyGroupLabelColors(groups) {
   } catch (_) {}
 }
 
+/**
+ * Week bar element reference
+ * @type {HTMLElement|null}
+ */
 let weekBarEl = null;
+
+/**
+ * Ensures the week bar element exists in the DOM
+ * @private
+ * @returns {HTMLElement|null} The week bar element
+ */
 function ensureWeekBar() {
   if (weekBarEl && weekBarEl.parentElement) return weekBarEl;
   weekBarEl = document.createElement('div');
@@ -40,6 +65,11 @@ function ensureWeekBar() {
   return weekBarEl;
 }
 
+/**
+ * Renders week numbers at the bottom of the timeline
+ * @param {Timeline} timeline - vis-timeline instance
+ * @returns {void}
+ */
 export function renderWeekBar(timeline) {
   try {
     if (!timeline) return;

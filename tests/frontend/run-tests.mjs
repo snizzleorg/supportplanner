@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Puppeteer runner: opens the browser harness pages to run tests and reads results
+// Frontend test runner: runs Puppeteer-based integration tests
 // Usage: APP_URL=http://app:3000 node run-tests.mjs
 
 import puppeteer from 'puppeteer';
@@ -7,19 +7,25 @@ import { spawn } from 'node:child_process';
 
 const APP_URL = process.env.APP_URL || process.argv[2] || '';
 const BRIEF = process.env.RUNNER_BRIEF === '1' || process.argv.includes('--brief');
+
 if (!APP_URL) {
   console.error('APP_URL env or first arg required, e.g. http://localhost:3000');
   process.exit(2);
 }
 
-function runNodeScript(cmd, args, env = {}) {
+function runNodeScript(cmd, args, env = {}, showProgress = false) {
   return new Promise((resolve) => {
     const start = Date.now();
-    const child = spawn(cmd, args, { env: { ...process.env, ...env } });
+    const child = spawn(cmd, args, { 
+      env: { ...process.env, ...env },
+      stdio: showProgress ? 'inherit' : 'pipe'
+    });
     let out = '';
     let err = '';
-    child.stdout.on('data', (d) => { out += d.toString(); });
-    child.stderr.on('data', (d) => { err += d.toString(); });
+    if (!showProgress) {
+      child.stdout?.on('data', (d) => { out += d.toString(); });
+      child.stderr?.on('data', (d) => { err += d.toString(); });
+    }
     child.on('close', (code) => {
       resolve({ code, out, err, ms: Date.now() - start });
     });

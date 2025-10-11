@@ -1,10 +1,37 @@
-// Search and filter module for vis-timeline items
-// Handles search input wiring and DOM-based dimming/highlighting
+/**
+ * Search and Filter Module
+ * 
+ * Handles search functionality for timeline items and groups.
+ * Implements DOM-based dimming/highlighting for search results.
+ * 
+ * @module search
+ */
 
+/**
+ * Reference to timeline items DataSet
+ * @type {Object|null}
+ */
 let itemsRef = null;
-let groupsRef = null; // DataSet for groups to resolve calendar names
+
+/**
+ * Reference to timeline groups DataSet
+ * @type {Object|null}
+ */
+let groupsRef = null;
+
+/**
+ * Current search query
+ * @type {string}
+ */
 export let currentSearch = '';
 
+/**
+ * Checks if an item matches the search query
+ * @private
+ * @param {Object} item - Timeline item to check
+ * @param {string} q - Search query (lowercase)
+ * @returns {boolean} True if item matches query
+ */
 function itemMatchesQuery(item, q) {
   if (!q) return true;
   const hay = [item.content, item.title, item.description, item.location, item.calendarName, item.calendarUrl];
@@ -25,6 +52,11 @@ function itemMatchesQuery(item, q) {
   return hay.filter(Boolean).some(v => String(v).toLowerCase().includes(q));
 }
 
+/**
+ * Applies the current search filter to timeline items
+ * Dims non-matching items and highlights matching ones
+ * @returns {void}
+ */
 export function applySearchFilter() {
   const q = (currentSearch || '').trim().toLowerCase();
   try {
@@ -128,11 +160,22 @@ export function applySearchFilter() {
   } catch (_) {}
 }
 
+/**
+ * Sets the search query and applies the filter
+ * @param {string} q - Search query string
+ * @returns {void}
+ */
 export function setSearchQuery(q) {
   currentSearch = q || '';
   applySearchFilter();
 }
 
+/**
+ * Initializes the search module with timeline data and DOM event listeners
+ * @param {Object} items - vis-timeline items DataSet
+ * @param {Object} groups - vis-timeline groups DataSet
+ * @returns {void}
+ */
 export function initSearch(items, groups) {
   itemsRef = items;
   groupsRef = groups;
