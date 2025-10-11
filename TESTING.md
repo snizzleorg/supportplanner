@@ -14,12 +14,15 @@ Tests individual modules in isolation:
 - **Middleware**: Validation, authentication
 - **Routes**: API endpoints (integration-style)
 
-**Run:**
+**Run locally:**
 ```bash
+npm install              # Install dependencies first
 npm test                 # Run once
 npm run test:watch       # Watch mode
 npm run test:coverage    # With coverage
 ```
+
+**Note**: Backend unit tests run locally, not in Docker, to avoid dependency conflicts.
 
 ### 2. Frontend Integration Tests (Puppeteer)
 Location: `tests/runner/`, `public/tests/`
@@ -31,7 +34,7 @@ Tests the complete application flow in a real browser:
 - Authentication flows
 - UI responsiveness
 
-**Run:**
+**Run in Docker:**
 ```bash
 docker compose run --rm support-planner-tests
 ```
