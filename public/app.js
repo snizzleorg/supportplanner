@@ -15,6 +15,8 @@ import { renderLocationHelp, debouncedLocationValidate, setModalLoading, closeMo
 import { MOBILE_BREAKPOINT, TOUCH } from './js/constants.js';
 // Import DOM elements from centralized module
 import * as DOM from './js/dom.js';
+// Import state management
+import * as State from './js/state.js';
 
 // Create aliases for DOM elements (for backward compatibility)
 const modal = DOM.modal;
@@ -58,28 +60,22 @@ const filtersToggleBtn = DOM.filtersToggleBtn;
 const mapToggleBtn = DOM.mapToggleBtn;
 const mobileBackdrop = DOM.mobileBackdrop;
 
-// State variables (to be moved to state.js in next step)
-let lastGeocode = null;
-let currentEvent = null;
-let timeline;
-let groups = new DataSet([]);
-let items = new DataSet([]);
-// Suppress click-after-drag: track user panning state
-let isPanning = false;
-let lastPanEnd = 0;
-let labelObserver = null;
-let refreshGen = 0; // generation guard for in-flight refreshes
-let weekBarEl = null; // overlay container for week numbers at bottom
-// Map timeline group IDs (cal-1, cal-2, ...) back to original server group IDs (calendar URLs)
-const groupReverseMap = new Map();
-// Map calendar URL -> timeline group id for quick lookup when adding items
-const urlToGroupId = new Map();
-// Track the group id used for the current create flow (for optimistic insert)
-let currentCreateGroupId = null;
-// Toggle to show/hide extra UI debug messages
-const DEBUG_UI = false;
-// Current user's role, used to gate editing features on the client
-let currentUserRole = 'reader';
+// Create aliases for state variables (for backward compatibility)
+let lastGeocode = State.lastGeocode;
+let currentEvent = State.currentEvent;
+let timeline = State.timeline;
+let groups = State.groups;
+let items = State.items;
+let isPanning = State.isPanning;
+let lastPanEnd = State.lastPanEnd;
+let labelObserver = State.labelObserver;
+let refreshGen = State.refreshGen;
+let weekBarEl = State.weekBarEl;
+const groupReverseMap = State.groupReverseMap;
+const urlToGroupId = State.urlToGroupId;
+let currentCreateGroupId = State.currentCreateGroupId;
+const DEBUG_UI = State.DEBUG_UI;
+let currentUserRole = State.currentUserRole;
 
 function setStatus(msg) {
   statusEl.textContent = msg || '';
@@ -168,7 +164,9 @@ async function hydrateAuthBox() {
   try {
     const info = await apiMe();
     const show = info && info.authEnabled && info.authenticated;
-    currentUserRole = (info && info.user && info.user.role) ? info.user.role : 'reader';
+    const role = (info && info.user && info.user.role) ? info.user.role : 'reader';
+    State.setCurrentUserRole(role);
+    currentUserRole = State.currentUserRole;
     if (userInfoEl) {
       if (show) {
         const name = info.user?.name || info.user?.preferred_username || info.user?.email || 'Signed in';
@@ -358,7 +356,8 @@ function initTimeline() {
   items = new DataSet({ type: { start: 'ISODate', end: 'ISODate' } });
   try { window.groups = groups; window.items = items; } catch (_) {}
   // Create timeline via module
-  timeline = initTimelineCore(timelineEl, items, groups);
+  State.setTimeline(initTimelineCore(timelineEl, items, groups));
+  timeline = State.timeline;
   // Initialize search module with items and groups datasets (to search calendar names)
   try { initSearch(items, groups); } catch (_) {}
 }
@@ -538,7 +537,8 @@ async function openEditModal(eventId) {
     
     if (!eventData.success) throw new Error(eventData.error || 'Failed to load event');
     
-    currentEvent = eventData.event;
+    State.setCurrentEvent(eventData.event);
+    currentEvent = State.currentEvent;
     console.log('Current event set:', currentEvent);
     
     // Populate form fields
@@ -1262,15 +1262,18 @@ function initTimelineEvents() {
   timeline.on('rangechange', (props) => {
     try {
       if (props && props.byUser) {
-        isPanning = true;
+        State.setIsPanning(true);
+        isPanning = State.isPanning;
       }
     } catch (_) {}
   });
   timeline.on('rangechanged', (props) => {
     try {
       if (props && props.byUser) {
-        isPanning = false;
-        lastPanEnd = Date.now();
+        State.setIsPanning(false);
+        State.setLastPanEnd(Date.now());
+        isPanning = State.isPanning;
+        lastPanEnd = State.lastPanEnd;
       }
     } catch (_) {}
   });
