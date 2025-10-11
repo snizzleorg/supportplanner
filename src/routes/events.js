@@ -19,8 +19,10 @@ import { calendarCache } from '../services/calendar.js';
 import { getEventType } from '../services/event-type.js';
 import { geocodeLocations } from '../services/geocoding.js';
 import { escapeHtml } from '../utils/html.js';
-import { requireEditor } from '../middleware/auth.js';
+import { requireRole } from '../middleware/auth.js';
 import { getEventTypes } from '../config/index.js';
+
+const requireEditor = requireRole('editor');
 
 const router = Router();
 
