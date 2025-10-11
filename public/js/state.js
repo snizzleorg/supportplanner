@@ -9,38 +9,95 @@
 
 import { DataSet } from 'https://cdn.jsdelivr.net/npm/vis-timeline@7.7.3/standalone/esm/vis-timeline-graph2d.min.js';
 
-// Timeline instance and data
+/**
+ * Timeline instance
+ * @type {Timeline|null}
+ */
 export let timeline = null;
+
+/**
+ * Timeline groups DataSet
+ * @type {DataSet}
+ */
 export let groups = new DataSet([]);
+
+/**
+ * Timeline items DataSet
+ * @type {DataSet}
+ */
 export let items = new DataSet([]);
 
-// Timeline interaction state
+/**
+ * Whether user is currently panning the timeline
+ * @type {boolean}
+ */
 export let isPanning = false;
+
+/**
+ * Timestamp of last pan end event
+ * @type {number}
+ */
 export let lastPanEnd = 0;
+
+/**
+ * MutationObserver for timeline labels
+ * @type {MutationObserver|null}
+ */
 export let labelObserver = null;
-export let weekBarEl = null; // overlay container for week numbers at bottom
 
-// Refresh state
-export let refreshGen = 0; // generation guard for in-flight refreshes
+/**
+ * Week bar overlay container element
+ * @type {HTMLElement|null}
+ */
+export let weekBarEl = null;
 
-// Group mappings
-// Map timeline group IDs (cal-1, cal-2, ...) back to original server group IDs (calendar URLs)
+/**
+ * Refresh generation counter for in-flight refresh tracking
+ * @type {number}
+ */
+export let refreshGen = 0;
+
+/**
+ * Map of timeline group IDs to original server group IDs (calendar URLs)
+ * @type {Map<string, string>}
+ */
 export const groupReverseMap = new Map();
-// Map calendar URL -> timeline group id for quick lookup when adding items
+
+/**
+ * Map of calendar URLs to timeline group IDs
+ * @type {Map<string, string>}
+ */
 export const urlToGroupId = new Map();
 
-// Current event state
+/**
+ * Currently selected/edited event
+ * @type {Object|null}
+ */
 export let currentEvent = null;
+
+/**
+ * Last geocode result
+ * @type {Object|null}
+ */
 export let lastGeocode = null;
 
-// Create flow state
-// Track the group id used for the current create flow (for optimistic insert)
+/**
+ * Group ID for current create flow (optimistic insert)
+ * @type {string|null}
+ */
 export let currentCreateGroupId = null;
 
-// User state
+/**
+ * Current user's role
+ * @type {string}
+ */
 export let currentUserRole = 'reader';
 
-// Debug configuration
+/**
+ * Debug UI flag
+ * @type {boolean}
+ * @constant
+ */
 export const DEBUG_UI = false;
 
 /**

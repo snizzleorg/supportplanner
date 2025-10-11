@@ -170,6 +170,12 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
   let currentEvent = null;
   let currentCreateGroupId = null;
 
+  /**
+   * Loads calendars into the calendar select dropdown
+   * @private
+   * @param {string} [selectedCalendarUrl=''] - Calendar URL to pre-select
+   * @returns {Promise<void>}
+   */
   async function loadCalendars(selectedCalendarUrl = '') {
     const calendars = await apiFetchCalendars();
     eventCalendarSelect.innerHTML = '';
@@ -182,6 +188,15 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     });
   }
 
+  /**
+   * Opens the modal for creating a new week event
+   * @private
+   * @param {string} calendarUrl - Calendar URL to create event in
+   * @param {string} startDateStr - Start date (YYYY-MM-DD)
+   * @param {string} endDateStr - End date (YYYY-MM-DD)
+   * @param {string} groupId - Timeline group ID
+   * @returns {Promise<void>}
+   */
   async function openCreateWeekModal(calendarUrl, startDateStr, endDateStr, groupId) {
     setStatus('Creating new event…');
     if (!modal) throw new Error('Modal element not found');
@@ -230,6 +245,11 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
   let lastActiveElement = null;
   let trapHandler = null;
 
+  /**
+   * Gets all focusable elements within the modal
+   * @private
+   * @returns {Array<HTMLElement>} Array of focusable elements
+   */
   function getFocusableInModal() {
     const root = modal;
     if (!root) return [];
@@ -242,6 +262,11 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     });
   }
 
+  /**
+   * Enables keyboard focus trap for modal accessibility
+   * @private
+   * @returns {void}
+   */
   function enableFocusTrap() {
     if (trapHandler) return;
     trapHandler = (e) => {
@@ -268,6 +293,11 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     window.addEventListener('keydown', trapHandler, true);
   }
 
+  /**
+   * Disables keyboard focus trap
+   * @private
+   * @returns {void}
+   */
   function disableFocusTrap() {
     if (trapHandler) {
       window.removeEventListener('keydown', trapHandler, true);
@@ -275,6 +305,12 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     }
   }
 
+  /**
+   * Opens the modal for editing an existing event
+   * @private
+   * @param {string} eventId - Event UID to edit
+   * @returns {Promise<void>}
+   */
   async function openEditModal(eventId) {
     setStatus('Loading event details...');
     if (!modal) throw new Error('Modal element not found');
@@ -333,6 +369,12 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     try { setTimeout(() => { const el = document.getElementById('eventTitle'); if (el) el.focus(); }, 0); } catch (_) {}
   }
 
+  /**
+   * Handles form submission (create or update event)
+   * @private
+   * @param {Event} e - Form submit event
+   * @returns {Promise<void>}
+   */
   async function handleSubmit(e) {
     e.preventDefault();
     try { console.debug('[modal] handleSubmit start'); } catch (_) {}
@@ -414,6 +456,11 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     }
   }
 
+  /**
+   * Handles event deletion
+   * @private
+   * @returns {Promise<void>}
+   */
   async function handleDelete() {
     if (!currentEvent || !confirm('Are you sure you want to delete this event?')) return;
     try {
@@ -434,6 +481,11 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     }
   }
 
+  /**
+   * Initializes modal event listeners
+   * @private
+   * @returns {void}
+   */
   function initModal() {
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
