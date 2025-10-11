@@ -424,6 +424,9 @@ async function runSecurityBrowserHarness(page) {
       outputs.push(await runTimelineDragE2E(page));
     }
     if (!process.env.RUN_ONLY) {
+      // Note: Backend unit tests (vitest) should be run separately via: npm test
+      // They are not included in the Docker test runner to avoid dependency conflicts
+      
       // Run headless Node tests as well
       const apiSmoke = await runNodeScript('node', ['public/tests/api-smoke.mjs', '--api', APP_URL]);
       outputs.push({ name: 'api-smoke', ok: apiSmoke.code === 0, ms: apiSmoke.ms, out: apiSmoke.out, err: apiSmoke.err });

@@ -20,6 +20,9 @@ COPY public/tests ./public/tests
 COPY public/js ./public/js
 COPY public/styles.css ./public/styles.css
 
+# Note: Backend unit tests (vitest) are run separately via npm test
+# They are not included in this Docker image to avoid dependency conflicts
+
 # Runtime env
 ENV PUPPETEER_PRODUCT=chrome
 ENV NODE_ENV=production
