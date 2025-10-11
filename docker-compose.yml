@@ -31,3 +31,12 @@ services:
       - support-planner
     # No ports exposed; this is a one-shot runner
     restart: "no"
+
+  frontend-unit-tests:
+    build:
+      context: .
+      dockerfile: tests/frontend-unit/Dockerfile
+    platform: linux/arm64  # Use native architecture on Apple Silicon
+    container_name: frontend-unit-tests
+    # No ports exposed; this is a one-shot runner
+    restart: "no"
