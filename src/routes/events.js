@@ -361,6 +361,13 @@ router.post('/', async (req, res) => {
       };
     });
     
+    // Debug: Check if geocoded field is present
+    const itemsWithGeocode = items.filter(i => i.geocoded);
+    console.log(`[Events] Items with geocoded field: ${itemsWithGeocode.length}/${items.length}`);
+    if (itemsWithGeocode.length > 0) {
+      console.log('[Events] Sample geocoded item:', JSON.stringify(itemsWithGeocode[0].geocoded));
+    }
+    
     res.json({
       groups: formattedGroups,
       items,
