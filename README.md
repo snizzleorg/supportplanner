@@ -25,6 +25,8 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
 
 The application follows a **modular architecture** with clear separation of concerns:
 
+### Backend (Node.js/Express)
+
 ```
 src/
 ├── server.js           # Main entry point (79 lines)
@@ -37,8 +39,42 @@ src/
 
 - **93% code reduction** from original monolithic structure (1,115 → 79 lines)
 - **100% JSDoc documentation** for all modules
-- **99 tests** covering all functionality
+- **86 unit tests** covering all backend modules
 - **Zero breaking changes** - all APIs remain compatible
+
+### Frontend (Vanilla JS)
+
+```
+public/
+├── index.html          # Main HTML structure
+├── app.js              # Application initialization & state
+├── styles.css          # Global styles & responsive design
+└── js/
+    ├── api.js          # API client & data fetching
+    ├── timeline.js     # vis-timeline integration & gestures
+    ├── map.js          # Leaflet map & location markers
+    ├── modal.js        # Event create/edit modal
+    ├── search.js       # Search & filter functionality
+    ├── mobile.js       # Mobile-specific UI (panels, gestures)
+    └── utils.js        # DOM helpers & utilities
+```
+
+- **Mobile-first design** with off-canvas panels and touch gestures
+- **Progressive enhancement** - works without JavaScript for basic viewing
+- **13 integration tests** covering UI, accessibility, and security
+- **No build step** - vanilla JavaScript for simplicity
+
+### Testing Infrastructure
+
+```
+tests/
+├── backend/
+│   └── Dockerfile      # Backend unit tests (Vitest, 86 tests)
+└── frontend/
+    ├── Dockerfile      # Frontend integration tests (Puppeteer, 13 suites)
+    ├── run-tests.mjs   # Test runner
+    └── css-audit.mjs   # CSS coverage analysis
+```
 
 See [docs/REFACTORING.md](docs/REFACTORING.md) for detailed architecture documentation.
 
