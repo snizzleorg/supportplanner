@@ -46,6 +46,12 @@ let lastRequestTime = 0;
 const MIN_REQUEST_DELAY = 1500; // ~0.66 req/sec for Nominatim (conservative)
 
 /**
+ * Cache TTL: 90 days in milliseconds
+ * @type {number}
+ */
+const CACHE_TTL = 90 * 24 * 60 * 60 * 1000; // 90 days
+
+/**
  * Loads geocoding cache from disk
  * @returns {Promise<void>}
  */
@@ -55,8 +61,26 @@ async function loadCache() {
   try {
     const data = await fs.readFile(CACHE_FILE, 'utf-8');
     const parsed = JSON.parse(data);
-    geocodeCache = new Map(Object.entries(parsed));
-    console.log(`[Geocoding] Loaded ${geocodeCache.size} cached locations`);
+    const now = Date.now();
+    let expiredCount = 0;
+    
+    // Load cache and filter out expired entries
+    geocodeCache = new Map();
+    for (const [key, value] of Object.entries(parsed)) {
+      const age = now - (value.timestamp || 0);
+      if (age < CACHE_TTL) {
+        geocodeCache.set(key, value);
+      } else {
+        expiredCount++;
+      }
+    }
+    
+    console.log(`[Geocoding] Loaded ${geocodeCache.size} cached locations (${expiredCount} expired entries removed)`);
+    
+    // Save cleaned cache if we removed expired entries
+    if (expiredCount > 0) {
+      await saveCache();
+    }
   } catch (err) {
     if (err.code !== 'ENOENT') {
       console.error('[Geocoding] Error loading cache:', err.message);
@@ -172,10 +196,19 @@ export async function geocodeLocation(locationStr) {
   // Normalize location string for cache key
   const cacheKey = String(locationStr).trim().toLowerCase();
   
-  // Check cache
+  // Check cache and validate TTL
   if (geocodeCache.has(cacheKey)) {
     const cached = geocodeCache.get(cacheKey);
-    return { lat: cached.lat, lon: cached.lon };
+    const age = Date.now() - (cached.timestamp || 0);
+    
+    if (age < CACHE_TTL) {
+      // Cache hit and not expired
+      return { lat: cached.lat, lon: cached.lon };
+    } else {
+      // Cache expired - remove it
+      console.log(`[Geocoding] Cache expired for "${locationStr}" (age: ${Math.round(age / (24 * 60 * 60 * 1000))} days)`);
+      geocodeCache.delete(cacheKey);
+    }
   }
   
   // Geocode with Nominatim
