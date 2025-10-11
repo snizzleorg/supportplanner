@@ -17,6 +17,8 @@ import { MOBILE_BREAKPOINT, TOUCH } from './js/constants.js';
 import * as DOM from './js/dom.js';
 // Import state management
 import * as State from './js/state.js';
+// Import authentication
+import { initAuth, isReader } from './js/auth.js';
 
 // Create aliases for DOM elements (for backward compatibility)
 const modal = DOM.modal;
@@ -160,37 +162,8 @@ function setupMobileToggles() {
   });
 }
 
-async function hydrateAuthBox() {
-  try {
-    const info = await apiMe();
-    const show = info && info.authEnabled && info.authenticated;
-    const role = (info && info.user && info.user.role) ? info.user.role : 'reader';
-    State.setCurrentUserRole(role);
-    currentUserRole = State.currentUserRole;
-    if (userInfoEl) {
-      if (show) {
-        const name = info.user?.name || info.user?.preferred_username || info.user?.email || 'Signed in';
-        const role = info.user?.role ? ` (${info.user.role})` : '';
-        userInfoEl.textContent = name + role;
-        userInfoEl.style.display = '';
-      } else {
-        userInfoEl.style.display = 'none';
-      }
-    }
-    if (logoutBtn) {
-      logoutBtn.style.display = show ? '' : 'none';
-      if (!logoutBtn._bound) {
-        logoutBtn.addEventListener('click', () => {
-          // Let the server initiate RP logout with the IdP and redirect back
-          location.href = '/auth/logout';
-        });
-        logoutBtn._bound = true;
-      }
-    }
-  } catch (err) {
-    // ignore auth box errors
-  }
-}
+// Authentication is now handled by auth.js module
+// hydrateAuthBox() replaced by initAuth() from auth.js
 
 // --- Search wiring moved to './js/search.js' ---
 
@@ -906,7 +879,7 @@ function initModal() {
 
 async function refresh() {
   // Update auth box first
-  await hydrateAuthBox();
+  await initAuth();
   // Always fetch all calendars
   const allCalendars = await fetchCalendars();
   const allCalendarUrls = allCalendars.map(c => c.url);
@@ -1299,7 +1272,7 @@ function initTimelineEvents() {
       if (uid) {
         console.log('Extracted UID:', uid);
         // Readers are not allowed to edit
-        if (currentUserRole === 'reader') {
+        if (isReader()) {
           setStatus('Read-only: editing disabled');
           return;
         }
@@ -1324,7 +1297,7 @@ function initTimelineEvents() {
       if (!g || g === 'weeks' || !t) return;
 
       // Readers are not allowed to create
-      if (currentUserRole === 'reader') {
+      if (isReader()) {
         setStatus('Read-only: creation disabled');
         return;
       }
