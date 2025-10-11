@@ -1,7 +1,28 @@
+/**
+ * Helmet security headers configuration
+ * 
+ * Configures Content Security Policy (CSP) and other security headers
+ * to protect against XSS, clickjacking, and other attacks.
+ * 
+ * Note: upgrade-insecure-requests is disabled for local HTTP development
+ * 
+ * @module config/helmet
+ */
+
 import helmet from 'helmet';
 
-// Security headers with helmet
-// Note: upgrade-insecure-requests is disabled for local HTTP development
+/**
+ * Helmet middleware with custom CSP configuration
+ * 
+ * CSP allows:
+ * - Scripts: self, inline, CDNs (jsdelivr, unpkg)
+ * - Styles: self, inline, unpkg
+ * - Images: self, data URLs, HTTPS, blobs
+ * - Connections: self, OSM (maps/geocoding), CDNs, holidays API
+ * - Fonts: self, data URLs
+ * 
+ * @type {import('express').RequestHandler}
+ */
 export const helmetMiddleware = helmet({
   contentSecurityPolicy: {
     useDefaults: false, // Don't use helmet's defaults which include upgrade-insecure-requests
