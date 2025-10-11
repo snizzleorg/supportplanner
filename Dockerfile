@@ -1,6 +1,9 @@
 # Build a small image for the Node/Express server
 FROM node:20-alpine
 
+# Install ca-certificates for HTTPS requests
+RUN apk add --no-cache ca-certificates
+
 # Create app directory
 WORKDIR /usr/src/support-planner
 

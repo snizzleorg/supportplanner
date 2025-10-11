@@ -8,6 +8,8 @@ services:
       - SKIP_SESSION_SECRET_CHECK=true
     ports:
       - "5175:5173"
+    volumes:
+      - ./data:/usr/src/support-planner/data
     restart: unless-stopped
 
   backend-tests:
