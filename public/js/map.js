@@ -205,13 +205,6 @@ export async function renderMapMarkers(allServerItems, groups) {
     
     if (!latlon) {
       console.log(`[Map] No geocoded coordinates for location: ${loc}`);
-      if (sampleEvent) {
-        console.log(`[Map] Sample event for ${loc}:`, {
-          location: sampleEvent.location,
-          geocoded: sampleEvent.geocoded,
-          hasGeocodedField: 'geocoded' in sampleEvent
-        });
-      }
       continue;
     }
     
