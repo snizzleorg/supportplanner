@@ -29,7 +29,7 @@ npm run test:coverage    # With coverage
 ```
 
 ### 2. Frontend Integration Tests (Puppeteer)
-Location: `tests/runner/`, `public/tests/`
+Location: `tests/frontend/`, `public/tests/`
 
 Tests the complete application flow in a real browser:
 - Security tests (CSP, XSS, headers)

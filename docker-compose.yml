@@ -22,7 +22,7 @@ services:
   frontend-tests:
     build:
       context: .
-      dockerfile: tests/runner/Dockerfile
+      dockerfile: tests/frontend/Dockerfile
     platform: linux/arm64  # Use native architecture on Apple Silicon
     container_name: frontend-tests
     environment:
