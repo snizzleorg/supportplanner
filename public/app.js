@@ -5,13 +5,15 @@ import { DataSet, Timeline } from 'https://cdn.jsdelivr.net/npm/vis-timeline@7.7
 import { setupTooltipHandlers } from './custom-tooltip.js';
 import { getHolidaysInRange } from './js/holidays.js';
 import { upsertHolidayBackgrounds } from './js/holidays-ui.js';
-import { geocodeLocation, tryParseLatLon, geocodeAddress } from './js/geocode.js';
+// geocode functions moved to modal.js - not needed here
 import { renderMapMarkers } from './js/map.js';
 import { initTimeline as initTimelineCore } from './js/timeline.js';
 import { renderWeekBar, applyGroupLabelColors } from './js/timeline-ui.js';
 import { initSearch, applySearchFilter } from './js/search.js';
-import { fetchCalendars as apiFetchCalendars, refreshCaldav, clientLog as apiClientLog, getEvent, updateEvent as apiUpdateEvent, deleteEvent as apiDeleteEvent, createAllDayEvent, me as apiMe, logout as apiLogout } from './js/api.js';
-import { renderLocationHelp, debouncedLocationValidate, setModalLoading, closeModal, createModalController } from './js/modal.js';
+import { fetchCalendars as apiFetchCalendars, refreshCaldav, clientLog as apiClientLog, getEvent, updateEvent as apiUpdateEvent, deleteEvent as apiDeleteEvent, createAllDayEvent } from './js/api.js';
+// me and logout moved to auth.js - not needed here
+import { debouncedLocationValidate, setModalLoading, closeModal, createModalController } from './js/modal.js';
+// renderLocationHelp only used in modal.js - not needed here
 import { MOBILE_BREAKPOINT, TOUCH } from './js/constants.js';
 // Import DOM elements from centralized module
 import * as DOM from './js/dom.js';
