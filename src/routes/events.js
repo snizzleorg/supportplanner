@@ -1,3 +1,18 @@
+/**
+ * Event routes
+ * 
+ * Provides comprehensive event management endpoints:
+ * - Create all-day events
+ * - Search events by summary
+ * - Get events for timeline (main endpoint)
+ * - Update events
+ * - Delete events
+ * - Move events between calendars
+ * - Get individual events by UID
+ * 
+ * @module routes/events
+ */
+
 import { Router } from 'express';
 import { body } from 'express-validator';
 import { requireRole, validate, eventValidation, uidValidation } from '../middleware/index.js';

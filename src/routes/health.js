@@ -1,3 +1,12 @@
+/**
+ * Health check routes
+ * 
+ * Provides health and readiness endpoints for monitoring and orchestration.
+ * Used by Docker, Kubernetes, and monitoring systems.
+ * 
+ * @module routes/health
+ */
+
 import { Router } from 'express';
 import { calendarCache } from '../services/index.js';
 import { authEnabled } from '../config/index.js';

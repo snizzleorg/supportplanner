@@ -1,3 +1,18 @@
+/**
+ * Authentication middleware
+ * 
+ * Provides OIDC (OpenID Connect) authentication and RBAC (Role-Based Access Control).
+ * 
+ * Features:
+ * - OIDC authentication flow (login, callback, logout)
+ * - Role-based access control (admin, editor, reader)
+ * - Group and email-based role mapping
+ * - Session management
+ * - Auth-disabled mode for development
+ * 
+ * @module middleware/auth
+ */
+
 import { Issuer, generators } from 'openid-client';
 import {
   OIDC_ISSUER_URL,
@@ -15,10 +30,27 @@ import {
   AUTH_DISABLED_DEFAULT_ROLE
 } from '../config/index.js';
 
+/**
+ * OIDC client promise (initialized on first use)
+ * @type {Promise<import('openid-client').Client>|null}
+ */
 let oidcClientPromise = null;
+
+/**
+ * OIDC end session endpoint URL
+ * @type {string|null}
+ */
 let oidcEndSessionEndpoint = null;
 
-// Initialize OIDC client if auth is enabled
+/**
+ * Initialize authentication system
+ * 
+ * Sets up OIDC authentication if enabled, or injects default role if disabled.
+ * Registers auth routes (/auth/login, /auth/callback, /auth/logout, etc.)
+ * 
+ * @param {import('express').Application} app - Express application instance
+ * @returns {void}
+ */
 export function initializeAuth(app) {
   if (!authEnabled) {
     // When auth is disabled, inject a default role so RBAC-protected endpoints work
@@ -274,7 +306,20 @@ export function initializeAuth(app) {
   });
 }
 
-// RBAC middleware - require minimum role
+/**
+ * RBAC middleware - require minimum role
+ * 
+ * Returns middleware that checks if user has required role.
+ * Role hierarchy: reader < editor < admin
+ * 
+ * @param {string} [minRole='reader'] - Minimum required role (reader, editor, or admin)
+ * @returns {import('express').RequestHandler} Express middleware
+ * 
+ * @example
+ * router.post('/events', requireRole('editor'), async (req, res) => {
+ *   // Only editors and admins can access this
+ * });
+ */
 export function requireRole(minRole = 'reader') {
   const order = { reader: 0, editor: 1, admin: 2 };
   return (req, res, next) => {
