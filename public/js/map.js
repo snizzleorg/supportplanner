@@ -191,8 +191,10 @@ export async function renderMapMarkers(allServerItems, groups) {
     // (server has already geocoded all locations)
     // Find first event that has geocoded data
     let latlon = null;
+    let sampleEvent = null;
     for (const events of inner.values()) {
       for (const event of events) {
+        if (!sampleEvent) sampleEvent = event;
         if (event.geocoded) {
           latlon = event.geocoded;
           break;
@@ -203,6 +205,13 @@ export async function renderMapMarkers(allServerItems, groups) {
     
     if (!latlon) {
       console.log(`[Map] No geocoded coordinates for location: ${loc}`);
+      if (sampleEvent) {
+        console.log(`[Map] Sample event for ${loc}:`, {
+          location: sampleEvent.location,
+          geocoded: sampleEvent.geocoded,
+          hasGeocodedField: 'geocoded' in sampleEvent
+        });
+      }
       continue;
     }
     
