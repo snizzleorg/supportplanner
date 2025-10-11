@@ -189,8 +189,17 @@ export async function renderMapMarkers(allServerItems, groups) {
   for (const [loc, inner] of byLocThenGroup.entries()) {
     // Get geocoded coordinates from the first event with this location
     // (server has already geocoded all locations)
-    const firstEventWithLocation = Array.from(inner.values())[0][0];
-    const latlon = firstEventWithLocation?.geocoded;
+    // Find first event that has geocoded data
+    let latlon = null;
+    for (const events of inner.values()) {
+      for (const event of events) {
+        if (event.geocoded) {
+          latlon = event.geocoded;
+          break;
+        }
+      }
+      if (latlon) break;
+    }
     
     if (!latlon) {
       console.log(`[Map] No geocoded coordinates for location: ${loc}`);
