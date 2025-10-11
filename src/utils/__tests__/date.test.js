@@ -33,7 +33,8 @@ describe('date utils', () => {
 
     it('should return false for non-date values', () => {
       expect(isValidDate('abc123')).toBe(false);
-      expect(isValidDate('12345')).toBe(false);
+      expect(isValidDate('not-a-real-date')).toBe(false);
+      expect(isValidDate('xyz')).toBe(false);
     });
   });
 });
