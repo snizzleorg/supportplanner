@@ -1,9 +1,19 @@
-// Modal helpers module: handles modal UI state and location validation UI
+/**
+ * Modal Management Module
+ * 
+ * Handles modal UI state, event editing, location validation, and form management.
+ * Provides a controller pattern for modal operations.
+ * 
+ * @module modal
+ */
 
 import { tryParseLatLon, geocodeAddress } from './geocode.js';
 import { fetchCalendars as apiFetchCalendars, getEvent, updateEvent as apiUpdateEvent, deleteEvent as apiDeleteEvent, createAllDayEvent } from './api.js';
 
-// DOM references
+/**
+ * DOM element references for modal
+ * @private
+ */
 const modal = document.getElementById('eventModal');
 const modalContent = document.querySelector('#eventModal .modal-content');
 const eventForm = document.getElementById('eventForm');
@@ -25,6 +35,14 @@ const eventStartDateInput = document.getElementById('eventStartDate');
 const eventEndDateInput = document.getElementById('eventEndDate');
 const eventCalendarSelect = document.getElementById('eventCalendar');
 
+/**
+ * Renders location validation help text in the modal
+ * @param {Object|null} state - Validation state object
+ * @param {string} [state.status] - Status: 'searching', 'ok', 'coords', 'error'
+ * @param {Object} [state.result] - Geocode result with lat, lon, displayName
+ * @param {string} [state.message] - Error message
+ * @returns {void}
+ */
 export function renderLocationHelp(state) {
   if (!eventLocationHelp) return;
   if (!state || !state.status) { eventLocationHelp.textContent = ''; eventLocationHelp.className = 'help-text'; return; }
@@ -48,6 +66,13 @@ export function renderLocationHelp(state) {
   if (state.status === 'error') { eventLocationHelp.textContent = state.message || 'Could not validate address'; eventLocationHelp.className = 'help-text error'; }
 }
 
+/**
+ * Creates a debounced version of a function
+ * @private
+ * @param {Function} fn - Function to debounce
+ * @param {number} ms - Debounce delay in milliseconds
+ * @returns {Function} Debounced function
+ */
 function debounce(fn, ms) {
   let t;
   return (...args) => {
@@ -56,7 +81,17 @@ function debounce(fn, ms) {
   };
 }
 
+/**
+ * Last geocode result
+ * @type {Object|null}
+ */
 let lastGeocode = null;
+
+/**
+ * Debounced location validation function
+ * Validates location input and updates help text
+ * @type {Function}
+ */
 export const debouncedLocationValidate = debounce(async () => {
   lastGeocode = null;
   const q = (eventLocationInput?.value || '').trim();
@@ -69,6 +104,12 @@ export const debouncedLocationValidate = debounce(async () => {
   catch (e) { renderLocationHelp({ status: 'error', message: 'Validation error' }); }
 }, 450);
 
+/**
+ * Sets the modal loading state
+ * @param {boolean} isLoading - Whether modal is loading
+ * @param {string} [action='save'] - Action type: 'save' or 'delete'
+ * @returns {void}
+ */
 export function setModalLoading(isLoading, action = 'save') {
   if (!modalContent) return;
   if (isLoading) {
@@ -91,6 +132,10 @@ export function setModalLoading(isLoading, action = 'save') {
   }
 }
 
+/**
+ * Closes the event modal
+ * @returns {void}
+ */
 export function closeModal() {
   if (!modal) return;
   modal.classList.remove('show');
@@ -109,10 +154,28 @@ export function closeModal() {
 }
 
 // Controller factory to encapsulate modal flows and dependencies
+/**
+ * Creates a modal controller with dependency injection
+ * @param {Object} deps - Dependencies object
+ * @param {Function} deps.setStatus - Status message function
+ * @param {Function} deps.refresh - Refresh data function
+ * @param {Function} deps.isoWeekNumber - ISO week number function
+ * @param {Object} deps.items - Timeline items DataSet
+ * @param {Map} deps.urlToGroupId - URL to group ID mapping
+ * @param {Function} deps.forceRefreshCache - Force cache refresh function
+ * @param {Object} deps.dayjs - Day.js instance
+ * @returns {Object} Modal controller with methods
+ */
 export function createModalController({ setStatus, refresh, isoWeekNumber, items, urlToGroupId, forceRefreshCache, dayjs }) {
   let currentEvent = null;
   let currentCreateGroupId = null;
 
+  /**
+   * Loads calendars into the calendar select dropdown
+   * @private
+   * @param {string} [selectedCalendarUrl=''] - Calendar URL to pre-select
+   * @returns {Promise<void>}
+   */
   async function loadCalendars(selectedCalendarUrl = '') {
     const calendars = await apiFetchCalendars();
     eventCalendarSelect.innerHTML = '';
@@ -125,6 +188,15 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     });
   }
 
+  /**
+   * Opens the modal for creating a new week event
+   * @private
+   * @param {string} calendarUrl - Calendar URL to create event in
+   * @param {string} startDateStr - Start date (YYYY-MM-DD)
+   * @param {string} endDateStr - End date (YYYY-MM-DD)
+   * @param {string} groupId - Timeline group ID
+   * @returns {Promise<void>}
+   */
   async function openCreateWeekModal(calendarUrl, startDateStr, endDateStr, groupId) {
     setStatus('Creating new event…');
     if (!modal) throw new Error('Modal element not found');
@@ -173,6 +245,11 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
   let lastActiveElement = null;
   let trapHandler = null;
 
+  /**
+   * Gets all focusable elements within the modal
+   * @private
+   * @returns {Array<HTMLElement>} Array of focusable elements
+   */
   function getFocusableInModal() {
     const root = modal;
     if (!root) return [];
@@ -185,6 +262,11 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     });
   }
 
+  /**
+   * Enables keyboard focus trap for modal accessibility
+   * @private
+   * @returns {void}
+   */
   function enableFocusTrap() {
     if (trapHandler) return;
     trapHandler = (e) => {
@@ -211,6 +293,11 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     window.addEventListener('keydown', trapHandler, true);
   }
 
+  /**
+   * Disables keyboard focus trap
+   * @private
+   * @returns {void}
+   */
   function disableFocusTrap() {
     if (trapHandler) {
       window.removeEventListener('keydown', trapHandler, true);
@@ -218,6 +305,12 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     }
   }
 
+  /**
+   * Opens the modal for editing an existing event
+   * @private
+   * @param {string} eventId - Event UID to edit
+   * @returns {Promise<void>}
+   */
   async function openEditModal(eventId) {
     setStatus('Loading event details...');
     if (!modal) throw new Error('Modal element not found');
@@ -276,6 +369,12 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     try { setTimeout(() => { const el = document.getElementById('eventTitle'); if (el) el.focus(); }, 0); } catch (_) {}
   }
 
+  /**
+   * Handles form submission (create or update event)
+   * @private
+   * @param {Event} e - Form submit event
+   * @returns {Promise<void>}
+   */
   async function handleSubmit(e) {
     e.preventDefault();
     try { console.debug('[modal] handleSubmit start'); } catch (_) {}
@@ -357,6 +456,11 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     }
   }
 
+  /**
+   * Handles event deletion
+   * @private
+   * @returns {Promise<void>}
+   */
   async function handleDelete() {
     if (!currentEvent || !confirm('Are you sure you want to delete this event?')) return;
     try {
@@ -377,6 +481,11 @@ export function createModalController({ setStatus, refresh, isoWeekNumber, items
     }
   }
 
+  /**
+   * Initializes modal event listeners
+   * @private
+   * @returns {void}
+   */
   function initModal() {
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
