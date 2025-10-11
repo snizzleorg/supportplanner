@@ -42,7 +42,7 @@ let lastRequestTime = 0;
  * Rate limiting: minimum delay between requests (ms)
  * @type {number}
  */
-const MIN_REQUEST_DELAY = 1000; // 1 req/sec for Nominatim
+const MIN_REQUEST_DELAY = 1500; // ~0.66 req/sec for Nominatim (conservative)
 
 /**
  * Loads geocoding cache from disk
