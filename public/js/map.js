@@ -1,13 +1,12 @@
 /**
- * Map Rendering Module
+ * Map Module
  * 
- * Provides Leaflet map integration for visualizing event locations.
- * Handles marker clustering, geocoding, and custom pin icons.
+ * Handles Leaflet map initialization and marker rendering.
+ * Groups events by location and calendar, displays colored markers.
+ * Uses server-provided geocoded coordinates for fast rendering.
  * 
  * @module map
  */
-
-import { geocodeLocation } from './geocode.js';
 
 /**
  * Leaflet map instance
@@ -188,9 +187,16 @@ export async function renderMapMarkers(allServerItems, groups) {
   };
 
   for (const [loc, inner] of byLocThenGroup.entries()) {
-    // Geocode the location string
-    let latlon = await geocodeLocation(loc);
-    if (!latlon) continue;
+    // Get geocoded coordinates from the first event with this location
+    // (server has already geocoded all locations)
+    const firstEventWithLocation = Array.from(inner.values())[0][0];
+    const latlon = firstEventWithLocation?.geocoded;
+    
+    if (!latlon) {
+      console.log(`[Map] No geocoded coordinates for location: ${loc}`);
+      continue;
+    }
+    
     const entries = Array.from(inner.entries());
     const total = entries.length;
     entries.forEach(([gid, evs], idx) => {
