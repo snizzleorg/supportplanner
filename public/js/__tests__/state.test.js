@@ -21,10 +21,7 @@ import {
   setLastPanEnd,
   setLabelObserver,
   setWeekBarEl,
-  setRefreshGen,
   setCurrentCreateGroupId,
-  addGroupMapping,
-  addUrlToGroupMapping,
 } from '../state.js';
 
 describe('state', () => {
@@ -177,18 +174,6 @@ describe('state', () => {
     });
   });
 
-  describe('setRefreshGen', () => {
-    it('should set refresh generation', () => {
-      setRefreshGen(5);
-      expect(true).toBe(true);
-    });
-
-    it('should accept 0', () => {
-      setRefreshGen(0);
-      expect(true).toBe(true);
-    });
-  });
-
   describe('setCurrentCreateGroupId', () => {
     it('should set current create group ID', () => {
       setCurrentCreateGroupId('cal-1');
@@ -197,20 +182,6 @@ describe('state', () => {
 
     it('should accept null', () => {
       setCurrentCreateGroupId(null);
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('addGroupMapping', () => {
-    it('should add group mapping', () => {
-      addGroupMapping('cal-1', 'https://cal.example.com/cal1');
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('addUrlToGroupMapping', () => {
-    it('should add URL to group mapping', () => {
-      addUrlToGroupMapping('https://cal.example.com/cal1', 'cal-1');
       expect(true).toBe(true);
     });
   });
