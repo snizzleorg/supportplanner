@@ -13,53 +13,54 @@ import { initSearch, applySearchFilter } from './js/search.js';
 import { fetchCalendars as apiFetchCalendars, refreshCaldav, clientLog as apiClientLog, getEvent, updateEvent as apiUpdateEvent, deleteEvent as apiDeleteEvent, createAllDayEvent, me as apiMe, logout as apiLogout } from './js/api.js';
 import { renderLocationHelp, debouncedLocationValidate, setModalLoading, closeModal, createModalController } from './js/modal.js';
 import { MOBILE_BREAKPOINT, TOUCH } from './js/constants.js';
+// Import DOM elements from centralized module
+import * as DOM from './js/dom.js';
 
-// DOM Elements
-const modal = document.getElementById('eventModal');
-const modalContent = document.querySelector('#eventModal .modal-content');
-const eventForm = document.getElementById('eventForm');
-const closeBtn = document.querySelector('.close-btn');
-const cancelBtn = document.getElementById('cancelEdit');
-const saveBtn = document.getElementById('saveEvent');
-const deleteBtn = document.getElementById('deleteEvent');
-const eventIdInput = document.getElementById('eventId');
-const eventTitleInput = document.getElementById('eventTitle');
-const eventStartDateInput = document.getElementById('eventStartDate');
-const eventEndDateInput = document.getElementById('eventEndDate');
-const eventAllDayInput = document.getElementById('eventAllDay');
-const eventDescriptionInput = document.getElementById('eventDescription');
-const eventLocationInput = document.getElementById('eventLocation');
-const eventCalendarSelect = document.getElementById('eventCalendar');
-// Structured metadata inputs
-const eventOrderNumberInput = document.getElementById('eventOrderNumber');
-const eventTicketLinkInput = document.getElementById('eventTicketLink');
-const eventSystemTypeInput = document.getElementById('eventSystemType');
-const eventLocationHelp = document.getElementById('eventLocationHelp');
+// Create aliases for DOM elements (for backward compatibility)
+const modal = DOM.modal;
+const modalContent = DOM.modalContent;
+const eventForm = DOM.eventForm;
+const closeBtn = DOM.closeBtn;
+const cancelBtn = DOM.cancelBtn;
+const saveBtn = DOM.saveBtn;
+const deleteBtn = DOM.deleteBtn;
+const eventIdInput = DOM.eventIdInput;
+const eventTitleInput = DOM.eventTitleInput;
+const eventStartDateInput = DOM.eventStartDateInput;
+const eventEndDateInput = DOM.eventEndDateInput;
+const eventAllDayInput = DOM.eventAllDayInput;
+const eventDescriptionInput = DOM.eventDescriptionInput;
+const eventLocationInput = DOM.eventLocationInput;
+const eventCalendarSelect = DOM.eventCalendarSelect;
+const eventOrderNumberInput = DOM.eventOrderNumberInput;
+const eventTicketLinkInput = DOM.eventTicketLinkInput;
+const eventSystemTypeInput = DOM.eventSystemTypeInput;
+const eventLocationHelp = DOM.eventLocationHelp;
+const statusEl = DOM.statusEl;
+const fromEl = DOM.fromEl;
+const toEl = DOM.toEl;
+const fromDateDisplay = DOM.fromDateDisplay;
+const toDateDisplay = DOM.toDateDisplay;
+const refreshBtn = DOM.refreshBtn;
+const fitBtn = DOM.fitBtn;
+const todayBtn = DOM.todayBtn;
+const monthViewBtn = DOM.monthViewBtn;
+const quarterViewBtn = DOM.quarterViewBtn;
+const zoomInBtn = DOM.zoomInBtn;
+const zoomOutBtn = DOM.zoomOutBtn;
+const showRangeBtn = DOM.showRangeBtn;
+const searchBox = DOM.searchBox;
+const clearSearchBtn = DOM.clearSearchBtn;
+const timelineEl = DOM.timelineEl;
+const userInfoEl = DOM.userInfoEl;
+const logoutBtn = DOM.logoutBtn;
+const filtersToggleBtn = DOM.filtersToggleBtn;
+const mapToggleBtn = DOM.mapToggleBtn;
+const mobileBackdrop = DOM.mobileBackdrop;
+
+// State variables (to be moved to state.js in next step)
 let lastGeocode = null;
 let currentEvent = null;
-
-const statusEl = document.getElementById('status');
-const fromEl = document.getElementById('fromDate');
-const toEl = document.getElementById('toDate');
-const fromDateDisplay = document.getElementById('fromDateDisplay');
-const toDateDisplay = document.getElementById('toDateDisplay');
-const refreshBtn = document.getElementById('refreshBtn');
-const fitBtn = document.getElementById('fitBtn');
-const todayBtn = document.getElementById('todayBtn');
-const monthViewBtn = document.getElementById('monthViewBtn');
-const quarterViewBtn = document.getElementById('quarterViewBtn');
-const zoomInBtn = document.getElementById('zoomInBtn');
-const zoomOutBtn = document.getElementById('zoomOutBtn');
-const showRangeBtn = document.getElementById('showRangeBtn');
-const searchBox = document.getElementById('searchBox');
-const clearSearchBtn = document.getElementById('clearSearch');
-const timelineEl = document.getElementById('timeline');
-const userInfoEl = document.getElementById('userInfo');
-const logoutBtn = document.getElementById('logoutBtn');
-// Mobile toggles
-const filtersToggleBtn = document.getElementById('filtersToggle');
-const mapToggleBtn = document.getElementById('mapToggle');
-const mobileBackdrop = document.getElementById('mobileBackdrop');
 let timeline;
 let groups = new DataSet([]);
 let items = new DataSet([]);
