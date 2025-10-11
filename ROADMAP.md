@@ -99,7 +99,13 @@
 - [x] Update README with new controls and test instructions
 
 ## Technical Debt
-- [ ] Refactor server.js into smaller modules (currently 1100+ lines)
+- [x] **Refactor server.js into smaller modules** (originally 1,115 lines)
+  - ✅ Phase 1: Configuration extracted (167 lines removed)
+  - ✅ Phase 2: Middleware extracted (247 lines removed)
+  - ✅ Phase 3: Services & utilities extracted (38 lines removed)
+  - 🚧 Phase 4: Routes extraction (in progress on `feature/modularize-server` branch)
+  - **Current**: 663 lines (41% reduction achieved)
+  - **Target**: ~100-150 lines after Phase 4 complete
 - [ ] Add TypeScript support
 - [ ] Implement proper state management
 - [ ] Update dependencies
