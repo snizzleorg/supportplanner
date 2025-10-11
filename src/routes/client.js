@@ -1,3 +1,13 @@
+/**
+ * Client utility routes
+ * 
+ * Provides client-side utilities:
+ * - Client-side logging endpoint
+ * - Logged-out confirmation page
+ * 
+ * @module routes/client
+ */
+
 import { Router } from 'express';
 
 const router = Router();

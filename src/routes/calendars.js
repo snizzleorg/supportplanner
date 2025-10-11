@@ -1,3 +1,13 @@
+/**
+ * Calendar routes
+ * 
+ * Provides endpoints for calendar operations:
+ * - List all calendars
+ * - Force refresh CalDAV data
+ * 
+ * @module routes/calendars
+ */
+
 import { Router } from 'express';
 import { requireRole } from '../middleware/index.js';
 import { calendarCache } from '../services/index.js';
