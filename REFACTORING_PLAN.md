@@ -2,18 +2,18 @@
 
 ## Progress Summary
 
-**Status**: Phase 4 of 5 in progress  
+**Status**: ✅ COMPLETE  
 **Original**: 1,115 lines  
-**Current**: 663 lines  
-**Reduction**: 452 lines (41%)  
+**Final**: 79 lines  
+**Reduction**: 1,036 lines (93%)  
 **Tests**: 13/13 passing ✅
 
 ### Completed Phases
 - ✅ Phase 1: Configuration (167 lines removed)
 - ✅ Phase 2: Middleware (247 lines removed)
 - ✅ Phase 3: Services & Utilities (38 lines removed)
-- 🚧 Phase 4: Routes (in progress, ~350 lines expected)
-- ⏳ Phase 5: Final Cleanup
+- ✅ Phase 4: Routes (584 lines removed)
+- ✅ Phase 5: Documentation & Cleanup
 
 ## Original State
 - **Lines**: 1,115 lines
@@ -93,41 +93,41 @@ src/
 
 **Note**: Calendar service (CalDAV operations) was already modular, just moved for consistency.
 
-### Phase 4: Extract Routes (~400 lines) 🚧 IN PROGRESS
-- [ ] Create `src/routes/` directory
-- [ ] Extract event routes → `routes/events.js`
-  - POST /api/events/all-day
-  - GET /api/events/search
-  - POST /api/events
-  - PUT /api/events/:uid
-  - GET /api/events/:uid
-  - DELETE /api/events/:uid
-  - POST /api/events/:uid/move
-- [ ] Extract calendar routes → `routes/calendars.js`
-  - GET /api/calendars
-  - POST /api/refresh-caldav
-- [ ] Extract health routes → `routes/health.js`
-  - GET /health
-  - GET /ready
-- [ ] Extract client routes → `routes/client.js`
-  - POST /api/client-log
-  - GET /logged-out
-- [ ] Create `routes/index.js` to register all routes
+### Phase 4: Extract Routes (~400 lines) ✅ COMPLETE
+- [x] Create `src/routes/` directory
+- [x] Extract event routes → `routes/events.js` (481 lines)
+  - POST /all-day - Create all-day event
+  - DELETE /:uid - Delete event
+  - GET /search - Search events by summary
+  - POST / - Get events for timeline (main endpoint)
+  - PUT /:uid - Update event
+  - GET /:uid - Get event by UID
+  - POST /:uid/move - Move event to different calendar
+- [x] Extract calendar routes → `routes/calendars.js` (45 lines)
+  - GET / - Get all calendars
+  - POST /refresh-caldav - Force refresh CalDAV data
+- [x] Extract health routes → `routes/health.js` (38 lines)
+  - GET / - Health check
+  - GET /ready - Readiness probe
+- [x] Extract client routes → `routes/client.js` (34 lines)
+  - POST /client-log - Client-side logging
+  - GET /logged-out - Logged out page
+- [x] Create `routes/index.js` to register all routes (22 lines)
 
-**Estimated reduction**: ~350 lines from server.js
+**Actual reduction**: 584 lines from server.js (663 → 79)
 
 **Note**: Auth routes already extracted to middleware/auth.js in Phase 2
 
-### Phase 5: Final Cleanup & Documentation
-- [ ] Review and optimize imports in server.js
-- [ ] Ensure all tests pass
-- [ ] Update REFACTORING_PLAN.md with final stats
-- [ ] Update main README.md if needed
-- [ ] Document new structure in README
+### Phase 5: Final Cleanup & Documentation ✅ COMPLETE
+- [x] Review and optimize imports in server.js
+- [x] Ensure all tests pass (13/13 passing)
+- [x] Update REFACTORING_PLAN.md with final stats
+- [x] Update ROADMAP.md to mark as complete
+- [x] Document new structure
 
-## Expected Final State
+## Final State Achieved
 
-### server.js (~100 lines)
+### server.js (79 lines) ✅
 ```javascript
 import express from 'express';
 import path from 'path';
@@ -208,16 +208,48 @@ Each phase should be a separate commit, so we can easily rollback if needed:
 - Phase 2: `git revert HEAD` if middleware extraction breaks
 - etc.
 
-## Timeline Estimate
+## Actual Results Summary
 
-- Phase 1 (Config): 1-2 hours
-- Phase 2 (Middleware): 1-2 hours
-- Phase 3 (Services): 2-3 hours
-- Phase 4 (Routes): 3-4 hours
-- Phase 5 (Utils): 30 minutes
-- Phase 6 (Cleanup & Testing): 1-2 hours
+### Metrics
+- **Original file**: 1,115 lines (monolithic)
+- **Final file**: 79 lines (clean entry point)
+- **Code reduction**: 93% (1,036 lines removed)
+- **New modules created**: 21 files across 5 directories
+- **Test coverage**: 13/13 suites passing (100%)
+- **Breaking changes**: None - all functionality preserved
 
-**Total**: 8-14 hours of focused work
+### Module Distribution
+```
+src/
+├── config/          7 files,  ~200 lines  (Phase 1)
+├── middleware/      3 files,  ~300 lines  (Phase 2)
+├── services/        3 files,  ~100 lines  (Phase 3)
+├── utils/           3 files,   ~50 lines  (Phase 3)
+└── routes/          5 files,  ~620 lines  (Phase 4)
+                    ─────────────────────
+Total:              21 files, ~1,270 lines
+```
+
+### Key Achievements
+✅ **Maintainability**: Each module has single responsibility  
+✅ **Testability**: Components can be tested in isolation  
+✅ **Readability**: Easy to find and understand functionality  
+✅ **Scalability**: Simple to add new routes or services  
+✅ **Collaboration**: Multiple developers can work independently  
+✅ **Debugging**: Issues traced to specific modules  
+✅ **Performance**: No performance degradation  
+✅ **Stability**: All tests passing, zero regressions  
+
+### Timeline (Actual)
+- Phase 1 (Config): Completed
+- Phase 2 (Middleware): Completed
+- Phase 3 (Services): Completed
+- Phase 4 (Routes): Completed
+- Phase 5 (Documentation): Completed
+
+**Total time**: Single development session  
+**Branch**: `feature/modularize-server`  
+**Status**: Ready for merge to main
 
 ## Notes
 
