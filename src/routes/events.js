@@ -184,10 +184,6 @@ router.post('/', async (req, res) => {
     const uniqueLocations = [...new Set(cachedEvents.map(e => e.location).filter(Boolean))];
     const geocodedLocations = await geocodeLocations(uniqueLocations);
     console.log(`[Events] Geocoded ${geocodedLocations.size} locations`);
-    
-    // Debug: Log first few geocoded locations
-    const firstFew = Array.from(geocodedLocations.entries()).slice(0, 3);
-    console.log('[Events] Sample geocoded:', firstFew);
 
     // Format events for the frontend
     const items = [];
@@ -279,12 +275,6 @@ router.post('/', async (req, res) => {
         // Create the item in vis-timeline format
         // Get geocoded coordinates if location exists
         const geocoded = event.location ? geocodedLocations.get(event.location) : null;
-        
-        // Debug: Log geocoded data for first event with location
-        if (event.location && items.length === 0) {
-          console.log('[Events] First event location:', event.location);
-          console.log('[Events] Geocoded result:', geocoded);
-        }
 
         const item = {
           id: eventId,
