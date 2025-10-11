@@ -16,11 +16,11 @@
 import { Router } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import { calendarCache } from '../services/calendar.js';
-import { getEventType, getEventTypes } from '../services/event-type.js';
+import { getEventType } from '../services/event-type.js';
 import { geocodeLocations } from '../services/geocoding.js';
 import { escapeHtml } from '../utils/html.js';
 import { requireEditor } from '../middleware/auth.js';
-import { loadEventTypesConfig, getEventTypes as EventTypes } from '../config/index.js';
+import { getEventTypes } from '../config/index.js';
 
 const router = Router();
 
