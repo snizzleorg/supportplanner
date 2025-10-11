@@ -1,5 +1,19 @@
+/**
+ * Express session configuration
+ * 
+ * Configures session middleware with secret validation and secure settings.
+ * Sessions are used for OIDC authentication and user state management.
+ * 
+ * @module config/session
+ */
+
 import session from 'express-session';
 
+/**
+ * Session secret from environment variable
+ * Required for signing session cookies
+ * @type {string|undefined}
+ */
 const SESSION_SECRET = process.env.SESSION_SECRET || 'supportplanner_dev_session';
 
 // Validate session secret in production
@@ -16,6 +30,17 @@ if (SESSION_SECRET === 'supportplanner_dev_session') {
 }
 
 // Session middleware (required for OIDC)
+/**
+ * Express session middleware
+ * 
+ * Configured with:
+ * - Secure secret (validated at startup)
+ * - HTTP-only cookies
+ * - SameSite=Lax for CSRF protection
+ * - Resave and saveUninitialized disabled for performance
+ * 
+ * @type {import('express').RequestHandler}
+ */
 export const sessionMiddleware = session({
   secret: SESSION_SECRET,
   resave: false,
