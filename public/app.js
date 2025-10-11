@@ -25,6 +25,8 @@ import {
   clampToWindow, getWindowBounds, initTimelineControls, initDateInputs, 
   initResizeHandler, initTimelinePanEvents
 } from './js/controls.js';
+// Import events
+import { initTimelineEvents as initTimelineEventsModule } from './js/events.js';
 
 // Create aliases for DOM elements (for backward compatibility)
 const modal = DOM.modal;
@@ -1111,84 +1113,9 @@ function initTimelineEvents() {
   
   // Initialize timeline panning event handlers (from controls.js)
   initTimelinePanEvents();
-
-  // Timeline event click handler
-  timeline.on('click', async (properties) => {
-    // Ignore clicks right after a user drag/pan
-    if (isPanning || (Date.now() - lastPanEnd) < TOUCH.PAN_DEBOUNCE) {
-      return;
-    }
-    console.log('Timeline click event:', properties);
-    if (properties.item) {
-      console.log('Item clicked, item ID:', properties.item);
-      // Get the event data from the clicked item
-      const item = items.get(properties.item);
-      console.log('Item data:', item);
-      
-      // Extract UID from the item's ID (format: 'cal-X-https://.../calendars/.../UID')
-      // The UID is everything after the last '/' in the item ID
-      const parts = properties.item.split('/');
-      const uid = parts[parts.length - 1];
-      
-      if (uid) {
-        console.log('Extracted UID:', uid);
-        // Readers are not allowed to edit
-        if (isReader()) {
-          setStatus('Read-only: editing disabled');
-          return;
-        }
-        // On mobile phones, single tap should NOT open modal (tooltip handles tap). Use long-press.
-        try {
-          const isMobileTap = document.body.classList.contains('mobile-device') || (navigator.maxTouchPoints || 0) > 0;
-          if (isMobileTap) return;
-        } catch (_) {}
-        modalCtl.openEditModal(uid);
-      } else {
-        console.error('Could not extract UID from item ID:', properties.item);
-        setStatus('Error: Could not identify event. Please try again.');
-      }
-    } else {
-      console.log('Click was not on an item');
-      // Quick-create all-day event when clicking on empty space within a person's row
-      // Requirements:
-      //  - must have a group (not the special "weeks" group)
-      //  - must have a time
-      const g = properties.group;
-      const t = properties.time;
-      if (!g || g === 'weeks' || !t) return;
-
-      // Readers are not allowed to create
-      if (isReader()) {
-        setStatus('Read-only: creation disabled');
-        return;
-      }
-
-      // Prefer the stored original URL on the group object
-      const groupObj = groups.get(g);
-      const calendarUrl = (groupObj && groupObj.calendarUrl) || groupReverseMap.get(g) || null;
-      console.log('Quick-create click', { groupId: g, groupObj, resolvedCalendarUrl: calendarUrl });
-      if (!calendarUrl) return;
-      // Validate it's a proper CalDAV URL, not a client group id
-      if (!/^https?:\/\//.test(calendarUrl)) {
-        setStatus(`Cannot create: invalid calendar URL resolved for group ${g}`);
-        return;
-      }
-
-      // Compute ISO week range (Mon..Sun) for clicked date
-      const clicked = dayjs(t);
-      // day(): 0=Sun..6=Sat, so shift to Monday-based
-      const offsetToMonday = (clicked.day() + 6) % 7; // 0 if Monday
-      const weekStart = clicked.subtract(offsetToMonday, 'day').startOf('day');
-      // Set end date to Friday (4 days after Monday)
-      const weekEnd = weekStart.add(4, 'day').startOf('day'); // Monday to Friday
-
-      const startStr = weekStart.format('YYYY-MM-DD');
-      const endStr = weekEnd.format('YYYY-MM-DD');
-
-      // Open modal in create mode so we reuse the stable edit flow (no flicker)
-      await modalCtl.openCreateWeekModal(calendarUrl, startStr, endStr, g);
-    }
-  });
+  
+  // Initialize timeline event click handlers (from events.js)
+  initTimelineEventsModule(modalCtl);
   
   // Initialize timeline control buttons (from controls.js)
   initTimelineControls(forceRefreshCache);
