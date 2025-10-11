@@ -14,17 +14,20 @@
  */
 
 import { Router } from 'express';
-import { body } from 'express-validator';
+import { body, param, validationResult } from 'express-validator';
+import { calendarCache } from '../services/calendar.js';
+import { getEventType } from '../services/event-type.js';
+import { geocodeLocations } from '../services/geocoding.js';
+import { escapeHtml } from '../utils/html.js';
 import { requireRole, validate, eventValidation, uidValidation } from '../middleware/index.js';
-import { calendarCache } from '../services/index.js';
-import { getEventType } from '../services/index.js';
-import { escapeHtml } from '../utils/index.js';
 import { loadEventTypesConfig, getEventTypes } from '../config/index.js';
+
+const requireEditor = requireRole('editor');
 
 const router = Router();
 
 // Create a new all-day event (inclusive start/end dates)
-router.post('/all-day', requireRole('editor'), [
+router.post('/all-day', requireEditor, [
   body('calendarUrl').trim().isURL().withMessage('Valid calendar URL required'),
   body('summary').trim().isLength({ min: 1, max: 500 }).withMessage('Summary required (1-500 chars)'),
   body('start').isISO8601().withMessage('Valid start date required'),
@@ -177,6 +180,11 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Geocode all unique locations in batch
+    const uniqueLocations = [...new Set(cachedEvents.map(e => e.location).filter(Boolean))];
+    const geocodedLocations = await geocodeLocations(uniqueLocations);
+    console.log(`[Events] Geocoded ${geocodedLocations.size} locations`);
+
     // Format events for the frontend
     const items = [];
     const groupMap = new Map();
@@ -265,6 +273,9 @@ router.post('/', async (req, res) => {
         const eventDetails = tooltipContent.join('');
 
         // Create the item in vis-timeline format
+        // Get geocoded coordinates if location exists
+        const geocoded = event.location ? geocodedLocations.get(event.location) : null;
+
         const item = {
           id: eventId,
           group: groupId,
@@ -277,6 +288,7 @@ router.post('/', async (req, res) => {
           descriptionRaw: event.descriptionRaw || event.description || '', // Full description as stored in CalDAV
           meta: event.meta || null,
           location: event.location || '', // Store location separately
+          geocoded: geocoded || null, // Add geocoded coordinates {lat, lon}
           // Store all the data we need for the custom tooltip
           dataAttributes: {
             'data-summary': event.summary || 'No title',

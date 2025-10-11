@@ -1045,6 +1045,7 @@ async function refresh() {
           start: typeof it.start === 'object' && it.start?.toISOString ? it.start.toISOString() : it.start,
           end: typeof it.end === 'object' && it.end?.toISOString ? it.end.toISOString() : it.end,
           location: it.location,
+          geocoded: it.geocoded,
           group: it.group
         }))
         .filter(it => it.location && String(it.location).trim().length > 0);
