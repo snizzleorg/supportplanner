@@ -7,7 +7,7 @@ This document describes the testing strategy for SupportPlanner.
 ### 1. Backend Unit Tests (Vitest)
 Location: `src/**/__tests__/*.test.js`
 
-Tests individual modules in isolation:
+Tests individual backend modules in isolation:
 - **Utilities**: Date validation, HTML escaping (7 tests)
 - **Services**: Event type classification, calendar operations (23 tests)
 - **Config**: Environment variables, event types, middleware configs (18 tests)
@@ -28,7 +28,38 @@ npm run test:watch       # Watch mode
 npm run test:coverage    # With coverage
 ```
 
-### 2. Frontend Integration Tests (Puppeteer)
+### 2. Frontend Unit Tests (Vitest + jsdom)
+Location: `public/js/__tests__/*.test.js`
+
+Tests individual frontend modules in isolation:
+- **API Client**: All API functions (25+ tests)
+- **Authentication**: Role checks, permissions (15+ tests)
+- **State Management**: All setters and getters (20+ tests)
+- **Geocoding**: Coordinate parsing, address lookup (25+ tests)
+- **UI Controls**: Date parsing, timeline controls (15+ tests)
+- **Search**: Filter logic, DOM updates (10+ tests)
+- **Events**: UID extraction, handlers (8+ tests)
+- **Timeline**: Initialization, configuration (10+ tests)
+- **Modal**: Form validation, loading states (15+ tests)
+- **And more**: holidays, map, DOM, timeline-ui, constants
+- **Total**: 15 test files, 200+ test cases
+
+**Run in Docker (recommended):**
+```bash
+docker compose run --rm frontend-unit-tests
+
+# With coverage
+docker compose run --rm frontend-unit-tests npm run test:frontend:coverage
+```
+
+**Run locally:**
+```bash
+npm run test:frontend           # Run once
+npm run test:frontend:watch     # Watch mode
+npm run test:frontend:coverage  # With coverage
+```
+
+### 3. Frontend Integration Tests (Playwright/Puppeteer)
 Location: `tests/frontend/`, `public/tests/`
 
 Tests the complete application flow in a real browser:
@@ -49,9 +80,12 @@ Tests the complete application flow in a real browser:
 docker compose run --rm frontend-tests
 ```
 
-### 3. Run All Tests
+### 4. Run All Tests
 ```bash
-./run-all-tests.sh       # Runs backend + frontend in sequence
+# Run all test types in sequence
+docker compose run --rm backend-tests
+docker compose run --rm frontend-unit-tests
+docker compose run --rm frontend-tests
 ```
 
 ## Test Coverage Goals
@@ -117,6 +151,50 @@ describe('my routes', () => {
   it('should return 200', async () => {
     const response = await request(app).get('/api/endpoint');
     expect(response.status).toBe(200);
+  });
+});
+```
+
+### Frontend Unit Tests
+
+Located in `public/js/__tests__/*.test.js`, these tests use Vitest with jsdom:
+
+**Example - Testing a utility function:**
+```javascript
+import { describe, it, expect } from 'vitest';
+import { tryParseLatLon } from '../geocode.js';
+
+describe('geocode', () => {
+  describe('tryParseLatLon', () => {
+    it('should parse valid coordinates', () => {
+      const result = tryParseLatLon('52.52, 13.405');
+      expect(result).toEqual({ lat: 52.52, lon: 13.405 });
+    });
+
+    it('should return null for invalid input', () => {
+      expect(tryParseLatLon('invalid')).toBeNull();
+    });
+  });
+});
+```
+
+**Example - Testing with DOM:**
+```javascript
+import { describe, it, expect, beforeEach } from 'vitest';
+import { applySearchFilter } from '../search.js';
+
+describe('search', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <div class="vis-item" data-id="1">Event 1</div>
+      <div class="vis-item" data-id="2">Meeting</div>
+    `;
+  });
+
+  it('should dim non-matching items', () => {
+    applySearchFilter('meeting');
+    const items = document.querySelectorAll('.vis-item');
+    expect(items[0].classList.contains('dimmed')).toBe(true);
   });
 });
 ```
