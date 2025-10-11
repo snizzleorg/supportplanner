@@ -1,3 +1,20 @@
+/**
+ * Calendar cache service
+ * 
+ * Manages CalDAV calendar data with caching, event CRUD operations,
+ * and recurring event expansion.
+ * 
+ * Features:
+ * - CalDAV client for Nextcloud integration
+ * - 30-minute cache with automatic refresh
+ * - Recurring event expansion using ical-expander
+ * - Event CRUD operations (create, read, update, delete, move)
+ * - YAML metadata extraction from event descriptions
+ * - Calendar ordering and color management
+ * 
+ * @module services/calendar
+ */
+
 import { DAVClient } from 'tsdav';
 import IcalExpander from 'ical-expander';
 import dayjs from 'dayjs';
@@ -13,6 +30,14 @@ import { calendarColorOverrides } from '../../config/calendar-colors.js';
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
+/**
+ * Calendar cache class
+ * 
+ * Provides caching layer for CalDAV calendar data with automatic refresh.
+ * Handles event CRUD operations and recurring event expansion.
+ * 
+ * @class CalendarCache
+ */
 export class CalendarCache {
   constructor() {
     // Cache with 30 minute TTL and check for expired items every 5 minutes
