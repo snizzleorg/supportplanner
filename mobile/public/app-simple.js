@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760267800 loaded');
+console.log('📱 Mobile Timeline v1760268000 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -154,9 +154,10 @@ function render() {
   
   console.log(`Rendering: ${totalDays} days, ${totalWidth}px wide, ${pixelsPerDay}px/day`);
   
-  // Build HTML
+  // Build HTML - Main container
   let html = '<div style="position: relative; display: flex; flex-direction: column; min-width: ' + totalWidth + 'px;">';
   
+  // === HEADER SECTION ===
   // Header row with months
   html += '<div style="display: flex; height: 40px; border-bottom: 1px solid #ddd; margin-left: 100px; min-width: ' + (totalWidth + 100) + 'px;">';
   html += renderMonthHeaders(pixelsPerDay);
@@ -172,17 +173,21 @@ function render() {
   html += renderDayNumbers(pixelsPerDay);
   html += '</div>';
   
-  // Month vertical lines (background) - starts from top of entire timeline
+  // === CALENDAR LANES SECTION ===
+  // Container for calendar lanes with background overlays
+  html += '<div style="position: relative; flex: 1; display: flex; flex-direction: column;">';
+  
+  // Month vertical lines - absolute positioned over lanes
   html += '<div style="position: absolute; top: 0; bottom: 0; left: 100px; pointer-events: none; z-index: 1;">';
   html += renderMonthLines(pixelsPerDay);
   html += '</div>';
   
-  // Weekend and holiday backgrounds - starts right after headers (85px from top)
-  html += `<div style="position: absolute; top: 85px; bottom: 0; left: 100px; pointer-events: none; z-index: 0;">`;
+  // Weekend and holiday backgrounds - absolute positioned over lanes
+  html += '<div style="position: absolute; top: 0; bottom: 0; left: 100px; pointer-events: none; z-index: 0;">';
   html += renderWeekendAndHolidayBackgrounds(pixelsPerDay);
   html += '</div>';
   
-  // Calendar lanes
+  // Calendar lanes (in normal flow)
   state.calendars.forEach(calendar => {
     html += '<div style="display: flex; height: 80px; border-bottom: 1px solid #eee;">';
     
@@ -195,7 +200,7 @@ function render() {
     html += `<div style="width: 100px; padding: 8px; font-size: 12px; font-weight: 600; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; display: flex; align-items: center; z-index: 20;">${name}</div>`;
     
     // Lane indicator - narrow colored bar (sticky, appears when scrolling)
-    html += `<div style="width: 30px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; z-index: 20; position: sticky; left: 0; margin-left: -30px;">${initials}</div>`;
+    html += `<div style="width: 30px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; z-index: 10; position: sticky; left: 0; margin-left: -30px;">${initials}</div>`;
     
     // Lane content (with overflow hidden to prevent events from piercing through)
     html += '<div style="position: relative; flex: 1; overflow: hidden;">';
@@ -205,6 +210,10 @@ function render() {
     html += '</div>';
   });
   
+  // Close calendar lanes container
+  html += '</div>';
+  
+  // Close main timeline container
   html += '</div>';
   
   container.innerHTML = html;
