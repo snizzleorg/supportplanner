@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760271700 loaded');
+console.log('📱 Mobile Timeline v1760271800 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -435,7 +435,13 @@ function showEventModal(event) {
       
       if (response.ok) {
         modal.classList.remove('active');
-        // Reload data from backend to refresh cache
+        // Force backend to refresh cache from CalDAV
+        try {
+          await fetch(`${API_BASE}/api/refresh-caldav`, { method: 'POST' });
+        } catch (e) {
+          console.warn('Cache refresh failed:', e);
+        }
+        // Reload data from backend
         await loadData();
         render();
       } else {
