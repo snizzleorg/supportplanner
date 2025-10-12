@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760272000 loaded');
+console.log('📱 Mobile Timeline v1760271900 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -268,7 +268,7 @@ function render() {
     html += `<div data-calendar-id="${calendar.id}" class="calendar-label" style="width: 30px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; z-index: 10; position: sticky; left: 0; margin-left: -30px; cursor: pointer;">${initials}</div>`;
     
     // Lane content (with overflow hidden to prevent events from piercing through)
-    html += `<div class="lane-content" data-calendar-id="${calendar.id}" style="position: relative; flex: 1; overflow: hidden;">`;
+    html += '<div style="position: relative; flex: 1; overflow: hidden;">';
     html += renderEventsForCalendar(calendar.id, pixelsPerDay);
     html += '</div>';
     
@@ -304,210 +304,12 @@ function render() {
   // Add click handlers for events
   document.querySelectorAll('.timeline-event').forEach(eventEl => {
     eventEl.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent lane click
       const eventId = e.target.dataset.eventId;
       const event = state.events.find(ev => ev.id === eventId);
       if (event) {
         showEventModal(event);
       }
     });
-  });
-  
-  // Add click handlers for lane content (create new event)
-  document.querySelectorAll('.lane-content').forEach(laneEl => {
-    laneEl.addEventListener('click', (e) => {
-      // Don't create if clicking on an event
-      if (e.target.classList.contains('timeline-event')) return;
-      
-      const calendarId = laneEl.dataset.calendarId;
-      const calendar = state.calendars.find(c => c.id === calendarId);
-      if (!calendar) return;
-      
-      // Calculate which date was clicked
-      const rect = laneEl.getBoundingClientRect();
-      const clickX = e.clientX - rect.left + laneEl.scrollLeft;
-      const pixelsPerDay = ZOOM_SETTINGS[state.zoom];
-      const daysFromStart = Math.floor(clickX / pixelsPerDay);
-      const clickedDate = new Date(state.dateRange.from);
-      clickedDate.setDate(clickedDate.getDate() + daysFromStart);
-      
-      showCreateEventModal(calendar, clickedDate);
-    });
-  });
-}
-
-// Show create event modal
-function showCreateEventModal(calendar, clickedDate) {
-  const modal = document.getElementById('eventModal');
-  const modalTitle = document.getElementById('modalTitle');
-  const modalBody = document.getElementById('modalBody');
-  
-  if (!modal || !modalTitle || !modalBody) return;
-  
-  modalTitle.textContent = 'Create New Event';
-  
-  // Format date as YYYY-MM-DD
-  const formatDate = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-  
-  // Get ISO week number
-  const getWeekNumber = (date) => {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-  };
-  
-  // Find Monday and Friday of the clicked week
-  const dayOfWeek = clickedDate.getDay();
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(clickedDate);
-  monday.setDate(clickedDate.getDate() + diff);
-  
-  const friday = new Date(monday);
-  friday.setDate(monday.getDate() + 4);
-  
-  const weekNumber = getWeekNumber(clickedDate);
-  const defaultTitle = `Week ${weekNumber}`;
-  
-  const startDateStr = formatDate(monday);
-  const endDateStr = formatDate(friday);
-  
-  modalBody.innerHTML = `
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
-      <input type="text" id="eventTitle" value="${defaultTitle}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start Date:</label>
-      <input type="date" id="eventStart" value="${startDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">End Date:</label>
-      <input type="date" id="eventEnd" value="${endDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Description:</label>
-      <textarea id="eventDescription" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit;"></textarea>
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Location:</label>
-      <input type="text" id="eventLocation" value="" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Order Number:</label>
-      <input type="text" id="eventOrderNumber" value="" placeholder="e.g., SO-12345" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Ticket Link:</label>
-      <input type="url" id="eventTicketLink" value="" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">System Type:</label>
-      <input type="text" id="eventSystemType" value="" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
-      <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-        ${state.calendars.map(cal => 
-          `<option value="${cal.url}" ${cal.id === calendar.id ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
-        ).join('')}
-      </select>
-    </div>
-  `;
-  
-  modal.classList.add('active');
-  
-  // Setup modal buttons for create mode
-  const closeModal = document.getElementById('closeModal');
-  const closeModalBtn = document.getElementById('closeModalBtn');
-  const saveEventBtn = document.getElementById('saveEventBtn');
-  const deleteEventBtn = document.getElementById('deleteEventBtn');
-  
-  // Hide delete button in create mode
-  if (deleteEventBtn) deleteEventBtn.style.display = 'none';
-  
-  const closeHandler = () => {
-    modal.classList.remove('active');
-  };
-  
-  // Remove old event listeners by cloning and replacing
-  const newSaveBtn = saveEventBtn.cloneNode(true);
-  saveEventBtn.parentNode.replaceChild(newSaveBtn, saveEventBtn);
-  
-  closeModal?.addEventListener('click', closeHandler);
-  closeModalBtn?.addEventListener('click', closeHandler);
-  
-  // Create event handler
-  newSaveBtn.addEventListener('click', async () => {
-    const title = document.getElementById('eventTitle').value;
-    const calendarUrl = document.getElementById('eventCalendar').value;
-    const start = document.getElementById('eventStart').value;
-    const end = document.getElementById('eventEnd').value;
-    const description = document.getElementById('eventDescription').value;
-    const location = document.getElementById('eventLocation').value;
-    const orderNumber = document.getElementById('eventOrderNumber').value;
-    const ticketLink = document.getElementById('eventTicketLink').value;
-    const systemType = document.getElementById('eventSystemType').value;
-    
-    if (!title || !start || !end) {
-      alert('Please fill in title, start date, and end date');
-      return;
-    }
-    
-    // Build metadata object
-    const metadata = {
-      description: description || '',
-      location: location || '',
-      orderNumber: orderNumber || '',
-      ticketLink: ticketLink || '',
-      systemType: systemType || ''
-    };
-    
-    try {
-      const response = await fetch(`${API_BASE}/api/events/all-day`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          calendarUrl: calendarUrl,
-          summary: title,
-          start: start,
-          end: end,
-          description: JSON.stringify(metadata),
-          location: location,
-          meta: {
-            orderNumber: orderNumber || undefined,
-            ticketLink: ticketLink || undefined,
-            systemType: systemType || undefined
-          }
-        })
-      });
-      
-      if (response.ok) {
-        modal.classList.remove('active');
-        // Force backend to refresh cache from CalDAV
-        try {
-          await fetch(`${API_BASE}/api/refresh-caldav`, { method: 'POST' });
-        } catch (e) {
-          console.warn('Cache refresh failed:', e);
-        }
-        // Reload data from backend
-        await loadData();
-        render();
-      } else {
-        const errorText = await response.text();
-        console.error('Failed to create event:', response.status, errorText);
-        alert(`Failed to create event: ${response.status}`);
-      }
-    } catch (error) {
-      console.error('Error creating event:', error);
-      alert(`Error creating event: ${error.message}`);
-    }
   });
 }
 
@@ -598,9 +400,6 @@ function showEventModal(event) {
   const closeModalBtn = document.getElementById('closeModalBtn');
   const saveEventBtn = document.getElementById('saveEventBtn');
   const deleteEventBtn = document.getElementById('deleteEventBtn');
-  
-  // Show delete button in edit mode
-  if (deleteEventBtn) deleteEventBtn.style.display = '';
   
   const closeHandler = () => {
     modal.classList.remove('active');
