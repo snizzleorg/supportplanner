@@ -177,21 +177,25 @@ async function loadData() {
     }
     
     const calendarsData = await calendarsRes.json();
-    state.calendars = calendarsData.calendars || [];
-    console.log('Loaded calendars:', state.calendars.length);
+    const allCalendars = calendarsData.calendars || [];
+    console.log('Loaded calendars from API:', allCalendars.length);
+    
+    // Store original calendars - we'll use these to show all lanes
+    state.allCalendars = allCalendars;
     
     // Fetch events
     const fromStr = state.dateRange.from.toISOString().split('T')[0];
     const toStr = state.dateRange.to.toISOString().split('T')[0];
     
     // Get all calendar URLs
-    const calendarUrls = state.calendars.map(cal => cal.url);
+    const calendarUrls = allCalendars.map(cal => cal.url);
     console.log('Calendar URLs:', calendarUrls);
     
     if (calendarUrls.length === 0) {
       console.warn('No calendars available, skipping events fetch');
       state.events = [];
       state.filteredEvents = [];
+      state.calendars = [];
       renderFilters();
       renderLegend();
       return;
@@ -216,27 +220,17 @@ async function loadData() {
     state.events = eventsData.items || [];
     state.filteredEvents = state.events;
     
-    // Merge groups from API with original calendars
-    // Groups only include calendars with events, but we want to show all calendars
-    if (eventsData.groups && eventsData.groups.length > 0) {
-      // Create a map of group IDs to group data
-      const groupMap = new Map(eventsData.groups.map(g => [g.id, g]));
-      
-      // Update calendars: use group data if available, otherwise create from calendar list
-      state.calendars = state.calendars.map((cal, index) => {
-        const groupId = `cal-${index + 1}`;
-        const group = groupMap.get(groupId);
-        return group || {
-          id: groupId,
-          content: cal.displayName || cal.content,
-          title: cal.displayName || cal.content,
-          url: cal.url
-        };
-      });
-    }
+    console.log('Events API response:', {
+      events: state.events.length,
+      groups: eventsData.groups?.length,
+      groupIds: eventsData.groups?.map(g => g.id)
+    });
     
-    console.log('Loaded events:', state.events.length);
-    console.log('Loaded calendars:', state.calendars.length);
+    // Use groups from events API for display (they have proper formatting)
+    // These are only calendars with events in the date range
+    state.calendars = eventsData.groups || [];
+    
+    console.log('Final calendars for display:', state.calendars.length, state.calendars.map(c => c.content));
     
     renderFilters();
     renderLegend();
