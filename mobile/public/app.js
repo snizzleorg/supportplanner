@@ -215,8 +215,18 @@ async function loadData() {
   } catch (error) {
     console.error('Error loading data:', error);
     showStatus(`Error: ${error.message}`);
-  } finally {
-    elements.loadingState.style.display = 'none';
+    
+    // Show detailed error on screen for debugging
+    elements.loadingState.innerHTML = `
+      <div style="color: red; padding: 20px; text-align: left; max-width: 600px;">
+        <h3>Error Loading Data</h3>
+        <p><strong>Message:</strong> ${error.message}</p>
+        <p><strong>API Base:</strong> ${API_BASE}</p>
+        <p><strong>Calendars loaded:</strong> ${state.calendars.length}</p>
+        <button onclick="location.reload()" style="margin-top: 10px; padding: 10px 20px;">Retry</button>
+      </div>
+    `;
+    elements.loadingState.style.display = 'block';
   }
 }
 
