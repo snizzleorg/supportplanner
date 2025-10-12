@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760269600 loaded');
+console.log('📱 Mobile Timeline v1760269700 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -417,16 +417,23 @@ function renderDayNumbers(pixelsPerDay) {
 
 // Render events for a calendar
 function renderEventsForCalendar(calendarId, pixelsPerDay) {
+  const calendar = state.calendars.find(c => c.id === calendarId);
   let events = state.events.filter(e => e.group === calendarId);
   
-  // Apply search filter
+  // Apply search filter (search in event content OR calendar name)
   if (state.searchQuery) {
-    events = events.filter(e => 
-      e.content.toLowerCase().includes(state.searchQuery)
-    );
+    const calendarName = (calendar?.content || calendar?.displayName || '').toLowerCase();
+    const matchesCalendar = calendarName.includes(state.searchQuery);
+    
+    if (!matchesCalendar) {
+      // If calendar doesn't match, filter events by content
+      events = events.filter(e => 
+        e.content.toLowerCase().includes(state.searchQuery)
+      );
+    }
+    // If calendar matches, show all events from that calendar
   }
   
-  const calendar = state.calendars.find(c => c.id === calendarId);
   let html = '';
   
   // Calculate positions
