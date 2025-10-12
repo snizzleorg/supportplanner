@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760265800 loaded');
+console.log('📱 Mobile Timeline v1760265900 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -136,14 +136,14 @@ function render() {
   // Build HTML
   let html = '<div style="position: relative; display: flex; flex-direction: column; min-width: ' + totalWidth + 'px;">';
   
-  // Weekend and holiday backgrounds
-  html += '<div style="position: absolute; top: 65px; bottom: 0; left: 0; margin-left: 100px; pointer-events: none; right: 0;">';
-  html += renderWeekendAndHolidayBackgrounds(pixelsPerDay);
+  // Month vertical lines (background)
+  html += '<div style="position: absolute; top: 0; bottom: 0; left: 100px; pointer-events: none; z-index: 1;">';
+  html += renderMonthLines(pixelsPerDay);
   html += '</div>';
   
-  // Month vertical lines (background)
-  html += '<div style="position: absolute; top: 0; bottom: 0; left: 100px; pointer-events: none;">';
-  html += renderMonthLines(pixelsPerDay);
+  // Weekend and holiday backgrounds
+  html += '<div style="position: absolute; top: 65px; bottom: 0; left: 100px; pointer-events: none; z-index: 0;">';
+  html += renderWeekendAndHolidayBackgrounds(pixelsPerDay);
   html += '</div>';
   
   // Header row with months
