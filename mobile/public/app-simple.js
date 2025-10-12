@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760266000 loaded');
+console.log('📱 Mobile Timeline v1760266100 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -312,7 +312,14 @@ function calculateEventPosition(event, pixelsPerDay) {
   // Calculate days from start (should be whole days)
   const msPerDay = 1000 * 60 * 60 * 24;
   const daysFromStart = Math.round((eventStart - rangeStart) / msPerDay);
-  const duration = Math.round((eventEnd - eventStart) / msPerDay);
+  let duration = Math.round((eventEnd - eventStart) / msPerDay);
+  
+  // For all-day events, the end date is exclusive in the API
+  // but we want to display it inclusively (e.g., Oct 20-24 should show 5 days, not 4)
+  // Add 1 day to make the visual representation inclusive
+  if (duration > 0) {
+    duration += 1;
+  }
   
   return {
     left: daysFromStart * pixelsPerDay,
