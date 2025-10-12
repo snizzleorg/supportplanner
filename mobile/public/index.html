@@ -9,21 +9,9 @@
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-    <!-- App Bar -->
+    <!-- Minimal header - just for safe area -->
     <div class="app-bar">
-        <div class="app-bar-content">
-            <h1>SupportPlanner</h1>
-            <div class="app-bar-actions">
-                <button class="icon-btn" id="searchBtn" title="Search">🔍</button>
-                <button class="icon-btn" id="filterBtn" title="Filter">⚙️</button>
-                <button class="icon-btn" id="refreshBtn" title="Refresh">🔄</button>
-            </div>
-        </div>
-        <div class="date-range-bar">
-            <button class="icon-btn" id="prevRange">◀</button>
-            <span id="dateRangeText">Loading...</span>
-            <button class="icon-btn" id="nextRange">▶</button>
-        </div>
+        <span id="dateRangeText" style="font-size: 12px; color: #666;">Loading...</span>
     </div>
 
     <!-- Search Overlay (hidden by default) -->
@@ -98,6 +86,8 @@
 
     <!-- Bottom Controls -->
     <div class="bottom-controls">
+        <button class="icon-btn" id="searchBtn" title="Search">🔍</button>
+        <button class="icon-btn" id="filterBtn" title="Filter">⚙️</button>
         <div class="zoom-controls">
             <button class="control-btn" data-zoom="week">Week</button>
             <button class="control-btn active" data-zoom="month">Month</button>
