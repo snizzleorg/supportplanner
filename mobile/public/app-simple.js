@@ -29,6 +29,10 @@ const ZOOM_SETTINGS = {
 async function init() {
   console.log('Initializing simple timeline...');
   
+  // Hide loading state
+  const loadingState = document.getElementById('loadingState');
+  if (loadingState) loadingState.style.display = 'none';
+  
   // Setup zoom buttons
   document.querySelectorAll('.zoom-controls .control-btn').forEach(btn => {
     btn.addEventListener('click', () => {
