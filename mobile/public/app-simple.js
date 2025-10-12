@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760272400 loaded');
+console.log('📱 Mobile Timeline v1760272500 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -481,12 +481,24 @@ function showCreateEventModal(calendar, clickedDate) {
       
       if (response.ok) {
         modal.classList.remove('active');
+        
+        // Show loading overlay while refreshing
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+        
         try {
+          console.log('Refreshing CalDAV cache after create...');
           await fetch(`${API_BASE}/api/refresh-caldav`, { method: 'POST' });
         } catch (e) {
           console.warn('Cache refresh failed:', e);
         }
+        
+        console.log('Reloading data...');
         await loadData();
+        
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+        
+        console.log('Rendering...');
         render();
       } else {
         const errorText = await response.text();
