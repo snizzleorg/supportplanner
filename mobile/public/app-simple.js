@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760265500 loaded');
+console.log('📱 Mobile Timeline v1760265800 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -137,7 +137,7 @@ function render() {
   let html = '<div style="position: relative; display: flex; flex-direction: column; min-width: ' + totalWidth + 'px;">';
   
   // Weekend and holiday backgrounds
-  html += '<div style="position: absolute; top: 65px; bottom: 0; left: 100px; pointer-events: none;">';
+  html += '<div style="position: absolute; top: 65px; bottom: 0; left: 0; margin-left: 100px; pointer-events: none; right: 0;">';
   html += renderWeekendAndHolidayBackgrounds(pixelsPerDay);
   html += '</div>';
   
@@ -197,6 +197,11 @@ function renderWeekendAndHolidayBackgrounds(pixelsPerDay) {
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const isHoliday = holidayDates.has(dateStr);
     
+    // Debug Oct 11-12
+    if (current.getDate() >= 11 && current.getDate() <= 12) {
+      console.log(`Weekend BG: Day ${dayIndex} = ${current.toDateString()}, dayOfWeek=${dayOfWeek}, isWeekend=${isWeekend}, left=${dayIndex * pixelsPerDay}px`);
+    }
+    
     if (isWeekend || isHoliday) {
       const left = dayIndex * pixelsPerDay;
       const color = isHoliday ? 'rgba(255, 200, 200, 0.3)' : 'rgba(200, 200, 200, 0.2)';
@@ -254,7 +259,9 @@ function renderMonthHeaders(pixelsPerDay) {
 function renderDayNumbers(pixelsPerDay) {
   let html = '';
   let current = new Date(state.dateRange.from);
+  current.setHours(0, 0, 0, 0); // Normalize to local midnight
   
+  let debugCount = 0;
   while (current < state.dateRange.to) {
     const dayNum = current.getDate();
     const dayOfWeek = current.getDay();
@@ -262,9 +269,15 @@ function renderDayNumbers(pixelsPerDay) {
     const color = isWeekend ? '#999' : '#666';
     const fontWeight = dayNum === 1 ? '600' : '400';
     
+    // Debug first few days
+    if (debugCount < 5) {
+      console.log(`Day ${debugCount}: ${current.toDateString()} - dayNum=${dayNum}, dayOfWeek=${dayOfWeek}, isWeekend=${isWeekend}`);
+    }
+    
     html += `<div style="width: ${pixelsPerDay}px; font-size: 9px; color: ${color}; text-align: center; padding-top: 4px; font-weight: ${fontWeight};">${dayNum}</div>`;
     
     current.setDate(current.getDate() + 1);
+    debugCount++;
   }
   
   return html;
