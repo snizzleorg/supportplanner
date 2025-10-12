@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760269900 loaded');
+console.log('📱 Mobile Timeline v1760270000 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -316,18 +316,29 @@ function showEventModal(event) {
   const endDate = parseLocalDate(event.end);
   const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   
+  // Parse metadata if it exists
+  let metadata = {};
+  try {
+    if (event.description) {
+      const parsed = JSON.parse(event.description);
+      if (typeof parsed === 'object' && parsed !== null) {
+        metadata = parsed;
+      }
+    }
+  } catch (e) {
+    // Not JSON, treat as plain text description
+  }
+  
+  const description = typeof metadata === 'object' && metadata !== null ? (metadata.description || '') : (event.description || '');
+  const location = metadata.location || '';
+  const orderNumber = metadata.orderNumber || '';
+  const ticketLink = metadata.ticketLink || '';
+  const systemType = metadata.systemType || '';
+  
   modalBody.innerHTML = `
     <div style="margin-bottom: 15px;">
       <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
       <input type="text" id="eventTitle" value="${event.content}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
-      <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-        ${state.calendars.map(cal => 
-          `<option value="${cal.id}" ${cal.id === event.group ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
-        ).join('')}
-      </select>
     </div>
     <div style="margin-bottom: 15px;">
       <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start Date:</label>
@@ -337,6 +348,34 @@ function showEventModal(event) {
       <label style="display: block; font-weight: 600; margin-bottom: 5px;">End Date:</label>
       <input type="date" id="eventEnd" value="${event.end}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
     </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Description:</label>
+      <textarea id="eventDescription" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit;">${description}</textarea>
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Location:</label>
+      <input type="text" id="eventLocation" value="${location}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Order Number:</label>
+      <input type="text" id="eventOrderNumber" value="${orderNumber}" placeholder="e.g., SO-12345" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Ticket Link:</label>
+      <input type="url" id="eventTicketLink" value="${ticketLink}" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">System Type:</label>
+      <input type="text" id="eventSystemType" value="${systemType}" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
+      <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        ${state.calendars.map(cal => 
+          `<option value="${cal.id}" ${cal.id === event.group ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
+        ).join('')}
+      </select>
+    </div>
   `;
   
   modal.classList.add('active');
@@ -344,7 +383,8 @@ function showEventModal(event) {
   // Setup modal buttons
   const closeModal = document.getElementById('closeModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
-  const editEventBtn = document.getElementById('editEventBtn');
+  const saveEventBtn = document.getElementById('saveEventBtn');
+  const deleteEventBtn = document.getElementById('deleteEventBtn');
   
   const closeHandler = () => {
     modal.classList.remove('active');
@@ -353,16 +393,57 @@ function showEventModal(event) {
   closeModal?.addEventListener('click', closeHandler);
   closeModalBtn?.addEventListener('click', closeHandler);
   
-  editEventBtn?.addEventListener('click', async () => {
+  // Delete event handler
+  deleteEventBtn?.addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to delete this event?')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/events/${event.id}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        // Remove from local state
+        state.events = state.events.filter(e => e.id !== event.id);
+        
+        modal.classList.remove('active');
+        render();
+      } else {
+        alert('Failed to delete event');
+      }
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert('Error deleting event');
+    }
+  });
+  
+  // Save event handler
+  saveEventBtn?.addEventListener('click', async () => {
     const title = document.getElementById('eventTitle').value;
     const calendarId = document.getElementById('eventCalendar').value;
     const start = document.getElementById('eventStart').value;
     const end = document.getElementById('eventEnd').value;
+    const description = document.getElementById('eventDescription').value;
+    const location = document.getElementById('eventLocation').value;
+    const orderNumber = document.getElementById('eventOrderNumber').value;
+    const ticketLink = document.getElementById('eventTicketLink').value;
+    const systemType = document.getElementById('eventSystemType').value;
     
     if (!title || !start || !end) {
-      alert('Please fill in all fields');
+      alert('Please fill in title, start date, and end date');
       return;
     }
+    
+    // Build metadata object
+    const metadata = {
+      description: description || '',
+      location: location || '',
+      orderNumber: orderNumber || '',
+      ticketLink: ticketLink || '',
+      systemType: systemType || ''
+    };
     
     try {
       const response = await fetch(`${API_BASE}/api/events/${event.id}`, {
@@ -372,7 +453,8 @@ function showEventModal(event) {
           content: title,
           group: calendarId,
           start: start,
-          end: end
+          end: end,
+          description: JSON.stringify(metadata)
         })
       });
       
@@ -382,6 +464,7 @@ function showEventModal(event) {
         event.group = calendarId;
         event.start = start;
         event.end = end;
+        event.description = JSON.stringify(metadata);
         
         modal.classList.remove('active');
         render();
