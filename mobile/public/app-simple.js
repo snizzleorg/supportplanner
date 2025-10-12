@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760268800 loaded');
+console.log('📱 Mobile Timeline v1760268900 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -157,6 +157,11 @@ function render() {
   // Build HTML - Main container
   let html = '<div style="position: relative; display: flex; flex-direction: column; min-width: ' + totalWidth + 'px;">';
   
+  // Month vertical lines - spans entire height including headers
+  html += '<div style="position: absolute; top: 0; bottom: 0; left: 100px; pointer-events: none; z-index: 103;">';
+  html += renderMonthLines(pixelsPerDay);
+  html += '</div>';
+  
   // === HEADER SECTION (STICKY) ===
   // Header row with months - sticky at top
   html += '<div style="position: sticky; top: 0; z-index: 102; display: flex; height: 40px; border-bottom: 1px solid #ddd; background: #fff; flex-shrink: 0;">';
@@ -185,11 +190,6 @@ function render() {
   // === CALENDAR LANES SECTION ===
   // Container for calendar lanes with background overlays
   html += '<div style="position: relative; flex: 1; display: flex; flex-direction: column; min-height: 0;">';
-  
-  // Month vertical lines - absolute positioned, offset to align with timeline content
-  html += '<div style="position: absolute; top: 0; bottom: 0; left: 0; pointer-events: none; z-index: 1; margin-left: 100px;">';
-  html += renderMonthLines(pixelsPerDay);
-  html += '</div>';
   
   // Weekend and holiday backgrounds - absolute positioned, offset to align with timeline content
   html += '<div style="position: absolute; top: 0; bottom: 0; left: 0; pointer-events: none; z-index: 0; margin-left: 100px;">';
