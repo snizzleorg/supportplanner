@@ -232,6 +232,20 @@ async function loadData() {
     
     console.log('Final calendars for display:', state.calendars.length, state.calendars.map(c => c.content));
     
+    // Show debug info on screen
+    const debugInfo = `
+      <div style="position: fixed; top: 60px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; font-size: 10px; z-index: 9999; max-width: 200px; border-radius: 5px;">
+        <div><strong>Debug Info:</strong></div>
+        <div>Calendars loaded: ${state.allCalendars?.length || 0}</div>
+        <div>Groups returned: ${state.calendars.length}</div>
+        <div>Events: ${state.events.length}</div>
+        <div>Date range: ${state.dateRange.from.toISOString().split('T')[0]} to ${state.dateRange.to.toISOString().split('T')[0]}</div>
+        <div>Grid start: ${new Date(state.dateRange.from).setDate(1)}</div>
+        <div style="margin-top: 5px; font-size: 9px;">Groups: ${state.calendars.map(c => c.content).join(', ')}</div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', debugInfo);
+    
     renderFilters();
     renderLegend();
     
