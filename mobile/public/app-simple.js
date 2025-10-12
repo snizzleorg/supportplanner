@@ -276,17 +276,24 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
   return html;
 }
 
+// Parse date string as local date (not UTC)
+function parseLocalDate(dateStr) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 // Calculate event position
 function calculateEventPosition(event, pixelsPerDay) {
-  const eventStart = new Date(event.start);
-  const eventEnd = new Date(event.end);
+  // Parse as local dates to avoid timezone issues
+  const eventStart = parseLocalDate(event.start);
+  const eventEnd = parseLocalDate(event.end);
   const rangeStart = new Date(state.dateRange.from);
   rangeStart.setHours(0, 0, 0, 0);
   
   // Calculate days from start (should be whole days)
   const msPerDay = 1000 * 60 * 60 * 24;
-  const daysFromStart = Math.floor((eventStart - rangeStart) / msPerDay);
-  const duration = Math.ceil((eventEnd - eventStart) / msPerDay);
+  const daysFromStart = Math.round((eventStart - rangeStart) / msPerDay);
+  const duration = Math.round((eventEnd - eventStart) / msPerDay);
   
   return {
     left: daysFromStart * pixelsPerDay,
