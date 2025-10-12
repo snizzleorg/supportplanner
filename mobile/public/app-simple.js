@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760268400 loaded');
+console.log('📱 Mobile Timeline v1760268600 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -157,25 +157,25 @@ function render() {
   // Build HTML - Main container
   let html = '<div style="position: relative; display: flex; flex-direction: column; min-width: ' + totalWidth + 'px;">';
   
-  // === HEADER SECTION ===
-  // Header row with months - using flex with label spacer
-  html += '<div style="display: flex; height: 40px; border-bottom: 1px solid #ddd;">';
+  // === HEADER SECTION (STICKY) ===
+  // Header row with months - sticky at top
+  html += '<div style="position: sticky; top: 0; z-index: 100; display: flex; height: 40px; border-bottom: 1px solid #ddd; background: #fff;">';
   html += '<div style="width: 100px; flex-shrink: 0; border-right: 2px solid #ccc; background: #fff;"></div>'; // Label spacer
-  html += '<div style="display: flex; flex: 1; min-width: ' + totalWidth + 'px;">';
+  html += '<div style="display: flex; flex: 1; min-width: ' + totalWidth + 'px; background: #fff;">';
   html += renderMonthHeaders(pixelsPerDay);
   html += '</div>';
   html += '</div>';
   
-  // Week numbers row - using flex with label spacer
-  html += '<div style="display: flex; height: 20px; border-bottom: 1px solid #ddd; background: #f9f9f9;">';
+  // Week numbers row - sticky below months
+  html += '<div style="position: sticky; top: 40px; z-index: 100; display: flex; height: 20px; border-bottom: 1px solid #ddd; background: #f9f9f9;">';
   html += '<div style="width: 100px; flex-shrink: 0; border-right: 2px solid #ccc; background: #f9f9f9;"></div>'; // Label spacer
   html += '<div style="position: relative; flex: 1; min-width: ' + totalWidth + 'px; background: #f9f9f9;">';
   html += renderWeekNumbers(pixelsPerDay);
   html += '</div>';
   html += '</div>';
   
-  // Day numbers row - using flex with label spacer
-  html += '<div style="display: flex; height: 25px; border-bottom: 2px solid #ccc; background: #fafafa;">';
+  // Day numbers row - sticky below week numbers
+  html += '<div style="position: sticky; top: 60px; z-index: 100; display: flex; height: 25px; border-bottom: 2px solid #ccc; background: #fafafa;">';
   html += '<div style="width: 100px; flex-shrink: 0; border-right: 2px solid #ccc; background: #fafafa;"></div>'; // Label spacer
   html += '<div style="position: relative; flex: 1; min-width: ' + totalWidth + 'px; background: #fafafa;">';
   html += renderDayNumbers(pixelsPerDay);
@@ -184,7 +184,8 @@ function render() {
   
   // === CALENDAR LANES SECTION ===
   // Container for calendar lanes with background overlays
-  html += '<div style="position: relative; display: flex; flex-direction: column;">';
+  // Padding-top to prevent overlap with sticky headers (40 + 20 + 25 = 85px)
+  html += '<div style="position: relative; display: flex; flex-direction: column; padding-top: 85px; margin-top: -85px;">';
   
   // Month vertical lines - absolute positioned, offset to align with timeline content
   html += '<div style="position: absolute; top: 0; bottom: 0; left: 0; pointer-events: none; z-index: 1; margin-left: 100px;">';
