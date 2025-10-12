@@ -451,20 +451,25 @@ function calculateEventPosition(event) {
   
   const rangeStart = state.dateRange.from.getTime();
   const rangeEnd = state.dateRange.to.getTime();
-  const totalDuration = rangeEnd - rangeStart;
   
   const eventStart = startDate.getTime();
   const eventEnd = endDate.getTime();
   
+  // Calculate which month column the event starts in
   const widths = { week: 600, month: 300, quarter: 150 };
   const monthWidth = widths[state.zoomLevel];
   
-  const totalMonths = (state.dateRange.to.getFullYear() - state.dateRange.from.getFullYear()) * 12 
-    + (state.dateRange.to.getMonth() - state.dateRange.from.getMonth());
-  const totalWidth = totalMonths * monthWidth;
+  // Calculate position based on days from range start
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const daysFromStart = (eventStart - rangeStart) / msPerDay;
+  const eventDuration = (eventEnd - eventStart) / msPerDay;
   
-  const left = ((eventStart - rangeStart) / totalDuration) * totalWidth;
-  const width = Math.max(((eventEnd - eventStart) / totalDuration) * totalWidth, 30);
+  // Approximate days per month
+  const daysPerMonth = 30.44; // Average
+  const pixelsPerDay = monthWidth / daysPerMonth;
+  
+  const left = daysFromStart * pixelsPerDay;
+  const width = Math.max(eventDuration * pixelsPerDay, 30);
   
   return { left, width };
 }
@@ -479,11 +484,13 @@ function positionTodayMarker() {
     const widths = { week: 600, month: 300, quarter: 150 };
     const monthWidth = widths[state.zoomLevel];
     
-    const totalMonths = (state.dateRange.to.getFullYear() - state.dateRange.from.getFullYear()) * 12 
-      + (state.dateRange.to.getMonth() - state.dateRange.from.getMonth());
-    const totalWidth = totalMonths * monthWidth;
+    // Calculate position based on days from range start
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const daysFromStart = (today.getTime() - rangeStart) / msPerDay;
+    const daysPerMonth = 30.44;
+    const pixelsPerDay = monthWidth / daysPerMonth;
     
-    const left = ((today.getTime() - rangeStart) / (rangeEnd - rangeStart)) * totalWidth + 100;
+    const left = daysFromStart * pixelsPerDay + 100; // +100 for lane header width
     
     elements.todayMarker.style.left = `${left}px`;
     elements.todayMarker.style.display = 'block';
