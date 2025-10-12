@@ -134,7 +134,7 @@ function render() {
   let html = '<div style="position: relative; display: flex; flex-direction: column; min-width: ' + totalWidth + 'px;">';
   
   // Weekend and holiday backgrounds
-  html += '<div style="position: absolute; top: 40px; bottom: 0; left: 100px; pointer-events: none;">';
+  html += '<div style="position: absolute; top: 65px; bottom: 0; left: 100px; pointer-events: none;">';
   html += renderWeekendAndHolidayBackgrounds(pixelsPerDay);
   html += '</div>';
   
@@ -144,8 +144,13 @@ function render() {
   html += '</div>';
   
   // Header row with months
-  html += '<div style="display: flex; height: 40px; border-bottom: 2px solid #ccc; margin-left: 100px;">';
+  html += '<div style="display: flex; height: 40px; border-bottom: 1px solid #ddd; margin-left: 100px;">';
   html += renderMonthHeaders(pixelsPerDay);
+  html += '</div>';
+  
+  // Day numbers row
+  html += '<div style="display: flex; height: 25px; border-bottom: 2px solid #ccc; margin-left: 100px; background: #fafafa;">';
+  html += renderDayNumbers(pixelsPerDay);
   html += '</div>';
   
   // Calendar lanes
@@ -231,6 +236,26 @@ function renderMonthHeaders(pixelsPerDay) {
     html += `<div style="width: ${width}px; padding: 8px; font-size: 11px; font-weight: 600; text-align: center; background: #f5f5f5;">${monthName}</div>`;
     
     current.setMonth(current.getMonth() + 1);
+  }
+  
+  return html;
+}
+
+// Render day numbers
+function renderDayNumbers(pixelsPerDay) {
+  let html = '';
+  let current = new Date(state.dateRange.from);
+  
+  while (current < state.dateRange.to) {
+    const dayNum = current.getDate();
+    const dayOfWeek = current.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const color = isWeekend ? '#999' : '#666';
+    const fontWeight = dayNum === 1 ? '600' : '400';
+    
+    html += `<div style="width: ${pixelsPerDay}px; font-size: 9px; color: ${color}; text-align: center; padding-top: 4px; font-weight: ${fontWeight};">${dayNum}</div>`;
+    
+    current.setDate(current.getDate() + 1);
   }
   
   return html;
