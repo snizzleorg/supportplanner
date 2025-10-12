@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760271100 loaded');
+console.log('📱 Mobile Timeline v1760271700 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -434,10 +434,9 @@ function showEventModal(event) {
       console.log('DELETE response status:', response.status);
       
       if (response.ok) {
-        // Remove from local state
-        state.events = state.events.filter(e => e.id !== event.id);
-        
         modal.classList.remove('active');
+        // Reload data from backend to refresh cache
+        await loadData();
         render();
       } else {
         const errorText = await response.text();
