@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760266300 loaded');
+console.log('📱 Mobile Timeline v1760266400 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -165,8 +165,10 @@ function render() {
   state.calendars.forEach(calendar => {
     html += '<div style="display: flex; height: 80px; border-bottom: 1px solid #eee;">';
     
-    // Lane label
-    html += `<div style="width: 100px; padding: 8px; font-size: 12px; font-weight: 600; border-right: 2px solid #ccc; flex-shrink: 0; background: white; z-index: 10; position: relative;">${calendar.content || calendar.displayName}</div>`;
+    // Lane label with calendar color
+    const bgColor = calendar.bg || '#f5f5f5';
+    const textColor = getContrastColor(bgColor);
+    html += `<div style="width: 100px; padding: 8px; font-size: 12px; font-weight: 600; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; z-index: 10; position: relative;">${calendar.content || calendar.displayName}</div>`;
     
     // Lane content
     html += '<div style="position: relative; flex: 1;">';
@@ -331,11 +333,12 @@ function renderDayNumbers(pixelsPerDay) {
 // Render events for a calendar
 function renderEventsForCalendar(calendarId, pixelsPerDay) {
   const events = state.events.filter(e => e.group === calendarId);
+  const calendar = state.calendars.find(c => c.id === calendarId);
   let html = '';
   
   events.forEach(event => {
     const pos = calculateEventPosition(event, pixelsPerDay);
-    const color = getEventColor(event);
+    const color = getEventColor(event, calendar);
     
     html += `<div style="position: absolute; left: ${pos.left}px; width: ${pos.width}px; top: 10px; height: 30px; background: ${color}; color: white; border-radius: 4px; padding: 4px 8px; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">${event.content}</div>`;
   });
@@ -375,20 +378,50 @@ function calculateEventPosition(event, pixelsPerDay) {
   };
 }
 
-// Get event color
-function getEventColor(event) {
-  const match = event.className?.match(/event-type-(\w+)/);
-  const type = match ? match[1] : 'default';
+// Get contrast color (white or black) based on background
+function getContrastColor(hexColor) {
+  // Convert hex to RGB
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
   
-  const colors = {
+  // Calculate luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  
+  // Return black for light backgrounds, white for dark
+  return luminance > 0.5 ? '#000000' : '#ffffff';
+}
+
+// Get event color
+function getEventColor(event, calendar) {
+  // First check if event has its own color
+  if (event.color) {
+    return event.color;
+  }
+  
+  // Then check event type from className
+  const match = event.className?.match(/event-type-(\w+)/);
+  const type = match ? match[1] : null;
+  
+  const typeColors = {
     installation: '#34c759',
     training: '#ff9500',
     maintenance: '#5856d6',
-    vacation: '#ff3b30',
-    default: '#007aff'
+    vacation: '#ff3b30'
   };
   
-  return colors[type] || colors.default;
+  if (type && typeColors[type]) {
+    return typeColors[type];
+  }
+  
+  // Finally use calendar color
+  if (calendar?.bg) {
+    return calendar.bg;
+  }
+  
+  // Default fallback
+  return '#007aff';
 }
 
 // Start
