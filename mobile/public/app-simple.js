@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760269000 loaded');
+console.log('📱 Mobile Timeline v1760269100 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -390,7 +390,7 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
     const pos = calculateEventPosition(event, pixelsPerDay);
     const color = getEventColor(event, calendar);
     
-    html += `<div style="position: absolute; left: ${pos.left}px; width: ${pos.width}px; top: 5px; height: 40px; background: ${color}; color: white; border-radius: 3px; padding: 3px 6px; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.2); display: flex; align-items: center;">${event.content}</div>`;
+    html += `<div style="position: absolute; left: ${pos.left}px; width: ${pos.width}px; top: 5px; height: 40px; background: ${color}; color: white; border-radius: 3px; padding: 3px 6px; font-size: 10px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; box-shadow: 0 1px 2px rgba(0,0,0,0.2);">${event.content}</div>`;
   });
   
   return html;
