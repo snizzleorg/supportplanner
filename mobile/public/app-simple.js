@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760268300 loaded');
+console.log('📱 Mobile Timeline v1760268400 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -169,7 +169,7 @@ function render() {
   // Week numbers row - using flex with label spacer
   html += '<div style="display: flex; height: 20px; border-bottom: 1px solid #ddd; background: #f9f9f9;">';
   html += '<div style="width: 100px; flex-shrink: 0; border-right: 2px solid #ccc; background: #f9f9f9;"></div>'; // Label spacer
-  html += '<div style="position: relative; overflow: hidden; flex: 1; min-width: ' + totalWidth + 'px;">';
+  html += '<div style="position: relative; flex: 1; min-width: ' + totalWidth + 'px; background: #f9f9f9;">';
   html += renderWeekNumbers(pixelsPerDay);
   html += '</div>';
   html += '</div>';
@@ -177,7 +177,7 @@ function render() {
   // Day numbers row - using flex with label spacer
   html += '<div style="display: flex; height: 25px; border-bottom: 2px solid #ccc; background: #fafafa;">';
   html += '<div style="width: 100px; flex-shrink: 0; border-right: 2px solid #ccc; background: #fafafa;"></div>'; // Label spacer
-  html += '<div style="position: relative; overflow: hidden; flex: 1; min-width: ' + totalWidth + 'px;">';
+  html += '<div style="position: relative; flex: 1; min-width: ' + totalWidth + 'px; background: #fafafa;">';
   html += renderDayNumbers(pixelsPerDay);
   html += '</div>';
   html += '</div>';
