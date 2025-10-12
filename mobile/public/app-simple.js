@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760272900 loaded');
+console.log('📱 Mobile Timeline v1760273100 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -465,7 +465,13 @@ function showCreateEventModal(calendar, clickedDate) {
         systemType: systemType || ''
       };
       
-      console.log('Creating event...');
+      console.log('Creating event...', {
+        calendarUrl,
+        title,
+        start,
+        end
+      });
+      
       const response = await fetch(`${API_BASE}/api/events/all-day`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -484,19 +490,27 @@ function showCreateEventModal(calendar, clickedDate) {
         })
       });
       
-      console.log('Create response:', response.status);
+      console.log('Create response status:', response.status);
+      console.log('Create response ok:', response.ok);
       
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Failed to create event:', response.status, errorText);
-        alert(`Failed to create event: ${response.status}`);
+        alert(`Failed to create event: ${response.status} - ${errorText.substring(0, 200)}`);
         return;
       }
       
-      // Success - close modal and reload page
-      // Simplest and most reliable way to refresh data
+      const responseData = await response.json();
+      console.log('Create response data:', responseData);
+      
+      // Success - close modal
       modal.classList.remove('active');
-      console.log('Event created successfully, reloading page...');
+      console.log('Event created successfully, waiting before reload...');
+      
+      // Wait 2 seconds for backend to finish saving to CalDAV
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      console.log('Calling window.location.reload()');
       window.location.reload();
       
     } catch (error) {
