@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760270700 loaded');
+console.log('📱 Mobile Timeline v1760271100 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -120,7 +120,14 @@ async function loadData() {
     if (!evtRes.ok) throw new Error(`Events fetch failed: ${evtRes.status}`);
     
     const evtData = await evtRes.json();
-    state.events = evtData.items || [];
+    // Process events to extract UID from the id field
+    state.events = (evtData.items || []).map(event => ({
+      ...event,
+      // Extract UID: if id is a URL, get last segment and remove leading hyphen
+      uid: event.id.includes('/') 
+        ? event.id.split('/').pop().replace(/^-/, '') 
+        : event.id.split('-').slice(1).join('-')
+    }));
     
     // Use groups for calendar display names
     if (evtData.groups) {
@@ -399,14 +406,32 @@ function showEventModal(event) {
       return;
     }
     
-    // Use event.uid if available, otherwise extract from id
-    const eventUid = event.uid || event.id.split('/').pop();
+    // Use event.uid if available, otherwise extract from id and remove leading hyphen
+    const eventUid = event.uid || event.id.split('/').pop().replace(/^-/, '');
     console.log('Deleting event with UID:', eventUid, 'Original event.id:', event.id, 'event.uid:', event.uid);
     
     try {
+      // First fetch the full event (like desktop does) to ensure backend can find it
+      console.log('Step 1: Fetching event with GET...');
+      const getResponse = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventUid)}`);
+      console.log('GET response status:', getResponse.status);
+      
+      if (!getResponse.ok) {
+        const errorText = await getResponse.text();
+        console.error('Failed to fetch event before delete:', getResponse.status, errorText);
+        alert(`Cannot find event: ${getResponse.status}`);
+        return;
+      }
+      
+      const eventData = await getResponse.json();
+      console.log('Step 2: GET succeeded, fetched event:', eventData);
+      
+      // Now delete it
+      console.log('Step 3: Attempting DELETE...');
       const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventUid)}`, {
         method: 'DELETE'
       });
+      console.log('DELETE response status:', response.status);
       
       if (response.ok) {
         // Remove from local state
@@ -451,8 +476,8 @@ function showEventModal(event) {
       systemType: systemType || ''
     };
     
-    // Use event.uid if available, otherwise extract from id
-    const eventUid = event.uid || event.id.split('/').pop();
+    // Use event.uid if available, otherwise extract from id and remove leading hyphen
+    const eventUid = event.uid || event.id.split('/').pop().replace(/^-/, '');
     console.log('Updating event with UID:', eventUid, 'Original event.id:', event.id, 'event.uid:', event.uid);
     
     try {
