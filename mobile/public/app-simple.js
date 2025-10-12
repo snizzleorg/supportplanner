@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760265400 loaded');
+console.log('📱 Mobile Timeline v1760265500 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -181,13 +181,19 @@ function renderWeekendAndHolidayBackgrounds(pixelsPerDay) {
   let html = '';
   const holidayDates = new Set(state.holidays.map(h => h.date));
   
-  // Iterate through each day in the range
+  // Iterate through each day in the range using local dates
   let current = new Date(state.dateRange.from);
+  current.setHours(0, 0, 0, 0); // Normalize to local midnight
   let dayIndex = 0;
   
   while (current < state.dateRange.to) {
     const dayOfWeek = current.getDay(); // 0 = Sunday, 6 = Saturday
-    const dateStr = current.toISOString().split('T')[0];
+    // Format as YYYY-MM-DD in local timezone
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, '0');
+    const day = String(current.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const isHoliday = holidayDates.has(dateStr);
     
