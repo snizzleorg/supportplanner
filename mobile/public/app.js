@@ -216,13 +216,27 @@ async function loadData() {
     state.events = eventsData.items || [];
     state.filteredEvents = state.events;
     
-    // Update calendars with the groups from the API (these have the actual calendar names)
+    // Merge groups from API with original calendars
+    // Groups only include calendars with events, but we want to show all calendars
     if (eventsData.groups && eventsData.groups.length > 0) {
-      state.calendars = eventsData.groups;
+      // Create a map of group IDs to group data
+      const groupMap = new Map(eventsData.groups.map(g => [g.id, g]));
+      
+      // Update calendars: use group data if available, otherwise create from calendar list
+      state.calendars = state.calendars.map((cal, index) => {
+        const groupId = `cal-${index + 1}`;
+        const group = groupMap.get(groupId);
+        return group || {
+          id: groupId,
+          content: cal.displayName || cal.content,
+          title: cal.displayName || cal.content,
+          url: cal.url
+        };
+      });
     }
     
     console.log('Loaded events:', state.events.length);
-    console.log('Loaded groups:', state.calendars.length);
+    console.log('Loaded calendars:', state.calendars.length);
     
     renderFilters();
     renderLegend();
