@@ -26,6 +26,10 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
       'http://mobile-planner:5174', // Mobile app Docker hostname
     ];
 
+// Also allow any origin from the same hostname on different ports (for mobile testing)
+// This allows http://m4.local:5174, http://192.168.x.x:5174, etc.
+const allowOriginPattern = /^https?:\/\/[^:]+:(5173|5174|5175)$/;
+
 /**
  * CORS middleware configured with origin validation
  * 
@@ -39,11 +43,18 @@ export const corsMiddleware = cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (e.g., mobile apps, Postman)
     if (!origin) return callback(null, true);
+    
+    // Check exact match in allowed origins
     if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+      return callback(null, true);
     }
+    
+    // Check pattern match for development (any hostname on ports 5173-5175)
+    if (allowOriginPattern.test(origin)) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true
 });
