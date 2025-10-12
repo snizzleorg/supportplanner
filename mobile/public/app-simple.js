@@ -1,6 +1,9 @@
 /**
  * Simple Mobile Timeline - Clean Implementation
+ * Version: 1760265400
  */
+
+console.log('📱 Mobile Timeline v1760265400 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
