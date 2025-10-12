@@ -156,30 +156,65 @@ async function loadData() {
   try {
     elements.loadingState.style.display = 'block';
     
+    console.log('Loading data from:', API_BASE);
+    
     // Fetch calendars
-    const calendarsRes = await fetch(`${API_BASE}/api/calendars`);
-    if (calendarsRes.ok) {
-      const data = await calendarsRes.json();
-      state.calendars = data.calendars || [];
+    const calendarsUrl = `${API_BASE}/api/calendars`;
+    console.log('Fetching calendars from:', calendarsUrl);
+    const calendarsRes = await fetch(calendarsUrl);
+    console.log('Calendars response:', calendarsRes.status, calendarsRes.statusText);
+    
+    if (!calendarsRes.ok) {
+      throw new Error(`Failed to fetch calendars: ${calendarsRes.status} ${calendarsRes.statusText}`);
     }
+    
+    const calendarsData = await calendarsRes.json();
+    state.calendars = calendarsData.calendars || [];
+    console.log('Loaded calendars:', state.calendars.length);
     
     // Fetch events
     const fromStr = state.dateRange.from.toISOString().split('T')[0];
     const toStr = state.dateRange.to.toISOString().split('T')[0];
     
-    const eventsRes = await fetch(`${API_BASE}/api/events?from=${fromStr}&to=${toStr}`);
-    if (eventsRes.ok) {
-      const data = await eventsRes.json();
-      state.events = data.events || [];
-      state.filteredEvents = state.events;
+    // Get all calendar URLs
+    const calendarUrls = state.calendars.map(cal => cal.url);
+    console.log('Calendar URLs:', calendarUrls);
+    
+    if (calendarUrls.length === 0) {
+      console.warn('No calendars available, skipping events fetch');
+      state.events = [];
+      state.filteredEvents = [];
+      renderFilters();
+      renderLegend();
+      return;
     }
+    
+    const eventsUrl = `${API_BASE}/api/events`;
+    console.log('Fetching events from:', eventsUrl);
+    const eventsRes = await fetch(eventsUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ calendarUrls, from: fromStr, to: toStr })
+    });
+    console.log('Events response:', eventsRes.status, eventsRes.statusText);
+    
+    if (!eventsRes.ok) {
+      const errorText = await eventsRes.text();
+      throw new Error(`Failed to fetch events: ${eventsRes.status} ${eventsRes.statusText} - ${errorText}`);
+    }
+    
+    const eventsData = await eventsRes.json();
+    // The API returns { groups, items } where items are the events
+    state.events = eventsData.items || [];
+    state.filteredEvents = state.events;
+    console.log('Loaded events:', state.events.length);
     
     renderFilters();
     renderLegend();
     
   } catch (error) {
     console.error('Error loading data:', error);
-    showStatus('Error loading data');
+    showStatus(`Error: ${error.message}`);
   } finally {
     elements.loadingState.style.display = 'none';
   }
@@ -187,8 +222,11 @@ async function loadData() {
 
 // Render filters
 function renderFilters() {
-  // Event types
-  const eventTypes = [...new Set(state.events.map(e => e.eventType || 'default'))];
+  // Event types - extract from className (format: event-type-{type})
+  const eventTypes = [...new Set(state.events.map(e => {
+    const match = e.className?.match(/event-type-(\w+)/);
+    return match ? match[1] : 'default';
+  }))];
   const eventTypeFilters = document.getElementById('eventTypeFilters');
   eventTypeFilters.innerHTML = eventTypes.map(type => `
     <div class="filter-chip" data-type="${type}">
@@ -214,8 +252,8 @@ function renderFilters() {
   const calendarFilters = document.getElementById('calendarFilters');
   calendarFilters.innerHTML = state.calendars.map(cal => `
     <label class="filter-item">
-      <input type="checkbox" data-calendar="${cal.displayName}" />
-      <span>${cal.displayName}</span>
+      <input type="checkbox" data-calendar="${cal.content || cal.displayName}" />
+      <span>${cal.content || cal.displayName}</span>
     </label>
   `).join('');
   
@@ -237,7 +275,8 @@ function applyFilters() {
   state.filteredEvents = state.events.filter(event => {
     // Event type filter
     if (state.activeFilters.eventTypes.size > 0) {
-      const eventType = event.eventType || 'default';
+      const match = event.className?.match(/event-type-(\w+)/);
+      const eventType = match ? match[1] : 'default';
       if (!state.activeFilters.eventTypes.has(eventType)) {
         return false;
       }
@@ -245,7 +284,9 @@ function applyFilters() {
     
     // Calendar filter
     if (state.activeFilters.calendars.size > 0) {
-      if (!state.activeFilters.calendars.has(event.calendar)) {
+      const calendar = state.calendars.find(cal => cal.id === event.group);
+      const calendarName = calendar?.content || calendar?.displayName;
+      if (!state.activeFilters.calendars.has(calendarName)) {
         return false;
       }
     }
@@ -265,9 +306,9 @@ function handleSearch(e) {
   } else {
     state.filteredEvents = state.events.filter(event => {
       return (
+        event.content?.toLowerCase().includes(query) ||
         event.title?.toLowerCase().includes(query) ||
         event.location?.toLowerCase().includes(query) ||
-        event.calendar?.toLowerCase().includes(query) ||
         event.description?.toLowerCase().includes(query)
       );
     });
@@ -322,14 +363,16 @@ function renderTimeGrid() {
 
 // Render calendar lanes
 function renderCalendarLanes() {
-  // Group events by calendar
+  // Group events by calendar (using group ID)
   const eventsByCalendar = {};
   state.filteredEvents.forEach(event => {
-    const calendar = event.calendar || 'Unknown';
-    if (!eventsByCalendar[calendar]) {
-      eventsByCalendar[calendar] = [];
+    const groupId = event.group;
+    const calendar = state.calendars.find(cal => cal.id === groupId);
+    const calendarName = calendar?.content || calendar?.displayName || 'Unknown';
+    if (!eventsByCalendar[calendarName]) {
+      eventsByCalendar[calendarName] = [];
     }
-    eventsByCalendar[calendar].push(event);
+    eventsByCalendar[calendarName].push(event);
   });
   
   // Render lanes
@@ -360,14 +403,15 @@ function renderCalendarLanes() {
 function renderEventsForLane(events) {
   return events.map(event => {
     const { left, width } = calculateEventPosition(event);
-    const eventType = event.eventType || 'default';
+    const match = event.className?.match(/event-type-(\w+)/);
+    const eventType = match ? match[1] : 'default';
     const top = Math.random() * 40; // Simple vertical positioning (can be improved)
     
     return `
       <div class="event-bar type-${eventType}" 
            style="left: ${left}px; width: ${width}px; top: ${top}px;"
            data-event-id="${event.id}">
-        ${event.title}
+        ${event.content || event.title}
       </div>
     `;
   }).join('');
@@ -435,7 +479,7 @@ function scrollToToday() {
 
 // Show event modal
 function showEventModal(event) {
-  elements.modalTitle.textContent = event.title;
+  elements.modalTitle.textContent = event.content || event.title;
   
   const startDate = new Date(event.start).toLocaleDateString('en-US', { 
     weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' 
@@ -444,10 +488,13 @@ function showEventModal(event) {
     weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' 
   });
   
+  const calendar = state.calendars.find(cal => cal.id === event.group);
+  const calendarName = calendar?.content || calendar?.displayName || 'Unknown';
+  
   elements.modalBody.innerHTML = `
     <div class="event-detail-row">
       <div class="event-detail-label">Calendar</div>
-      <div class="event-detail-value">${event.calendar || 'Unknown'}</div>
+      <div class="event-detail-value">${calendarName}</div>
     </div>
     <div class="event-detail-row">
       <div class="event-detail-label">Start Date</div>
@@ -502,7 +549,10 @@ function showStatus(message) {
 
 // Render legend
 function renderLegend() {
-  const eventTypes = [...new Set(state.events.map(e => e.eventType || 'default'))];
+  const eventTypes = [...new Set(state.events.map(e => {
+    const match = e.className?.match(/event-type-(\w+)/);
+    return match ? match[1] : 'default';
+  }))];
   const colors = {
     installation: 'var(--success-color)',
     training: 'var(--warning-color)',
