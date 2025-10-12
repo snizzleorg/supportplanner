@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760266500 loaded');
+console.log('📱 Mobile Timeline v1760266600 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -413,14 +413,18 @@ function getEventColor(event, calendar) {
   }
   
   // Then check event type from className
-  const match = event.className?.match(/event-type-(\w+)/);
-  const type = match ? match[1] : null;
+  const match = event.className?.match(/event-type-(\w+)/i);
+  const type = match ? match[1].toLowerCase() : null;
   
   const typeColors = {
-    installation: '#34c759',
-    training: '#ff9500',
-    maintenance: '#5856d6',
-    vacation: '#ff3b30'
+    install: '#34c759',        // Green - installations
+    installation: '#34c759',   // Green - installations
+    training: '#ff9500',       // Orange - training
+    maintenance: '#5856d6',    // Purple - maintenance
+    vacation: '#ff3b30',       // Red - vacation
+    sick: '#ff3b30',           // Red - sick leave
+    support: '#007aff',        // Blue - support
+    default: null              // Use calendar color for default
   };
   
   if (type && typeColors[type]) {
