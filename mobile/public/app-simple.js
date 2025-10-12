@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760269100 loaded');
+console.log('📱 Mobile Timeline v1760269300 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -386,11 +386,62 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
   const calendar = state.calendars.find(c => c.id === calendarId);
   let html = '';
   
-  events.forEach(event => {
-    const pos = calculateEventPosition(event, pixelsPerDay);
-    const color = getEventColor(event, calendar);
+  // Calculate positions
+  const eventData = events.map(event => ({
+    event,
+    pos: calculateEventPosition(event, pixelsPerDay),
+    color: getEventColor(event, calendar),
+    lane: 0,
+    maxLanesInGroup: 1
+  }));
+  
+  // Sort by start position
+  eventData.sort((a, b) => a.pos.left - b.pos.left);
+  
+  // Assign lanes to avoid overlaps
+  eventData.forEach((current, i) => {
+    const currentEnd = current.pos.left + current.pos.width;
     
-    html += `<div style="position: absolute; left: ${pos.left}px; width: ${pos.width}px; top: 5px; height: 40px; background: ${color}; color: white; border-radius: 3px; padding: 3px 6px; font-size: 10px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; box-shadow: 0 1px 2px rgba(0,0,0,0.2);">${event.content}</div>`;
+    // Find occupied lanes by checking overlapping events
+    const occupiedLanes = new Set();
+    const overlappingEvents = [];
+    
+    for (let j = 0; j < i; j++) {
+      const prev = eventData[j];
+      const prevEnd = prev.pos.left + prev.pos.width;
+      
+      // Check if events overlap
+      if (current.pos.left < prevEnd && currentEnd > prev.pos.left) {
+        occupiedLanes.add(prev.lane);
+        overlappingEvents.push(prev);
+      }
+    }
+    
+    // Find first available lane
+    let lane = 0;
+    while (occupiedLanes.has(lane)) {
+      lane++;
+    }
+    current.lane = lane;
+    
+    // Calculate max lanes for this overlapping group
+    const maxLanesInGroup = Math.max(lane + 1, ...overlappingEvents.map(e => e.maxLanesInGroup));
+    current.maxLanesInGroup = maxLanesInGroup;
+    
+    // Update all overlapping events with the new max
+    overlappingEvents.forEach(e => {
+      e.maxLanesInGroup = maxLanesInGroup;
+    });
+  });
+  
+  // Render events with individual heights based on their overlap group
+  eventData.forEach(({ event, pos, color, lane, maxLanesInGroup }) => {
+    const eventHeight = maxLanesInGroup > 1 ? Math.floor(40 / maxLanesInGroup) : 40;
+    const top = 5 + (lane * eventHeight);
+    const fontSize = eventHeight < 25 ? 9 : 10;
+    const lineClamp = eventHeight < 25 ? 1 : 2;
+    
+    html += `<div style="position: absolute; left: ${pos.left}px; width: ${pos.width}px; top: ${top}px; height: ${eventHeight}px; background: ${color}; color: white; border-radius: 3px; padding: 2px 4px; font-size: ${fontSize}px; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: ${lineClamp}; -webkit-box-orient: vertical; box-shadow: 0 1px 2px rgba(0,0,0,0.2);">${event.content}</div>`;
   });
   
   return html;
