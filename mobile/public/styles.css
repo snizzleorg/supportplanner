@@ -30,41 +30,15 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* App Bar */
+/* App Bar - Minimal */
 .app-bar {
     position: sticky;
     top: 0;
     background: #fff;
     border-bottom: 1px solid var(--border-color);
-    padding: max(4px, var(--safe-area-top)) 8px 4px;
+    padding: max(4px, var(--safe-area-top)) 12px 4px;
     z-index: 100;
-    box-shadow: var(--shadow-sm);
-}
-
-.app-bar-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
-}
-
-.app-bar h1 {
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.app-bar-actions {
-    display: flex;
-    gap: 4px;
-}
-
-.date-range-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 2px 0;
-    font-size: 12px;
-    color: #666;
+    text-align: center;
 }
 
 .icon-btn {
@@ -211,7 +185,7 @@ body {
 /* Timeline Container */
 .timeline-wrapper {
     position: relative;
-    height: calc(100vh - 110px);
+    height: calc(100vh - 70px);
     overflow: hidden;
 }
 
@@ -546,8 +520,9 @@ body {
     border-top: 1px solid var(--border-color);
     padding: 4px 8px max(4px, var(--safe-area-bottom));
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
+    gap: 8px;
     z-index: 100;
     box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
 }
