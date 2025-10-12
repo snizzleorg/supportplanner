@@ -161,11 +161,19 @@ async function loadData() {
     // Fetch calendars
     const calendarsUrl = `${API_BASE}/api/calendars`;
     console.log('Fetching calendars from:', calendarsUrl);
-    const calendarsRes = await fetch(calendarsUrl);
+    
+    let calendarsRes;
+    try {
+      calendarsRes = await fetch(calendarsUrl);
+    } catch (fetchError) {
+      throw new Error(`Network error fetching calendars: ${fetchError.message}. Check if ${API_BASE} is reachable from your device.`);
+    }
+    
     console.log('Calendars response:', calendarsRes.status, calendarsRes.statusText);
     
     if (!calendarsRes.ok) {
-      throw new Error(`Failed to fetch calendars: ${calendarsRes.status} ${calendarsRes.statusText}`);
+      const errorText = await calendarsRes.text();
+      throw new Error(`Failed to fetch calendars: ${calendarsRes.status} ${calendarsRes.statusText} - ${errorText}`);
     }
     
     const calendarsData = await calendarsRes.json();
