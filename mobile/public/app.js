@@ -449,26 +449,28 @@ function calculateEventPosition(event) {
   const startDate = new Date(event.start);
   const endDate = new Date(event.end);
   
-  const rangeStart = state.dateRange.from.getTime();
-  const rangeEnd = state.dateRange.to.getTime();
+  // Get the actual grid start (1st of the first month in range)
+  const gridStart = new Date(state.dateRange.from);
+  gridStart.setDate(1);
   
   const eventStart = startDate.getTime();
   const eventEnd = endDate.getTime();
+  const gridStartTime = gridStart.getTime();
   
   // Calculate which month column the event starts in
   const widths = { week: 600, month: 300, quarter: 150 };
   const monthWidth = widths[state.zoomLevel];
   
-  // Calculate position based on days from range start
+  // Calculate position based on days from grid start
   const msPerDay = 24 * 60 * 60 * 1000;
-  const daysFromStart = (eventStart - rangeStart) / msPerDay;
+  const daysFromGridStart = (eventStart - gridStartTime) / msPerDay;
   const eventDuration = (eventEnd - eventStart) / msPerDay;
   
   // Approximate days per month
   const daysPerMonth = 30.44; // Average
   const pixelsPerDay = monthWidth / daysPerMonth;
   
-  const left = daysFromStart * pixelsPerDay;
+  const left = daysFromGridStart * pixelsPerDay;
   const width = Math.max(eventDuration * pixelsPerDay, 30);
   
   return { left, width };
@@ -477,20 +479,25 @@ function calculateEventPosition(event) {
 // Position today marker
 function positionTodayMarker() {
   const today = new Date();
-  const rangeStart = state.dateRange.from.getTime();
+  
+  // Get the actual grid start (1st of the first month in range)
+  const gridStart = new Date(state.dateRange.from);
+  gridStart.setDate(1);
+  const gridStartTime = gridStart.getTime();
+  
   const rangeEnd = state.dateRange.to.getTime();
   
-  if (today >= state.dateRange.from && today <= state.dateRange.to) {
+  if (today >= gridStart && today.getTime() <= rangeEnd) {
     const widths = { week: 600, month: 300, quarter: 150 };
     const monthWidth = widths[state.zoomLevel];
     
-    // Calculate position based on days from range start
+    // Calculate position based on days from grid start
     const msPerDay = 24 * 60 * 60 * 1000;
-    const daysFromStart = (today.getTime() - rangeStart) / msPerDay;
+    const daysFromGridStart = (today.getTime() - gridStartTime) / msPerDay;
     const daysPerMonth = 30.44;
     const pixelsPerDay = monthWidth / daysPerMonth;
     
-    const left = daysFromStart * pixelsPerDay + 100; // +100 for lane header width
+    const left = daysFromGridStart * pixelsPerDay + 100; // +100 for lane header width
     
     elements.todayMarker.style.left = `${left}px`;
     elements.todayMarker.style.display = 'block';
@@ -623,7 +630,13 @@ function getWeeksInMonth(month) {
   const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
   const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
   
+  // Start from the Monday of the week containing the 1st
   let current = new Date(firstDay);
+  const dayOfWeek = current.getDay();
+  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 0=Sunday, 1=Monday
+  current.setDate(current.getDate() - daysToMonday);
+  
+  // Generate weeks until we pass the last day of the month
   while (current <= lastDay) {
     weeks.push(new Date(current));
     current.setDate(current.getDate() + 7);
