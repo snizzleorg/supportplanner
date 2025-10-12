@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760272800 loaded');
+console.log('📱 Mobile Timeline v1760272900 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -493,54 +493,11 @@ function showCreateEventModal(calendar, clickedDate) {
         return;
       }
       
-      // Success - close modal and refresh
+      // Success - close modal and reload page
+      // Simplest and most reliable way to refresh data
       modal.classList.remove('active');
-      
-      // Show loading overlay
-      const loadingOverlay = document.getElementById('loadingOverlay');
-      if (loadingOverlay) loadingOverlay.classList.remove('hidden');
-      
-      // Use a timeout to ensure we don't hang forever
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Refresh timeout')), 10000)
-      );
-      
-      try {
-        console.log('Refreshing CalDAV cache after create...');
-        const refreshResponse = await Promise.race([
-          fetch(`${API_BASE}/api/refresh-caldav`, { 
-            method: 'POST',
-            credentials: 'include'
-          }),
-          timeoutPromise
-        ]);
-        console.log('Refresh response:', refreshResponse.status);
-        if (!refreshResponse.ok) {
-          const errorText = await refreshResponse.text();
-          console.error('Refresh failed:', refreshResponse.status, errorText);
-        }
-      } catch (e) {
-        console.error('Cache refresh error:', e.message);
-      }
-      
-      try {
-        console.log('Reloading data...');
-        await Promise.race([
-          loadData(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Load data timeout')), 10000))
-        ]);
-      } catch (e) {
-        console.error('Load data error:', e.message);
-      }
-      
-      // Always hide loading overlay
-      if (loadingOverlay) {
-        loadingOverlay.classList.add('hidden');
-        console.log('Loading overlay hidden');
-      }
-      
-      console.log('Rendering...');
-      render();
+      console.log('Event created successfully, reloading page...');
+      window.location.reload();
       
     } catch (error) {
       console.error('Unexpected error creating event:', error);
