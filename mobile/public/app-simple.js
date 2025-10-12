@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760269500 loaded');
+console.log('📱 Mobile Timeline v1760269600 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -24,7 +24,8 @@ const state = {
   events: [],
   holidays: [],
   dateRange: getDefaultDateRange(),
-  zoom: 'month' // week, month, quarter
+  zoom: 'month', // week, month, quarter
+  searchQuery: '' // search filter
 };
 
 // Zoom settings: pixels per day
@@ -51,6 +52,29 @@ async function init() {
       );
       render();
     });
+  });
+  
+  // Setup search
+  const searchBtn = document.getElementById('searchBtn');
+  const searchOverlay = document.getElementById('searchOverlay');
+  const searchInput = document.getElementById('searchInput');
+  const closeSearch = document.getElementById('closeSearch');
+  
+  searchBtn?.addEventListener('click', () => {
+    searchOverlay?.classList.add('active');
+    searchInput?.focus();
+  });
+  
+  closeSearch?.addEventListener('click', () => {
+    searchOverlay?.classList.remove('active');
+    searchInput.value = '';
+    state.searchQuery = '';
+    render();
+  });
+  
+  searchInput?.addEventListener('input', (e) => {
+    state.searchQuery = e.target.value.toLowerCase();
+    render();
   });
   
   // Show loading overlay
@@ -393,7 +417,15 @@ function renderDayNumbers(pixelsPerDay) {
 
 // Render events for a calendar
 function renderEventsForCalendar(calendarId, pixelsPerDay) {
-  const events = state.events.filter(e => e.group === calendarId);
+  let events = state.events.filter(e => e.group === calendarId);
+  
+  // Apply search filter
+  if (state.searchQuery) {
+    events = events.filter(e => 
+      e.content.toLowerCase().includes(state.searchQuery)
+    );
+  }
+  
   const calendar = state.calendars.find(c => c.id === calendarId);
   let html = '';
   
