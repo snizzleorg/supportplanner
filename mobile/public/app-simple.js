@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760272500 loaded');
+console.log('📱 Mobile Timeline v1760272600 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -85,7 +85,11 @@ async function init() {
   // Force backend to refresh cache from CalDAV on page load
   try {
     console.log('Refreshing CalDAV cache...');
-    await fetch(`${API_BASE}/api/refresh-caldav`, { method: 'POST' });
+    const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, { 
+      method: 'POST',
+      credentials: 'include'
+    });
+    console.log('Initial refresh response:', refreshResponse.status);
   } catch (e) {
     console.warn('Initial cache refresh failed:', e);
   }
@@ -488,9 +492,17 @@ function showCreateEventModal(calendar, clickedDate) {
         
         try {
           console.log('Refreshing CalDAV cache after create...');
-          await fetch(`${API_BASE}/api/refresh-caldav`, { method: 'POST' });
+          const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, { 
+            method: 'POST',
+            credentials: 'include'
+          });
+          console.log('Refresh response:', refreshResponse.status);
+          if (!refreshResponse.ok) {
+            const errorText = await refreshResponse.text();
+            console.error('Refresh failed:', refreshResponse.status, errorText);
+          }
         } catch (e) {
-          console.warn('Cache refresh failed:', e);
+          console.error('Cache refresh failed:', e);
         }
         
         console.log('Reloading data...');
@@ -647,7 +659,11 @@ function showEventModal(event) {
         modal.classList.remove('active');
         // Force backend to refresh cache from CalDAV
         try {
-          await fetch(`${API_BASE}/api/refresh-caldav`, { method: 'POST' });
+          const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, { 
+            method: 'POST',
+            credentials: 'include'
+          });
+          console.log('Delete refresh response:', refreshResponse.status);
         } catch (e) {
           console.warn('Cache refresh failed:', e);
         }
