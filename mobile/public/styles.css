@@ -193,9 +193,8 @@ body {
     display: flex;
     height: 100%;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x proximity;
     position: relative;
 }
 
