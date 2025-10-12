@@ -413,11 +413,18 @@ function renderTimeline() {
 // Render time grid
 function renderTimeGrid() {
   const months = getMonthsInRange(state.dateRange.from, state.dateRange.to);
+  const widths = { week: 600, month: 300, quarter: 150 };
+  const monthWidth = widths[state.zoomLevel];
   
   elements.timeGrid.innerHTML = months.map(month => {
     const weeks = getWeeksInMonth(month);
+    const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+    const daysPerMonth = 30.44;
+    const pixelsPerDay = monthWidth / daysPerMonth;
+    const actualWidth = daysInMonth * pixelsPerDay;
+    
     return `
-      <div class="month-column">
+      <div class="month-column" style="min-width: ${actualWidth}px;">
         <div class="month-header">${month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
         <div class="week-markers">
           ${weeks.map(week => `
