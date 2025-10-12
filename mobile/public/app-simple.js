@@ -11,6 +11,7 @@ const API_BASE = window.location.hostname === 'localhost'
 const state = {
   calendars: [],
   events: [],
+  holidays: [],
   dateRange: {
     from: new Date('2025-10-01'),
     to: new Date('2026-01-01')
@@ -88,6 +89,20 @@ async function loadData() {
     
     console.log(`Loaded: ${state.calendars.length} calendars, ${state.events.length} events`);
     
+    // Fetch holidays for Berlin (optional, don't fail if it errors)
+    try {
+      const year = state.dateRange.from.getFullYear();
+      const holidayRes = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/DE`);
+      if (holidayRes.ok) {
+        const allHolidays = await holidayRes.json();
+        // Filter for Berlin-specific holidays (Germany + Berlin state holidays)
+        state.holidays = allHolidays.filter(h => !h.counties || h.counties.includes('DE-BE'));
+        console.log(`Loaded ${state.holidays.length} Berlin holidays`);
+      }
+    } catch (err) {
+      console.warn('Could not load holidays:', err);
+    }
+    
   } catch (error) {
     console.error('Load error:', error);
     console.error('Error stack:', error.stack);
@@ -118,13 +133,18 @@ function render() {
   // Build HTML
   let html = '<div style="position: relative; display: flex; flex-direction: column; min-width: ' + totalWidth + 'px;">';
   
+  // Weekend and holiday backgrounds
+  html += '<div style="position: absolute; top: 40px; bottom: 0; left: 100px; pointer-events: none;">';
+  html += renderWeekendAndHolidayBackgrounds(pixelsPerDay);
+  html += '</div>';
+  
   // Month vertical lines (background)
   html += '<div style="position: absolute; top: 0; bottom: 0; left: 100px; pointer-events: none;">';
   html += renderMonthLines(pixelsPerDay);
   html += '</div>';
   
-  // Header row with months and week numbers
-  html += '<div style="display: flex; height: 60px; border-bottom: 2px solid #ccc; margin-left: 100px;">';
+  // Header row with months
+  html += '<div style="display: flex; height: 40px; border-bottom: 2px solid #ccc; margin-left: 100px;">';
   html += renderMonthHeaders(pixelsPerDay);
   html += '</div>';
   
@@ -148,6 +168,34 @@ function render() {
   container.innerHTML = html;
 }
 
+// Render weekend and holiday backgrounds
+function renderWeekendAndHolidayBackgrounds(pixelsPerDay) {
+  let html = '';
+  const holidayDates = new Set(state.holidays.map(h => h.date));
+  
+  // Iterate through each day in the range
+  let current = new Date(state.dateRange.from);
+  let dayIndex = 0;
+  
+  while (current < state.dateRange.to) {
+    const dayOfWeek = current.getDay(); // 0 = Sunday, 6 = Saturday
+    const dateStr = current.toISOString().split('T')[0];
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const isHoliday = holidayDates.has(dateStr);
+    
+    if (isWeekend || isHoliday) {
+      const left = dayIndex * pixelsPerDay;
+      const color = isHoliday ? 'rgba(255, 200, 200, 0.3)' : 'rgba(200, 200, 200, 0.2)';
+      html += `<div style="position: absolute; left: ${left}px; width: ${pixelsPerDay}px; top: 0; bottom: 0; background: ${color};"></div>`;
+    }
+    
+    current.setDate(current.getDate() + 1);
+    dayIndex++;
+  }
+  
+  return html;
+}
+
 // Render month vertical lines
 function renderMonthLines(pixelsPerDay) {
   let html = '';
@@ -169,7 +217,7 @@ function renderMonthLines(pixelsPerDay) {
   return html;
 }
 
-// Render month headers with week numbers
+// Render month headers
 function renderMonthHeaders(pixelsPerDay) {
   let html = '';
   let current = new Date(state.dateRange.from);
@@ -180,47 +228,12 @@ function renderMonthHeaders(pixelsPerDay) {
     const width = daysInMonth * pixelsPerDay;
     const monthName = current.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     
-    html += `<div style="width: ${width}px; padding: 4px 8px; font-size: 11px; font-weight: 600; text-align: center; background: #f5f5f5; position: relative;">`;
-    html += `<div>${monthName}</div>`;
-    
-    // Add week numbers below month name
-    html += '<div style="display: flex; margin-top: 2px; font-size: 9px; font-weight: 400; color: #666;">';
-    html += renderWeekNumbers(current, daysInMonth, pixelsPerDay);
-    html += '</div>';
-    
-    html += '</div>';
+    html += `<div style="width: ${width}px; padding: 8px; font-size: 11px; font-weight: 600; text-align: center; background: #f5f5f5;">${monthName}</div>`;
     
     current.setMonth(current.getMonth() + 1);
   }
   
   return html;
-}
-
-// Render week numbers for a month
-function renderWeekNumbers(monthStart, daysInMonth, pixelsPerDay) {
-  let html = '';
-  let current = new Date(monthStart);
-  const monthWidth = daysInMonth * pixelsPerDay;
-  
-  // Generate week numbers for each week in the month
-  for (let day = 1; day <= daysInMonth; day += 7) {
-    current.setDate(day);
-    const weekNum = getWeekNumber(current);
-    const weekWidth = Math.min(7, daysInMonth - day + 1) * pixelsPerDay;
-    
-    html += `<div style="width: ${weekWidth}px; text-align: center;">W${weekNum}</div>`;
-  }
-  
-  return html;
-}
-
-// Get ISO week number
-function getWeekNumber(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
 // Render events for a calendar
