@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760269300 loaded');
+console.log('📱 Mobile Timeline v1760269500 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -161,6 +161,17 @@ function render() {
   html += '<div style="position: absolute; top: 0; bottom: 0; left: 100px; pointer-events: none; z-index: 103;">';
   html += renderMonthLines(pixelsPerDay);
   html += '</div>';
+  
+  // Today indicator line
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (today >= state.dateRange.from && today < state.dateRange.to) {
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const daysFromStart = Math.round((today - state.dateRange.from) / msPerDay);
+    const todayLeft = 100 + (daysFromStart * pixelsPerDay);
+    html += `<div style="position: absolute; top: 0; bottom: 0; left: ${todayLeft}px; width: 2px; background: #ff3b30; pointer-events: none; z-index: 104;"></div>`;
+    html += `<div style="position: absolute; top: 0; left: ${todayLeft - 20}px; width: 40px; height: 20px; background: #ff3b30; color: white; font-size: 9px; font-weight: 600; display: flex; align-items: center; justify-content: center; border-radius: 0 0 4px 4px; pointer-events: none; z-index: 104;">TODAY</div>`;
+  }
   
   // === HEADER SECTION (STICKY) ===
   // Header row with months - sticky at top
