@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760268900 loaded');
+console.log('📱 Mobile Timeline v1760269000 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -198,7 +198,7 @@ function render() {
   
   // Calendar lanes (in normal flow)
   state.calendars.forEach(calendar => {
-    html += '<div style="display: flex; height: 80px; border-bottom: 1px solid #eee;">';
+    html += '<div style="display: flex; height: 50px; border-bottom: 1px solid #eee;">';
     
     const bgColor = calendar.bg || '#f5f5f5';
     const textColor = getContrastColor(bgColor);
@@ -390,7 +390,7 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
     const pos = calculateEventPosition(event, pixelsPerDay);
     const color = getEventColor(event, calendar);
     
-    html += `<div style="position: absolute; left: ${pos.left}px; width: ${pos.width}px; top: 10px; height: 30px; background: ${color}; color: white; border-radius: 4px; padding: 4px 8px; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">${event.content}</div>`;
+    html += `<div style="position: absolute; left: ${pos.left}px; width: ${pos.width}px; top: 5px; height: 40px; background: ${color}; color: white; border-radius: 3px; padding: 3px 6px; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.2); display: flex; align-items: center;">${event.content}</div>`;
   });
   
   return html;
