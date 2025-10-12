@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760270300 loaded');
+console.log('📱 Mobile Timeline v1760270400 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -414,11 +414,13 @@ function showEventModal(event) {
         modal.classList.remove('active');
         render();
       } else {
-        alert('Failed to delete event');
+        const errorText = await response.text();
+        console.error('Failed to delete event:', response.status, errorText);
+        alert(`Failed to delete event: ${response.status} - ${errorText}`);
       }
     } catch (error) {
       console.error('Error deleting event:', error);
-      alert('Error deleting event');
+      alert(`Error deleting event: ${error.message}`);
     }
   });
   
