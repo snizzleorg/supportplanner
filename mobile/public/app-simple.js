@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760267500 loaded');
+console.log('📱 Mobile Timeline v1760267600 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -162,8 +162,9 @@ function render() {
   html += renderMonthLines(pixelsPerDay);
   html += '</div>';
   
-  // Weekend and holiday backgrounds (starts after month header + week numbers + day numbers)
-  html += '<div style="position: absolute; top: 85px; bottom: 0; left: 100px; pointer-events: none; z-index: 0;">';
+  // Weekend and holiday backgrounds (starts after month header + week numbers + day numbers + borders)
+  // 40px (month) + 20px (week) + 25px (day) + 4px (borders) = 89px
+  html += '<div style="position: absolute; top: 89px; bottom: 0; left: 100px; pointer-events: none; z-index: 0;">';
   html += renderWeekendAndHolidayBackgrounds(pixelsPerDay);
   html += '</div>';
   
