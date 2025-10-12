@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760270400 loaded');
+console.log('📱 Mobile Timeline v1760270600 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -399,11 +399,11 @@ function showEventModal(event) {
       return;
     }
     
-    // Extract event ID from CalDAV URL (last segment)
-    const eventId = event.id.split('/').pop();
+    // Extract just the UID from the full CalDAV URL
+    const eventUid = event.id.split('/').pop();
     
     try {
-      const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventId)}`, {
+      const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventUid)}`, {
         method: 'DELETE'
       });
       
@@ -450,11 +450,11 @@ function showEventModal(event) {
       systemType: systemType || ''
     };
     
-    // Extract event ID from CalDAV URL (last segment)
-    const eventId = event.id.split('/').pop();
+    // Extract just the UID from the full CalDAV URL
+    const eventUid = event.id.split('/').pop();
     
     try {
-      const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventId)}`, {
+      const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventUid)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
