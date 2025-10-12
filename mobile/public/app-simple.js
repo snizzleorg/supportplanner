@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760267400 loaded');
+console.log('📱 Mobile Timeline v1760267500 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -197,8 +197,8 @@ function render() {
     // Lane indicator - narrow colored bar (sticky, appears when scrolling)
     html += `<div style="width: 30px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; z-index: 10; position: sticky; left: 0; margin-left: -30px;">${initials}</div>`;
     
-    // Lane content
-    html += '<div style="position: relative; flex: 1;">';
+    // Lane content (with overflow hidden to prevent events from piercing through)
+    html += '<div style="position: relative; flex: 1; overflow: hidden;">';
     html += renderEventsForCalendar(calendar.id, pixelsPerDay);
     html += '</div>';
     
