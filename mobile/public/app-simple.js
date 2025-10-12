@@ -116,7 +116,12 @@ function render() {
   console.log(`Rendering: ${totalDays} days, ${totalWidth}px wide, ${pixelsPerDay}px/day`);
   
   // Build HTML
-  let html = '<div style="display: flex; flex-direction: column; min-width: ' + totalWidth + 'px;">';
+  let html = '<div style="position: relative; display: flex; flex-direction: column; min-width: ' + totalWidth + 'px;">';
+  
+  // Month vertical lines (background)
+  html += '<div style="position: absolute; top: 0; bottom: 0; left: 100px; pointer-events: none;">';
+  html += renderMonthLines(pixelsPerDay);
+  html += '</div>';
   
   // Header row with months
   html += '<div style="display: flex; height: 40px; border-bottom: 2px solid #ccc; margin-left: 100px;">';
@@ -128,7 +133,7 @@ function render() {
     html += '<div style="display: flex; height: 80px; border-bottom: 1px solid #eee;">';
     
     // Lane label
-    html += `<div style="width: 100px; padding: 8px; font-size: 12px; font-weight: 600; border-right: 2px solid #ccc; flex-shrink: 0;">${calendar.content || calendar.displayName}</div>`;
+    html += `<div style="width: 100px; padding: 8px; font-size: 12px; font-weight: 600; border-right: 2px solid #ccc; flex-shrink: 0; background: white; z-index: 10; position: relative;">${calendar.content || calendar.displayName}</div>`;
     
     // Lane content
     html += '<div style="position: relative; flex: 1;">';
@@ -143,6 +148,27 @@ function render() {
   container.innerHTML = html;
 }
 
+// Render month vertical lines
+function renderMonthLines(pixelsPerDay) {
+  let html = '';
+  let current = new Date(state.dateRange.from);
+  current.setDate(1);
+  let position = 0;
+  
+  while (current < state.dateRange.to) {
+    const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+    const width = daysInMonth * pixelsPerDay;
+    
+    // Add vertical line at the end of each month
+    html += `<div style="position: absolute; left: ${position + width}px; top: 0; bottom: 0; width: 2px; background: #999;"></div>`;
+    
+    position += width;
+    current.setMonth(current.getMonth() + 1);
+  }
+  
+  return html;
+}
+
 // Render month headers
 function renderMonthHeaders(pixelsPerDay) {
   let html = '';
@@ -154,7 +180,7 @@ function renderMonthHeaders(pixelsPerDay) {
     const width = daysInMonth * pixelsPerDay;
     const monthName = current.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     
-    html += `<div style="width: ${width}px; border-right: 1px solid #ddd; padding: 8px; font-size: 11px; font-weight: 600; text-align: center;">${monthName}</div>`;
+    html += `<div style="width: ${width}px; padding: 8px; font-size: 11px; font-weight: 600; text-align: center; background: #f5f5f5;">${monthName}</div>`;
     
     current.setMonth(current.getMonth() + 1);
   }
