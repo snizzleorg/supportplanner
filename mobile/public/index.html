@@ -11,7 +11,7 @@
 <body>
     <!-- Minimal header - just for safe area -->
     <div class="app-bar">
-        <span id="dateRangeText" style="font-size: 12px; color: #666;">Loading...</span>
+        <span id="dateRangeText" style="font-size: 12px; color: #666;"></span>
     </div>
 
     <!-- Search Overlay (hidden by default) -->
@@ -40,25 +40,16 @@
         </div>
     </div>
 
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>Loading timeline...</p>
+    </div>
+
     <!-- Timeline -->
     <div class="timeline-wrapper">
         <div class="timeline-container" id="timelineContainer">
-            <!-- Loading State -->
-            <div class="loading" id="loadingState" style="display: none;">
-                <div class="spinner"></div>
-                <p>Loading timeline...</p>
-            </div>
-
-            <!-- Time Grid (will be populated by JS) -->
-            <div class="time-grid" id="timeGrid"></div>
-
-            <!-- Calendar Lanes (will be populated by JS) -->
-            <div class="calendar-lanes" id="calendarLanes"></div>
-
-            <!-- Today Marker (will be positioned by JS) -->
-            <div class="today-marker" id="todayMarker" style="display: none;">
-                <div class="today-label">Today</div>
-            </div>
+            <!-- Timeline content populated by JS -->
         </div>
     </div>
 
@@ -99,6 +90,6 @@
     <!-- Status Bar -->
     <div class="status-bar" id="statusBar"></div>
 
-    <script type="module" src="/app-simple.js?v=1760267300"></script>
+    <script type="module" src="/app-simple.js?v=1760267400"></script>
 </body>
 </html>

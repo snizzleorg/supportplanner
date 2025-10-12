@@ -199,15 +199,27 @@ body {
     position: relative;
 }
 
-/* Loading State */
-.loading {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    color: #666;
-    z-index: 10;
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(5px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+
+.loading-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .spinner {
@@ -217,7 +229,7 @@ body {
     border-top-color: var(--primary-color);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
-    margin: 0 auto 12px;
+    margin-bottom: 12px;
 }
 
 @keyframes spin {

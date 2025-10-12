@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760267300 loaded');
+console.log('📱 Mobile Timeline v1760267400 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -53,8 +53,15 @@ async function init() {
     });
   });
   
+  // Show loading overlay
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+  
   // Load data
   await loadData();
+  
+  // Hide loading overlay
+  if (loadingOverlay) loadingOverlay.classList.add('hidden');
   
   // Render
   render();
