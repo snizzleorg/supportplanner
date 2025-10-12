@@ -41,19 +41,29 @@ const allowOriginPattern = /^https?:\/\/[^:]+:(5173|5174|5175)$/;
  */
 export const corsMiddleware = cors({
   origin: (origin, callback) => {
+    console.log('[CORS] Request from origin:', origin);
+    
     // Allow requests with no origin (e.g., mobile apps, Postman)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('[CORS] ✓ Allowed (no origin)');
+      return callback(null, true);
+    }
     
     // Check exact match in allowed origins
     if (allowedOrigins.includes(origin)) {
+      console.log('[CORS] ✓ Allowed (exact match)');
       return callback(null, true);
     }
     
     // Check pattern match for development (any hostname on ports 5173-5175)
     if (allowOriginPattern.test(origin)) {
+      console.log('[CORS] ✓ Allowed (pattern match)');
       return callback(null, true);
     }
     
+    console.log('[CORS] ✗ BLOCKED - Origin not in allowed list or pattern');
+    console.log('[CORS] Pattern:', allowOriginPattern);
+    console.log('[CORS] Test result:', allowOriginPattern.test(origin));
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true

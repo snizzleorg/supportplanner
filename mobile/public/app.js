@@ -215,10 +215,20 @@ async function loadData() {
     // The API returns { groups, items } where items are the events
     state.events = eventsData.items || [];
     state.filteredEvents = state.events;
+    
+    // Update calendars with the groups from the API (these have the actual calendar names)
+    if (eventsData.groups && eventsData.groups.length > 0) {
+      state.calendars = eventsData.groups;
+    }
+    
     console.log('Loaded events:', state.events.length);
+    console.log('Loaded groups:', state.calendars.length);
     
     renderFilters();
     renderLegend();
+    
+    // Hide loading state after successful load
+    elements.loadingState.style.display = 'none';
     
   } catch (error) {
     console.error('Error loading data:', error);
@@ -381,23 +391,22 @@ function renderTimeGrid() {
 
 // Render calendar lanes
 function renderCalendarLanes() {
-  // Group events by calendar (using group ID)
-  const eventsByCalendar = {};
+  // Group events by calendar group ID
+  const eventsByGroup = {};
   state.filteredEvents.forEach(event => {
     const groupId = event.group;
-    const calendar = state.calendars.find(cal => cal.id === groupId);
-    const calendarName = calendar?.content || calendar?.displayName || 'Unknown';
-    if (!eventsByCalendar[calendarName]) {
-      eventsByCalendar[calendarName] = [];
+    if (!eventsByGroup[groupId]) {
+      eventsByGroup[groupId] = [];
     }
-    eventsByCalendar[calendarName].push(event);
+    eventsByGroup[groupId].push(event);
   });
   
-  // Render lanes
-  elements.calendarLanes.innerHTML = Object.entries(eventsByCalendar).map(([calendar, events]) => {
+  // Render lanes for ALL calendars (even if no events)
+  elements.calendarLanes.innerHTML = state.calendars.map(calendar => {
+    const events = eventsByGroup[calendar.id] || [];
     return `
       <div class="calendar-lane">
-        <div class="lane-header">${calendar}</div>
+        <div class="lane-header">${calendar.content || calendar.displayName || 'Unknown'}</div>
         <div class="lane-content">
           ${renderEventsForLane(events)}
         </div>
