@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>SupportPlanner Mobile</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <!-- App Bar -->
+    <div class="app-bar">
+        <div class="app-bar-content">
+            <h1>SupportPlanner</h1>
+            <div class="app-bar-actions">
+                <button class="icon-btn" id="searchBtn" title="Search">🔍</button>
+                <button class="icon-btn" id="filterBtn" title="Filter">⚙️</button>
+                <button class="icon-btn" id="refreshBtn" title="Refresh">🔄</button>
+            </div>
+        </div>
+        <div class="date-range-bar">
+            <button class="icon-btn" id="prevRange">◀</button>
+            <span id="dateRangeText">Loading...</span>
+            <button class="icon-btn" id="nextRange">▶</button>
+        </div>
+    </div>
+
+    <!-- Search Overlay (hidden by default) -->
+    <div class="search-overlay" id="searchOverlay">
+        <div class="search-container">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search events, locations, people...">
+            <button class="icon-btn" id="closeSearch">✕</button>
+        </div>
+    </div>
+
+    <!-- Filter Panel (hidden by default) -->
+    <div class="filter-panel" id="filterPanel">
+        <div class="filter-header">
+            <h2>Filters</h2>
+            <button class="icon-btn" id="closeFilter">✕</button>
+        </div>
+        <div class="filter-content">
+            <div class="filter-section">
+                <h3>Event Types</h3>
+                <div id="eventTypeFilters" class="filter-chips"></div>
+            </div>
+            <div class="filter-section">
+                <h3>Calendars</h3>
+                <div id="calendarFilters" class="filter-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-wrapper">
+        <div class="timeline-container" id="timelineContainer">
+            <!-- Loading State -->
+            <div class="loading" id="loadingState">
+                <div class="spinner"></div>
+                <p>Loading timeline...</p>
+            </div>
+
+            <!-- Time Grid (will be populated by JS) -->
+            <div class="time-grid" id="timeGrid"></div>
+
+            <!-- Calendar Lanes (will be populated by JS) -->
+            <div class="calendar-lanes" id="calendarLanes"></div>
+
+            <!-- Today Marker (will be positioned by JS) -->
+            <div class="today-marker" id="todayMarker" style="display: none;">
+                <div class="today-label">Today</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Details Modal -->
+    <div class="event-modal" id="eventModal">
+        <div class="event-modal-content">
+            <div class="event-modal-header">
+                <h2 id="modalTitle">Event Details</h2>
+                <button class="icon-btn" id="closeModal">✕</button>
+            </div>
+            <div class="event-modal-body" id="modalBody">
+                <!-- Event details will be populated here -->
+            </div>
+            <div class="event-modal-actions">
+                <button class="btn btn-secondary" id="editEventBtn">Edit</button>
+                <button class="btn btn-primary" id="closeModalBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend" id="legend">
+        <!-- Will be populated by JS based on event types -->
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="bottom-controls">
+        <div class="zoom-controls">
+            <button class="control-btn" data-zoom="week">Week</button>
+            <button class="control-btn active" data-zoom="month">Month</button>
+            <button class="control-btn" data-zoom="quarter">Quarter</button>
+        </div>
+        <button class="control-btn" id="todayBtn">📍 Today</button>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar" id="statusBar"></div>
+
+    <script type="module" src="/app.js"></script>
+</body>
+</html>

@@ -42,3 +42,16 @@ services:
     container_name: frontend-unit-tests
     # No ports exposed; this is a one-shot runner
     restart: "no"
+
+  mobile-planner:
+    build:
+      context: .
+      dockerfile: mobile/Dockerfile
+    container_name: mobile-planner
+    ports:
+      - "5174:5174"
+    volumes:
+      - ./mobile/public:/usr/src/mobile-planner/public
+    depends_on:
+      - support-planner
+    restart: unless-stopped

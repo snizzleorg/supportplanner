@@ -1,0 +1,15 @@
+node_modules/
+package-lock.json
+
+# Capacitor
+ios/
+android/
+.capacitor/
+
+# Build outputs
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
