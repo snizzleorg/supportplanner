@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760270100 loaded');
+console.log('📱 Mobile Timeline v1760270200 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -469,11 +469,13 @@ function showEventModal(event) {
         modal.classList.remove('active');
         render();
       } else {
-        alert('Failed to update event');
+        const errorText = await response.text();
+        console.error('Failed to update event:', response.status, errorText);
+        alert(`Failed to update event: ${response.status} - ${errorText}`);
       }
     } catch (error) {
       console.error('Error updating event:', error);
-      alert('Error updating event');
+      alert(`Error updating event: ${error.message}`);
     }
   });
 }
