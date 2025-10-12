@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760266800 loaded');
+console.log('📱 Mobile Timeline v1760266900 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -166,12 +166,12 @@ function render() {
   html += '</div>';
   
   // Week numbers row
-  html += '<div style="position: relative; height: 20px; border-bottom: 1px solid #ddd; margin-left: 100px; background: #f9f9f9;">';
+  html += '<div style="position: relative; height: 20px; border-bottom: 1px solid #ddd; margin-left: 100px; background: #f9f9f9; min-width: ' + (totalWidth + 100) + 'px;">';
   html += renderWeekNumbers(pixelsPerDay);
   html += '</div>';
   
   // Day numbers row
-  html += '<div style="position: relative; height: 25px; border-bottom: 2px solid #ccc; margin-left: 100px; background: #fafafa;">';
+  html += '<div style="position: relative; height: 25px; border-bottom: 2px solid #ccc; margin-left: 100px; background: #fafafa; min-width: ' + (totalWidth + 100) + 'px;">';
   html += renderDayNumbers(pixelsPerDay);
   html += '</div>';
   
