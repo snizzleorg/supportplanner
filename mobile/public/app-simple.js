@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760273100 loaded');
+console.log('📱 Mobile Timeline v1760273200 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -657,19 +657,13 @@ function showEventModal(event) {
       
       if (response.ok) {
         modal.classList.remove('active');
-        // Force backend to refresh cache from CalDAV
-        try {
-          const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, { 
-            method: 'POST',
-            credentials: 'include'
-          });
-          console.log('Delete refresh response:', refreshResponse.status);
-        } catch (e) {
-          console.warn('Cache refresh failed:', e);
-        }
-        // Reload data from backend
-        await loadData();
-        render();
+        console.log('Event deleted successfully, waiting before reload...');
+        
+        // Wait 2 seconds for backend to finish saving to CalDAV
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        console.log('Reloading page after delete...');
+        window.location.reload();
       } else {
         const errorText = await response.text();
         console.error('Failed to delete event:', response.status, errorText);
