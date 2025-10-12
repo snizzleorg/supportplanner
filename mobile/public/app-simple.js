@@ -123,8 +123,8 @@ function render() {
   html += renderMonthLines(pixelsPerDay);
   html += '</div>';
   
-  // Header row with months
-  html += '<div style="display: flex; height: 40px; border-bottom: 2px solid #ccc; margin-left: 100px;">';
+  // Header row with months and week numbers
+  html += '<div style="display: flex; height: 60px; border-bottom: 2px solid #ccc; margin-left: 100px;">';
   html += renderMonthHeaders(pixelsPerDay);
   html += '</div>';
   
@@ -169,7 +169,7 @@ function renderMonthLines(pixelsPerDay) {
   return html;
 }
 
-// Render month headers
+// Render month headers with week numbers
 function renderMonthHeaders(pixelsPerDay) {
   let html = '';
   let current = new Date(state.dateRange.from);
@@ -180,12 +180,47 @@ function renderMonthHeaders(pixelsPerDay) {
     const width = daysInMonth * pixelsPerDay;
     const monthName = current.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     
-    html += `<div style="width: ${width}px; padding: 8px; font-size: 11px; font-weight: 600; text-align: center; background: #f5f5f5;">${monthName}</div>`;
+    html += `<div style="width: ${width}px; padding: 4px 8px; font-size: 11px; font-weight: 600; text-align: center; background: #f5f5f5; position: relative;">`;
+    html += `<div>${monthName}</div>`;
+    
+    // Add week numbers below month name
+    html += '<div style="display: flex; margin-top: 2px; font-size: 9px; font-weight: 400; color: #666;">';
+    html += renderWeekNumbers(current, daysInMonth, pixelsPerDay);
+    html += '</div>';
+    
+    html += '</div>';
     
     current.setMonth(current.getMonth() + 1);
   }
   
   return html;
+}
+
+// Render week numbers for a month
+function renderWeekNumbers(monthStart, daysInMonth, pixelsPerDay) {
+  let html = '';
+  let current = new Date(monthStart);
+  const monthWidth = daysInMonth * pixelsPerDay;
+  
+  // Generate week numbers for each week in the month
+  for (let day = 1; day <= daysInMonth; day += 7) {
+    current.setDate(day);
+    const weekNum = getWeekNumber(current);
+    const weekWidth = Math.min(7, daysInMonth - day + 1) * pixelsPerDay;
+    
+    html += `<div style="width: ${weekWidth}px; text-align: center;">W${weekNum}</div>`;
+  }
+  
+  return html;
+}
+
+// Get ISO week number
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
 // Render events for a calendar
