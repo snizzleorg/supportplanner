@@ -437,7 +437,15 @@ body {
 .event-modal-body {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 16px;
+}
+
+.event-modal-body input,
+.event-modal-body select,
+.event-modal-body textarea {
+    box-sizing: border-box;
+    max-width: 100%;
 }
 
 .event-detail-row {
