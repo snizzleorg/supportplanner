@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760266100 loaded');
+console.log('📱 Mobile Timeline v1760266200 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -141,14 +141,19 @@ function render() {
   html += renderMonthLines(pixelsPerDay);
   html += '</div>';
   
-  // Weekend and holiday backgrounds
-  html += '<div style="position: absolute; top: 65px; bottom: 0; left: 100px; pointer-events: none; z-index: 0;">';
+  // Weekend and holiday backgrounds (starts after month header + week numbers + day numbers)
+  html += '<div style="position: absolute; top: 85px; bottom: 0; left: 100px; pointer-events: none; z-index: 0;">';
   html += renderWeekendAndHolidayBackgrounds(pixelsPerDay);
   html += '</div>';
   
   // Header row with months
   html += '<div style="display: flex; height: 40px; border-bottom: 1px solid #ddd; margin-left: 100px;">';
   html += renderMonthHeaders(pixelsPerDay);
+  html += '</div>';
+  
+  // Week numbers row
+  html += '<div style="position: relative; height: 20px; border-bottom: 1px solid #ddd; margin-left: 100px; background: #f9f9f9;">';
+  html += renderWeekNumbers(pixelsPerDay);
   html += '</div>';
   
   // Day numbers row
@@ -250,6 +255,42 @@ function renderMonthHeaders(pixelsPerDay) {
     html += `<div style="width: ${width}px; padding: 8px; font-size: 11px; font-weight: 600; text-align: center; background: #f5f5f5;">${monthName}</div>`;
     
     current.setMonth(current.getMonth() + 1);
+  }
+  
+  return html;
+}
+
+// Get ISO week number
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+// Render week numbers
+function renderWeekNumbers(pixelsPerDay) {
+  let html = '';
+  let current = new Date(state.dateRange.from);
+  current.setHours(0, 0, 0, 0);
+  
+  let dayIndex = 0;
+  let lastWeekNum = -1;
+  
+  while (current < state.dateRange.to) {
+    const weekNum = getWeekNumber(current);
+    const dayOfWeek = current.getDay();
+    
+    // Show week number on Monday (or first day if week starts mid-range)
+    if (weekNum !== lastWeekNum && (dayOfWeek === 1 || dayIndex === 0)) {
+      const left = dayIndex * pixelsPerDay;
+      html += `<div style="position: absolute; left: ${left}px; width: ${pixelsPerDay * 7}px; font-size: 8px; color: #888; text-align: left; padding-top: 2px; padding-left: 2px; font-weight: 600;">W${weekNum}</div>`;
+      lastWeekNum = weekNum;
+    }
+    
+    current.setDate(current.getDate() + 1);
+    dayIndex++;
   }
   
   return html;
