@@ -21,7 +21,9 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : [
       'http://localhost:5175', 
       'http://localhost:5173',
+      'http://localhost:5174', // Mobile app
       'http://support-planner:5173', // Docker internal hostname for tests
+      'http://mobile-planner:5174', // Mobile app Docker hostname
     ];
 
 /**
