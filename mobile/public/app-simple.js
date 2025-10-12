@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760272700 loaded');
+console.log('📱 Mobile Timeline v1760272800 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -500,29 +500,44 @@ function showCreateEventModal(calendar, clickedDate) {
       const loadingOverlay = document.getElementById('loadingOverlay');
       if (loadingOverlay) loadingOverlay.classList.remove('hidden');
       
+      // Use a timeout to ensure we don't hang forever
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Refresh timeout')), 10000)
+      );
+      
       try {
         console.log('Refreshing CalDAV cache after create...');
-        const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, { 
-          method: 'POST',
-          credentials: 'include'
-        });
+        const refreshResponse = await Promise.race([
+          fetch(`${API_BASE}/api/refresh-caldav`, { 
+            method: 'POST',
+            credentials: 'include'
+          }),
+          timeoutPromise
+        ]);
         console.log('Refresh response:', refreshResponse.status);
         if (!refreshResponse.ok) {
           const errorText = await refreshResponse.text();
           console.error('Refresh failed:', refreshResponse.status, errorText);
         }
       } catch (e) {
-        console.error('Cache refresh error:', e);
+        console.error('Cache refresh error:', e.message);
       }
       
       try {
         console.log('Reloading data...');
-        await loadData();
+        await Promise.race([
+          loadData(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Load data timeout')), 10000))
+        ]);
       } catch (e) {
-        console.error('Load data error:', e);
+        console.error('Load data error:', e.message);
       }
       
-      if (loadingOverlay) loadingOverlay.classList.add('hidden');
+      // Always hide loading overlay
+      if (loadingOverlay) {
+        loadingOverlay.classList.add('hidden');
+        console.log('Loading overlay hidden');
+      }
       
       console.log('Rendering...');
       render();
