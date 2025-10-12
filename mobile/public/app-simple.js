@@ -3,22 +3,27 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760266600 loaded');
+console.log('📱 Mobile Timeline v1760266700 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
   ? 'http://localhost:5175'
   : window.location.origin.replace(':5174', ':5175');
 
+// Calculate date range: 6 months from today
+function getDefaultDateRange() {
+  const today = new Date();
+  const from = new Date(today.getFullYear(), today.getMonth(), 1); // Start of current month
+  const to = new Date(today.getFullYear(), today.getMonth() + 6, 1); // 6 months ahead
+  return { from, to };
+}
+
 // State
 const state = {
   calendars: [],
   events: [],
   holidays: [],
-  dateRange: {
-    from: new Date('2025-10-01'),
-    to: new Date('2026-01-01')
-  },
+  dateRange: getDefaultDateRange(),
   zoom: 'month' // week, month, quarter
 };
 
@@ -94,14 +99,23 @@ async function loadData() {
     
     // Fetch holidays for Berlin (optional, don't fail if it errors)
     try {
-      const year = state.dateRange.from.getFullYear();
-      const holidayRes = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/DE`);
-      if (holidayRes.ok) {
-        const allHolidays = await holidayRes.json();
-        // Filter for Berlin-specific holidays (Germany + Berlin state holidays)
-        state.holidays = allHolidays.filter(h => !h.counties || h.counties.includes('DE-BE'));
-        console.log(`Loaded ${state.holidays.length} Berlin holidays`);
+      const startYear = state.dateRange.from.getFullYear();
+      const endYear = state.dateRange.to.getFullYear();
+      const allHolidays = [];
+      
+      // Fetch holidays for all years in range
+      for (let year = startYear; year <= endYear; year++) {
+        const holidayRes = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/DE`);
+        if (holidayRes.ok) {
+          const yearHolidays = await holidayRes.json();
+          // Filter for Berlin-specific holidays (Germany + Berlin state holidays)
+          const berlinHolidays = yearHolidays.filter(h => !h.counties || h.counties.includes('DE-BE'));
+          allHolidays.push(...berlinHolidays);
+        }
       }
+      
+      state.holidays = allHolidays;
+      console.log(`Loaded ${state.holidays.length} Berlin holidays for ${startYear}-${endYear}`);
     } catch (err) {
       console.warn('Could not load holidays:', err);
     }
