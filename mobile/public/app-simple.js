@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760267100 loaded');
+console.log('📱 Mobile Timeline v1760267200 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -151,27 +151,27 @@ function render() {
   let html = '<div style="position: relative; display: flex; flex-direction: column; min-width: ' + totalWidth + 'px;">';
   
   // Month vertical lines (background)
-  html += '<div style="position: absolute; top: 0; bottom: 0; left: 100px; pointer-events: none; z-index: 1;">';
+  html += '<div style="position: absolute; top: 0; bottom: 0; left: 30px; pointer-events: none; z-index: 1;">';
   html += renderMonthLines(pixelsPerDay);
   html += '</div>';
   
   // Weekend and holiday backgrounds (starts after month header + week numbers + day numbers)
-  html += '<div style="position: absolute; top: 85px; bottom: 0; left: 100px; pointer-events: none; z-index: 0;">';
+  html += '<div style="position: absolute; top: 85px; bottom: 0; left: 30px; pointer-events: none; z-index: 0;">';
   html += renderWeekendAndHolidayBackgrounds(pixelsPerDay);
   html += '</div>';
   
   // Header row with months
-  html += '<div style="display: flex; height: 40px; border-bottom: 1px solid #ddd; margin-left: 100px; min-width: ' + (totalWidth + 100) + 'px;">';
+  html += '<div style="display: flex; height: 40px; border-bottom: 1px solid #ddd; margin-left: 30px; min-width: ' + (totalWidth + 30) + 'px;">';
   html += renderMonthHeaders(pixelsPerDay);
   html += '</div>';
   
   // Week numbers row
-  html += '<div style="position: relative; height: 20px; border-bottom: 1px solid #ddd; margin-left: 100px; background: #f9f9f9; min-width: ' + (totalWidth + 100) + 'px;">';
+  html += '<div style="position: relative; height: 20px; border-bottom: 1px solid #ddd; margin-left: 30px; background: #f9f9f9; min-width: ' + (totalWidth + 30) + 'px;">';
   html += renderWeekNumbers(pixelsPerDay);
   html += '</div>';
   
   // Day numbers row
-  html += '<div style="position: relative; height: 25px; border-bottom: 2px solid #ccc; margin-left: 100px; background: #fafafa; min-width: ' + (totalWidth + 100) + 'px;">';
+  html += '<div style="position: relative; height: 25px; border-bottom: 2px solid #ccc; margin-left: 30px; background: #fafafa; min-width: ' + (totalWidth + 30) + 'px;">';
   html += renderDayNumbers(pixelsPerDay);
   html += '</div>';
   
@@ -179,13 +179,16 @@ function render() {
   state.calendars.forEach(calendar => {
     html += '<div style="display: flex; height: 80px; border-bottom: 1px solid #eee;">';
     
-    // Lane label with calendar color (sticky)
+    // Lane indicator - narrow colored bar (sticky)
     const bgColor = calendar.bg || '#f5f5f5';
     const textColor = getContrastColor(bgColor);
-    html += `<div style="width: 100px; padding: 8px; font-size: 12px; font-weight: 600; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; z-index: 10; position: sticky; left: 0;">${calendar.content || calendar.displayName}</div>`;
+    const name = calendar.content || calendar.displayName;
+    const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    
+    html += `<div style="width: 30px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; z-index: 10; position: sticky; left: 0;">${initials}</div>`;
     
     // Lane content
-    html += '<div style="position: relative; flex: 1;">';
+    html += '<div style="position: relative; flex: 1; margin-left: 70px;">';
     html += renderEventsForCalendar(calendar.id, pixelsPerDay);
     html += '</div>';
     
