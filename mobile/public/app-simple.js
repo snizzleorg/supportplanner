@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760267700 loaded');
+console.log('📱 Mobile Timeline v1760267800 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -157,18 +157,6 @@ function render() {
   // Build HTML
   let html = '<div style="position: relative; display: flex; flex-direction: column; min-width: ' + totalWidth + 'px;">';
   
-  // Month vertical lines (background)
-  html += '<div style="position: absolute; top: 0; bottom: 0; left: 100px; pointer-events: none; z-index: 1;">';
-  html += renderMonthLines(pixelsPerDay);
-  html += '</div>';
-  
-  // Weekend and holiday backgrounds - positioned to align with calendar lanes
-  // Headers: 40px (month) + 20px (week) + 25px (day) = 85px content
-  // Borders are part of the elements, not additional space
-  html += `<div style="position: absolute; top: 85px; bottom: 0; left: 100px; pointer-events: none; z-index: 0;">`;
-  html += renderWeekendAndHolidayBackgrounds(pixelsPerDay);
-  html += '</div>';
-  
   // Header row with months
   html += '<div style="display: flex; height: 40px; border-bottom: 1px solid #ddd; margin-left: 100px; min-width: ' + (totalWidth + 100) + 'px;">';
   html += renderMonthHeaders(pixelsPerDay);
@@ -182,6 +170,16 @@ function render() {
   // Day numbers row
   html += '<div style="position: relative; height: 25px; border-bottom: 2px solid #ccc; margin-left: 100px; background: #fafafa; min-width: ' + (totalWidth + 100) + 'px;">';
   html += renderDayNumbers(pixelsPerDay);
+  html += '</div>';
+  
+  // Month vertical lines (background) - starts from top of entire timeline
+  html += '<div style="position: absolute; top: 0; bottom: 0; left: 100px; pointer-events: none; z-index: 1;">';
+  html += renderMonthLines(pixelsPerDay);
+  html += '</div>';
+  
+  // Weekend and holiday backgrounds - starts right after headers (85px from top)
+  html += `<div style="position: absolute; top: 85px; bottom: 0; left: 100px; pointer-events: none; z-index: 0;">`;
+  html += renderWeekendAndHolidayBackgrounds(pixelsPerDay);
   html += '</div>';
   
   // Calendar lanes
