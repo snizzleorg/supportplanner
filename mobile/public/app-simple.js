@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760266400 loaded');
+console.log('📱 Mobile Timeline v1760266500 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -379,12 +379,24 @@ function calculateEventPosition(event, pixelsPerDay) {
 }
 
 // Get contrast color (white or black) based on background
-function getContrastColor(hexColor) {
-  // Convert hex to RGB
-  const hex = hexColor.replace('#', '');
-  const r = parseInt(hex.substr(0, 2), 16);
-  const g = parseInt(hex.substr(2, 2), 16);
-  const b = parseInt(hex.substr(4, 2), 16);
+function getContrastColor(color) {
+  let r, g, b;
+  
+  // Handle rgb() format
+  if (color.startsWith('rgb')) {
+    const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (match) {
+      r = parseInt(match[1]);
+      g = parseInt(match[2]);
+      b = parseInt(match[3]);
+    }
+  } else {
+    // Handle hex format
+    const hex = color.replace('#', '');
+    r = parseInt(hex.substr(0, 2), 16);
+    g = parseInt(hex.substr(2, 2), 16);
+    b = parseInt(hex.substr(4, 2), 16);
+  }
   
   // Calculate luminance
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
