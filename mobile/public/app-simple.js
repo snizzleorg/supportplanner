@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760267000 loaded');
+console.log('📱 Mobile Timeline v1760267100 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -179,10 +179,10 @@ function render() {
   state.calendars.forEach(calendar => {
     html += '<div style="display: flex; height: 80px; border-bottom: 1px solid #eee;">';
     
-    // Lane label with calendar color
+    // Lane label with calendar color (sticky)
     const bgColor = calendar.bg || '#f5f5f5';
     const textColor = getContrastColor(bgColor);
-    html += `<div style="width: 100px; padding: 8px; font-size: 12px; font-weight: 600; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; z-index: 10; position: relative;">${calendar.content || calendar.displayName}</div>`;
+    html += `<div style="width: 100px; padding: 8px; font-size: 12px; font-weight: 600; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; z-index: 10; position: sticky; left: 0;">${calendar.content || calendar.displayName}</div>`;
     
     // Lane content
     html += '<div style="position: relative; flex: 1;">';
