@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760269700 loaded');
+console.log('📱 Mobile Timeline v1760269800 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -25,7 +25,8 @@ const state = {
   holidays: [],
   dateRange: getDefaultDateRange(),
   zoom: 'month', // week, month, quarter
-  searchQuery: '' // search filter
+  searchQuery: '', // search filter
+  selectedCalendars: new Set() // selected calendar IDs (empty = all)
 };
 
 // Zoom settings: pixels per day
@@ -157,13 +158,15 @@ async function loadData() {
     
     // Show error on screen
     const container = document.getElementById('timelineContainer');
-    container.innerHTML = `
-      <div style="padding: 20px; color: red;">
-        <h3>Error Loading Data</h3>
-        <p>${error.message}</p>
-        <button onclick="location.reload()">Retry</button>
-      </div>
-    `;
+    if (container) {
+      container.innerHTML = `
+        <div style="padding: 20px; color: red;">
+          <h3>Error Loading Data</h3>
+          <p>${error.message}</p>
+          <button onclick="location.reload()">Retry</button>
+        </div>
+      `;
+    }
   }
 }
 
@@ -233,18 +236,21 @@ function render() {
   
   // Calendar lanes (in normal flow)
   state.calendars.forEach(calendar => {
-    html += '<div style="display: flex; height: 50px; border-bottom: 1px solid #eee;">';
+    const isSelected = state.selectedCalendars.size === 0 || state.selectedCalendars.has(calendar.id);
+    const opacity = isSelected ? '1' : '0.3';
+    
+    html += `<div style="display: flex; height: 50px; border-bottom: 1px solid #eee; opacity: ${opacity};">`;
     
     const bgColor = calendar.bg || '#f5f5f5';
     const textColor = getContrastColor(bgColor);
     const name = calendar.content || calendar.displayName;
     const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     
-    // Full name label (visible at start, scrolls away)
-    html += `<div style="width: 100px; padding: 8px; font-size: 12px; font-weight: 600; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; display: flex; align-items: center; z-index: 20;">${name}</div>`;
+    // Full name label (visible at start, scrolls away) - clickable
+    html += `<div data-calendar-id="${calendar.id}" class="calendar-label" style="width: 100px; padding: 8px; font-size: 12px; font-weight: 600; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; display: flex; align-items: center; z-index: 20; cursor: pointer;">${name}</div>`;
     
-    // Lane indicator - narrow colored bar (sticky, appears when scrolling)
-    html += `<div style="width: 30px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; z-index: 10; position: sticky; left: 0; margin-left: -30px;">${initials}</div>`;
+    // Lane indicator - narrow colored bar (sticky, appears when scrolling) - clickable
+    html += `<div data-calendar-id="${calendar.id}" class="calendar-label" style="width: 30px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; z-index: 10; position: sticky; left: 0; margin-left: -30px; cursor: pointer;">${initials}</div>`;
     
     // Lane content (with overflow hidden to prevent events from piercing through)
     html += '<div style="position: relative; flex: 1; overflow: hidden;">';
@@ -261,6 +267,24 @@ function render() {
   html += '</div>';
   
   container.innerHTML = html;
+  
+  // Add click handlers for calendar labels
+  document.querySelectorAll('.calendar-label').forEach(label => {
+    label.addEventListener('click', (e) => {
+      const calendarId = e.target.dataset.calendarId;
+      
+      if (state.selectedCalendars.has(calendarId)) {
+        // If already selected, deselect it (show all)
+        state.selectedCalendars.clear();
+      } else {
+        // If not selected, select only this one
+        state.selectedCalendars.clear();
+        state.selectedCalendars.add(calendarId);
+      }
+      
+      render();
+    });
+  });
 }
 
 // Render weekend and holiday backgrounds
@@ -419,6 +443,12 @@ function renderDayNumbers(pixelsPerDay) {
 function renderEventsForCalendar(calendarId, pixelsPerDay) {
   const calendar = state.calendars.find(c => c.id === calendarId);
   let events = state.events.filter(e => e.group === calendarId);
+  
+  // Apply calendar selection filter
+  if (state.selectedCalendars.size > 0 && !state.selectedCalendars.has(calendarId)) {
+    // If calendars are selected and this one isn't selected, show no events
+    return '';
+  }
   
   // Apply search filter (search in event content OR calendar name)
   if (state.searchQuery) {
