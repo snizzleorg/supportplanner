@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760272600 loaded');
+console.log('📱 Mobile Timeline v1760272700 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -441,30 +441,31 @@ function showCreateEventModal(calendar, clickedDate) {
   closeModalBtn?.addEventListener('click', closeHandler);
   
   newSaveBtn.addEventListener('click', async () => {
-    const title = document.getElementById('eventTitle').value;
-    const calendarUrl = document.getElementById('eventCalendar').value;
-    const start = document.getElementById('eventStart').value;
-    const end = document.getElementById('eventEnd').value;
-    const description = document.getElementById('eventDescription').value;
-    const location = document.getElementById('eventLocation').value;
-    const orderNumber = document.getElementById('eventOrderNumber').value;
-    const ticketLink = document.getElementById('eventTicketLink').value;
-    const systemType = document.getElementById('eventSystemType').value;
-    
-    if (!title || !start || !end) {
-      alert('Please fill in title, start date, and end date');
-      return;
-    }
-    
-    const metadata = {
-      description: description || '',
-      location: location || '',
-      orderNumber: orderNumber || '',
-      ticketLink: ticketLink || '',
-      systemType: systemType || ''
-    };
-    
     try {
+      const title = document.getElementById('eventTitle').value;
+      const calendarUrl = document.getElementById('eventCalendar').value;
+      const start = document.getElementById('eventStart').value;
+      const end = document.getElementById('eventEnd').value;
+      const description = document.getElementById('eventDescription').value;
+      const location = document.getElementById('eventLocation').value;
+      const orderNumber = document.getElementById('eventOrderNumber').value;
+      const ticketLink = document.getElementById('eventTicketLink').value;
+      const systemType = document.getElementById('eventSystemType').value;
+      
+      if (!title || !start || !end) {
+        alert('Please fill in title, start date, and end date');
+        return;
+      }
+      
+      const metadata = {
+        description: description || '',
+        location: location || '',
+        orderNumber: orderNumber || '',
+        ticketLink: ticketLink || '',
+        systemType: systemType || ''
+      };
+      
+      console.log('Creating event...');
       const response = await fetch(`${API_BASE}/api/events/all-day`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -483,43 +484,56 @@ function showCreateEventModal(calendar, clickedDate) {
         })
       });
       
-      if (response.ok) {
-        modal.classList.remove('active');
-        
-        // Show loading overlay while refreshing
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        if (loadingOverlay) loadingOverlay.classList.remove('hidden');
-        
-        try {
-          console.log('Refreshing CalDAV cache after create...');
-          const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, { 
-            method: 'POST',
-            credentials: 'include'
-          });
-          console.log('Refresh response:', refreshResponse.status);
-          if (!refreshResponse.ok) {
-            const errorText = await refreshResponse.text();
-            console.error('Refresh failed:', refreshResponse.status, errorText);
-          }
-        } catch (e) {
-          console.error('Cache refresh failed:', e);
-        }
-        
-        console.log('Reloading data...');
-        await loadData();
-        
-        if (loadingOverlay) loadingOverlay.classList.add('hidden');
-        
-        console.log('Rendering...');
-        render();
-      } else {
+      console.log('Create response:', response.status);
+      
+      if (!response.ok) {
         const errorText = await response.text();
         console.error('Failed to create event:', response.status, errorText);
         alert(`Failed to create event: ${response.status}`);
+        return;
       }
+      
+      // Success - close modal and refresh
+      modal.classList.remove('active');
+      
+      // Show loading overlay
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+      
+      try {
+        console.log('Refreshing CalDAV cache after create...');
+        const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, { 
+          method: 'POST',
+          credentials: 'include'
+        });
+        console.log('Refresh response:', refreshResponse.status);
+        if (!refreshResponse.ok) {
+          const errorText = await refreshResponse.text();
+          console.error('Refresh failed:', refreshResponse.status, errorText);
+        }
+      } catch (e) {
+        console.error('Cache refresh error:', e);
+      }
+      
+      try {
+        console.log('Reloading data...');
+        await loadData();
+      } catch (e) {
+        console.error('Load data error:', e);
+      }
+      
+      if (loadingOverlay) loadingOverlay.classList.add('hidden');
+      
+      console.log('Rendering...');
+      render();
+      
     } catch (error) {
-      console.error('Error creating event:', error);
-      alert(`Error creating event: ${error.message}`);
+      console.error('Unexpected error creating event:', error);
+      alert(`Unexpected error: ${error.message}`);
+      
+      // Make sure loading overlay is hidden
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      if (loadingOverlay) loadingOverlay.classList.add('hidden');
     }
   });
 }
