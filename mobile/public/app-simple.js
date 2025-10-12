@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760270600 loaded');
+console.log('📱 Mobile Timeline v1760270700 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -399,8 +399,9 @@ function showEventModal(event) {
       return;
     }
     
-    // Extract just the UID from the full CalDAV URL
-    const eventUid = event.id.split('/').pop();
+    // Use event.uid if available, otherwise extract from id
+    const eventUid = event.uid || event.id.split('/').pop();
+    console.log('Deleting event with UID:', eventUid, 'Original event.id:', event.id, 'event.uid:', event.uid);
     
     try {
       const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventUid)}`, {
@@ -450,8 +451,9 @@ function showEventModal(event) {
       systemType: systemType || ''
     };
     
-    // Extract just the UID from the full CalDAV URL
-    const eventUid = event.id.split('/').pop();
+    // Use event.uid if available, otherwise extract from id
+    const eventUid = event.uid || event.id.split('/').pop();
+    console.log('Updating event with UID:', eventUid, 'Original event.id:', event.id, 'event.uid:', event.uid);
     
     try {
       const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventUid)}`, {
