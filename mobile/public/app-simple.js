@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760271800 loaded');
+console.log('📱 Mobile Timeline v1760271900 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -81,6 +81,14 @@ async function init() {
   // Show loading overlay
   const loadingOverlay = document.getElementById('loadingOverlay');
   if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+  
+  // Force backend to refresh cache from CalDAV on page load
+  try {
+    console.log('Refreshing CalDAV cache...');
+    await fetch(`${API_BASE}/api/refresh-caldav`, { method: 'POST' });
+  } catch (e) {
+    console.warn('Initial cache refresh failed:', e);
+  }
   
   // Load data
   await loadData();
