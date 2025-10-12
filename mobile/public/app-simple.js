@@ -54,21 +54,29 @@ async function init() {
 // Load data from API
 async function loadData() {
   try {
+    console.log('Loading calendars...');
+    
     // Fetch calendars
     const calRes = await fetch(`${API_BASE}/api/calendars`);
+    if (!calRes.ok) throw new Error(`Calendar fetch failed: ${calRes.status}`);
+    
     const calData = await calRes.json();
     state.calendars = calData.calendars || [];
+    console.log(`Got ${state.calendars.length} calendars`);
     
     // Fetch events
     const calendarUrls = state.calendars.map(c => c.url);
     const fromStr = state.dateRange.from.toISOString().split('T')[0];
     const toStr = state.dateRange.to.toISOString().split('T')[0];
     
+    console.log('Loading events...');
     const evtRes = await fetch(`${API_BASE}/api/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ calendarUrls, from: fromStr, to: toStr })
     });
+    
+    if (!evtRes.ok) throw new Error(`Events fetch failed: ${evtRes.status}`);
     
     const evtData = await evtRes.json();
     state.events = evtData.items || [];
@@ -82,7 +90,17 @@ async function loadData() {
     
   } catch (error) {
     console.error('Load error:', error);
-    alert(`Error: ${error.message}`);
+    console.error('Error stack:', error.stack);
+    
+    // Show error on screen
+    const container = document.getElementById('timelineContainer');
+    container.innerHTML = `
+      <div style="padding: 20px; color: red;">
+        <h3>Error Loading Data</h3>
+        <p>${error.message}</p>
+        <button onclick="location.reload()">Retry</button>
+      </div>
+    `;
   }
 }
 
