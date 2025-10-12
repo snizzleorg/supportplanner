@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760265900 loaded');
+console.log('📱 Mobile Timeline v1760266000 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -152,7 +152,7 @@ function render() {
   html += '</div>';
   
   // Day numbers row
-  html += '<div style="display: flex; height: 25px; border-bottom: 2px solid #ccc; margin-left: 100px; background: #fafafa;">';
+  html += '<div style="position: relative; height: 25px; border-bottom: 2px solid #ccc; margin-left: 100px; background: #fafafa;">';
   html += renderDayNumbers(pixelsPerDay);
   html += '</div>';
   
@@ -261,7 +261,7 @@ function renderDayNumbers(pixelsPerDay) {
   let current = new Date(state.dateRange.from);
   current.setHours(0, 0, 0, 0); // Normalize to local midnight
   
-  let debugCount = 0;
+  let dayIndex = 0;
   while (current < state.dateRange.to) {
     const dayNum = current.getDate();
     const dayOfWeek = current.getDay();
@@ -269,15 +269,12 @@ function renderDayNumbers(pixelsPerDay) {
     const color = isWeekend ? '#999' : '#666';
     const fontWeight = dayNum === 1 ? '600' : '400';
     
-    // Debug first few days
-    if (debugCount < 5) {
-      console.log(`Day ${debugCount}: ${current.toDateString()} - dayNum=${dayNum}, dayOfWeek=${dayOfWeek}, isWeekend=${isWeekend}`);
-    }
-    
-    html += `<div style="width: ${pixelsPerDay}px; font-size: 9px; color: ${color}; text-align: center; padding-top: 4px; font-weight: ${fontWeight};">${dayNum}</div>`;
+    // Use absolute positioning like events and weekend backgrounds
+    const left = dayIndex * pixelsPerDay;
+    html += `<div style="position: absolute; left: ${left}px; width: ${pixelsPerDay}px; font-size: 9px; color: ${color}; text-align: center; padding-top: 4px; font-weight: ${fontWeight};">${dayNum}</div>`;
     
     current.setDate(current.getDate() + 1);
-    debugCount++;
+    dayIndex++;
   }
   
   return html;
