@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760266700 loaded');
+console.log('📱 Mobile Timeline v1760266800 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -247,10 +247,15 @@ function renderMonthLines(pixelsPerDay) {
     const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
     const width = daysInMonth * pixelsPerDay;
     
-    // Add vertical line at the end of each month
-    html += `<div style="position: absolute; left: ${position + width}px; top: 0; bottom: 0; width: 2px; background: #999;"></div>`;
-    
     position += width;
+    const nextMonth = new Date(current);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    
+    // Add vertical line at the end of each month (but not at the very end)
+    if (nextMonth < state.dateRange.to) {
+      html += `<div style="position: absolute; left: ${position}px; top: 0; bottom: 0; width: 2px; background: #999;"></div>`;
+    }
+    
     current.setMonth(current.getMonth() + 1);
   }
   
