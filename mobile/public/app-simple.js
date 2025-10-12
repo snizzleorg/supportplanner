@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760270200 loaded');
+console.log('📱 Mobile Timeline v1760270300 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -399,8 +399,11 @@ function showEventModal(event) {
       return;
     }
     
+    // Extract event ID from CalDAV URL (last segment)
+    const eventId = event.id.split('/').pop();
+    
     try {
-      const response = await fetch(`${API_BASE}/api/events/${event.id}`, {
+      const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventId)}`, {
         method: 'DELETE'
       });
       
@@ -445,8 +448,11 @@ function showEventModal(event) {
       systemType: systemType || ''
     };
     
+    // Extract event ID from CalDAV URL (last segment)
+    const eventId = event.id.split('/').pop();
+    
     try {
-      const response = await fetch(`${API_BASE}/api/events/${event.id}`, {
+      const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
