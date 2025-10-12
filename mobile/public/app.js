@@ -233,17 +233,34 @@ async function loadData() {
     console.log('Final calendars for display:', state.calendars.length, state.calendars.map(c => c.content));
     
     // Show debug info on screen
+    const gridStart = new Date(state.dateRange.from);
+    gridStart.setDate(1);
+    
+    // Sample event for debugging
+    const sampleEvent = state.events[0];
+    const samplePos = sampleEvent ? calculateEventPosition(sampleEvent) : null;
+    
     const debugInfo = `
-      <div style="position: fixed; top: 60px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; font-size: 10px; z-index: 9999; max-width: 200px; border-radius: 5px;">
+      <div id="debugInfo" style="position: fixed; top: 60px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; font-size: 10px; z-index: 9999; max-width: 220px; border-radius: 5px;">
         <div><strong>Debug Info:</strong></div>
-        <div>Calendars loaded: ${state.allCalendars?.length || 0}</div>
-        <div>Groups returned: ${state.calendars.length}</div>
+        <div>Calendars: ${state.allCalendars?.length || 0}</div>
+        <div>Groups: ${state.calendars.length}</div>
         <div>Events: ${state.events.length}</div>
-        <div>Date range: ${state.dateRange.from.toISOString().split('T')[0]} to ${state.dateRange.to.toISOString().split('T')[0]}</div>
-        <div>Grid start: ${new Date(state.dateRange.from).setDate(1)}</div>
-        <div style="margin-top: 5px; font-size: 9px;">Groups: ${state.calendars.map(c => c.content).join(', ')}</div>
+        <div>Range: ${state.dateRange.from.toISOString().split('T')[0]} to ${state.dateRange.to.toISOString().split('T')[0]}</div>
+        <div>Grid start: ${gridStart.toISOString().split('T')[0]}</div>
+        <div>Oct 1 is: ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date('2025-10-01').getDay()]}</div>
+        ${sampleEvent ? `
+          <div style="margin-top: 5px; border-top: 1px solid #666; padding-top: 5px;">
+            <div>Sample: ${sampleEvent.content?.substring(0, 15)}...</div>
+            <div>Start: ${sampleEvent.start.split('T')[0]}</div>
+            <div>Pos: ${Math.round(samplePos.left)}px, W: ${Math.round(samplePos.width)}px</div>
+          </div>
+        ` : ''}
       </div>
     `;
+    // Remove old debug info if exists
+    const oldDebug = document.getElementById('debugInfo');
+    if (oldDebug) oldDebug.remove();
     document.body.insertAdjacentHTML('beforeend', debugInfo);
     
     renderFilters();
