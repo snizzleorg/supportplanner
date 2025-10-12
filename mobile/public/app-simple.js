@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760266900 loaded');
+console.log('📱 Mobile Timeline v1760267000 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -161,7 +161,7 @@ function render() {
   html += '</div>';
   
   // Header row with months
-  html += '<div style="display: flex; height: 40px; border-bottom: 1px solid #ddd; margin-left: 100px;">';
+  html += '<div style="display: flex; height: 40px; border-bottom: 1px solid #ddd; margin-left: 100px; min-width: ' + (totalWidth + 100) + 'px;">';
   html += renderMonthHeaders(pixelsPerDay);
   html += '</div>';
   
