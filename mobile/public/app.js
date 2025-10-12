@@ -4,9 +4,11 @@
  */
 
 // Configuration
+// When running in Docker, containers communicate via service names
+// When accessing from browser, use localhost
 const API_BASE = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5175'  // Main backend in docker
-  : window.location.origin.replace(':5174', ':5175');
+  ? 'http://localhost:5175'  // Accessing from host machine
+  : window.location.protocol + '//' + window.location.hostname.replace('mobile-planner', 'support-planner') + ':5175';
 
 // State
 const state = {
