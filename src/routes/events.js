@@ -278,6 +278,7 @@ router.post('/', async (req, res) => {
 
         const item = {
           id: eventId,
+          uid: event.uid, // Add UID for edit/delete operations
           group: groupId,
           content: event.summary || 'No title',
           start: event.start,
