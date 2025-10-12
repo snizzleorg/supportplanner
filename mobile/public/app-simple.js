@@ -280,10 +280,13 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
 function calculateEventPosition(event, pixelsPerDay) {
   const eventStart = new Date(event.start);
   const eventEnd = new Date(event.end);
-  const rangeStart = state.dateRange.from;
+  const rangeStart = new Date(state.dateRange.from);
+  rangeStart.setHours(0, 0, 0, 0);
   
-  const daysFromStart = (eventStart - rangeStart) / (1000 * 60 * 60 * 24);
-  const duration = (eventEnd - eventStart) / (1000 * 60 * 60 * 24);
+  // Calculate days from start (should be whole days)
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const daysFromStart = Math.floor((eventStart - rangeStart) / msPerDay);
+  const duration = Math.ceil((eventEnd - eventStart) / msPerDay);
   
   return {
     left: daysFromStart * pixelsPerDay,
