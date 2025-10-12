@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760266200 loaded');
+console.log('📱 Mobile Timeline v1760266300 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -285,7 +285,14 @@ function renderWeekNumbers(pixelsPerDay) {
     // Show week number on Monday (or first day if week starts mid-range)
     if (weekNum !== lastWeekNum && (dayOfWeek === 1 || dayIndex === 0)) {
       const left = dayIndex * pixelsPerDay;
-      html += `<div style="position: absolute; left: ${left}px; width: ${pixelsPerDay * 7}px; font-size: 8px; color: #888; text-align: left; padding-top: 2px; padding-left: 2px; font-weight: 600;">W${weekNum}</div>`;
+      const weekWidth = pixelsPerDay * 7;
+      
+      // Week number label (centered)
+      html += `<div style="position: absolute; left: ${left}px; width: ${weekWidth}px; font-size: 8px; color: #888; text-align: center; padding-top: 2px; font-weight: 600;">W${weekNum}</div>`;
+      
+      // Vertical line at start of week
+      html += `<div style="position: absolute; left: ${left}px; top: 0; bottom: 0; width: 1px; background: #ddd;"></div>`;
+      
       lastWeekNum = weekNum;
     }
     
