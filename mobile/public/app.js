@@ -416,19 +416,21 @@ function renderTimeGrid() {
   const widths = { week: 600, month: 300, quarter: 150 };
   const monthWidth = widths[state.zoomLevel];
   
-  elements.timeGrid.innerHTML = months.map(month => {
+  elements.timeGrid.innerHTML = months.map((month, index) => {
     const weeks = getWeeksInMonth(month);
     const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
     const daysPerMonth = 30.44;
     const pixelsPerDay = monthWidth / daysPerMonth;
     const actualWidth = daysInMonth * pixelsPerDay;
     
+    console.log(`Month ${index}: ${month.toLocaleDateString('en-US', { month: 'long' })}, days: ${daysInMonth}, width: ${actualWidth}px, weeks: ${weeks.length}`);
+    
     return `
-      <div class="month-column" style="min-width: ${actualWidth}px;">
+      <div class="month-column" style="min-width: ${actualWidth}px; width: ${actualWidth}px;">
         <div class="month-header">${month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
         <div class="week-markers">
-          ${weeks.map(week => `
-            <div class="week-marker">
+          ${weeks.map((week, wIndex) => `
+            <div class="week-marker" style="flex: 1;">
               <span class="week-label">W${getWeekNumber(week)}</span>
             </div>
           `).join('')}
@@ -670,6 +672,7 @@ function getMonthsInRange(from, to) {
     current.setMonth(current.getMonth() + 1);
   }
   
+  console.log('Months in range:', months.map(m => m.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })));
   return months;
 }
 
