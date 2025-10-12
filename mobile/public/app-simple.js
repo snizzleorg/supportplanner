@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760269800 loaded');
+console.log('📱 Mobile Timeline v1760269900 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
@@ -285,6 +285,114 @@ function render() {
       render();
     });
   });
+  
+  // Add click handlers for events
+  document.querySelectorAll('.timeline-event').forEach(eventEl => {
+    eventEl.addEventListener('click', (e) => {
+      const eventId = e.target.dataset.eventId;
+      const event = state.events.find(ev => ev.id === eventId);
+      if (event) {
+        showEventModal(event);
+      }
+    });
+  });
+}
+
+// Show event modal
+function showEventModal(event) {
+  const modal = document.getElementById('eventModal');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody = document.getElementById('modalBody');
+  
+  if (!modal || !modalTitle || !modalBody) return;
+  
+  const calendar = state.calendars.find(c => c.id === event.group);
+  const calendarName = calendar?.content || calendar?.displayName || 'Unknown';
+  
+  modalTitle.textContent = event.content;
+  
+  // Format dates
+  const startDate = parseLocalDate(event.start);
+  const endDate = parseLocalDate(event.end);
+  const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  
+  modalBody.innerHTML = `
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
+      <input type="text" id="eventTitle" value="${event.content}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
+      <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        ${state.calendars.map(cal => 
+          `<option value="${cal.id}" ${cal.id === event.group ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
+        ).join('')}
+      </select>
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start Date:</label>
+      <input type="date" id="eventStart" value="${event.start}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">End Date:</label>
+      <input type="date" id="eventEnd" value="${event.end}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+  `;
+  
+  modal.classList.add('active');
+  
+  // Setup modal buttons
+  const closeModal = document.getElementById('closeModal');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+  const editEventBtn = document.getElementById('editEventBtn');
+  
+  const closeHandler = () => {
+    modal.classList.remove('active');
+  };
+  
+  closeModal?.addEventListener('click', closeHandler);
+  closeModalBtn?.addEventListener('click', closeHandler);
+  
+  editEventBtn?.addEventListener('click', async () => {
+    const title = document.getElementById('eventTitle').value;
+    const calendarId = document.getElementById('eventCalendar').value;
+    const start = document.getElementById('eventStart').value;
+    const end = document.getElementById('eventEnd').value;
+    
+    if (!title || !start || !end) {
+      alert('Please fill in all fields');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/events/${event.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: title,
+          group: calendarId,
+          start: start,
+          end: end
+        })
+      });
+      
+      if (response.ok) {
+        // Update local state
+        event.content = title;
+        event.group = calendarId;
+        event.start = start;
+        event.end = end;
+        
+        modal.classList.remove('active');
+        render();
+      } else {
+        alert('Failed to update event');
+      }
+    } catch (error) {
+      console.error('Error updating event:', error);
+      alert('Error updating event');
+    }
+  });
 }
 
 // Render weekend and holiday backgrounds
@@ -521,7 +629,7 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
     const fontSize = eventHeight < 25 ? 9 : 10;
     const lineClamp = eventHeight < 25 ? 1 : 2;
     
-    html += `<div style="position: absolute; left: ${pos.left}px; width: ${pos.width}px; top: ${top}px; height: ${eventHeight}px; background: ${color}; color: white; border-radius: 3px; padding: 2px 4px; font-size: ${fontSize}px; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: ${lineClamp}; -webkit-box-orient: vertical; box-shadow: 0 1px 2px rgba(0,0,0,0.2);">${event.content}</div>`;
+    html += `<div class="timeline-event" data-event-id="${event.id}" style="position: absolute; left: ${pos.left}px; width: ${pos.width}px; top: ${top}px; height: ${eventHeight}px; background: ${color}; color: white; border-radius: 3px; padding: 2px 4px; font-size: ${fontSize}px; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: ${lineClamp}; -webkit-box-orient: vertical; box-shadow: 0 1px 2px rgba(0,0,0,0.2); cursor: pointer;">${event.content}</div>`;
   });
   
   return html;
