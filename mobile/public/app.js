@@ -359,6 +359,9 @@ function setZoomLevel(zoom) {
   document.querySelectorAll('.month-column').forEach(col => {
     col.style.minWidth = `${widths[zoom]}px`;
   });
+  
+  // Re-render timeline to update event positions
+  renderTimeline();
 }
 
 // Render timeline
@@ -630,16 +633,21 @@ function getWeeksInMonth(month) {
   const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
   const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
   
-  // Start from the Monday of the week containing the 1st
+  // Always show 4-5 weeks per month for consistent layout
+  // Start from the 1st and create week markers every 7 days
   let current = new Date(firstDay);
-  const dayOfWeek = current.getDay();
-  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 0=Sunday, 1=Monday
-  current.setDate(current.getDate() - daysToMonday);
   
-  // Generate weeks until we pass the last day of the month
-  while (current <= lastDay) {
-    weeks.push(new Date(current));
-    current.setDate(current.getDate() + 7);
+  // Generate approximately 4-5 weeks to cover the month
+  for (let i = 0; i < 5; i++) {
+    if (current <= lastDay) {
+      weeks.push(new Date(current));
+      current.setDate(current.getDate() + 7);
+    }
+  }
+  
+  // Ensure we have at least 4 weeks
+  if (weeks.length === 0) {
+    weeks.push(new Date(firstDay));
   }
   
   return weeks;
