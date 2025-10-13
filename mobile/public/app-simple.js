@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760276900 loaded');
+console.log('📱 Mobile Timeline v1760277000 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -188,9 +188,10 @@ async function init() {
 function scrollToToday() {
   // Small delay to ensure DOM is fully rendered
   setTimeout(() => {
-    const wrapper = document.querySelector('.timeline-wrapper');
-    if (!wrapper) {
-      console.warn('Timeline wrapper not found for scrolling');
+    // Scroll the timeline-container, not the wrapper
+    const container = document.querySelector('.timeline-container');
+    if (!container) {
+      console.warn('Timeline container not found for scrolling');
       return;
     }
     
@@ -206,7 +207,7 @@ function scrollToToday() {
     const todayPosition = 100 + (daysFromStart * pixelsPerDay);
     
     // Center today in the viewport
-    const viewportWidth = wrapper.clientWidth;
+    const viewportWidth = container.clientWidth;
     const scrollPosition = todayPosition - (viewportWidth / 2);
     
     console.log('Scrolling to today:', {
@@ -216,7 +217,7 @@ function scrollToToday() {
       scrollPosition: Math.max(0, scrollPosition)
     });
     
-    wrapper.scrollLeft = Math.max(0, scrollPosition);
+    container.scrollLeft = Math.max(0, scrollPosition);
   }, 100);
 }
 
