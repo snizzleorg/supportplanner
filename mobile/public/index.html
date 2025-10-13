@@ -7,8 +7,29 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>SupportPlanner Mobile</title>
     
-    <!-- Custom styles only - Ionic CSS conflicts with layout -->
+    <!-- Custom styles FIRST -->
     <link rel="stylesheet" href="/styles.css">
+    
+    <!-- Ionic CSS for modal components -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.5.0/css/ionic.bundle.css" crossorigin="anonymous">
+    
+    <!-- Override Ionic CSS that conflicts with timeline -->
+    <style>
+        /* Prevent Ionic from hiding our timeline */
+        .timeline-wrapper,
+        .timeline-container,
+        .app-bar,
+        .controls-bar,
+        .status-bar {
+            display: block !important;
+            position: relative !important;
+        }
+        
+        /* Ensure our layout stays intact */
+        body {
+            overflow: auto !important;
+        }
+    </style>
 </head>
 <body>
     <!-- Minimal header - just for safe area -->
@@ -138,6 +159,6 @@
         });
     </script>
     
-    <script type="module" src="/app-simple.js?v=1760275300"></script>
+    <script type="module" src="/app-simple.js?v=1760275400"></script>
 </body>
 </html>
