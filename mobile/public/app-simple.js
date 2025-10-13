@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760275800 loaded');
+console.log('📱 Mobile Timeline v1760275900 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -490,13 +490,15 @@ async function showCreateEventModal(calendar, clickedDate) {
       <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
       <input type="text" id="eventTitle" value="${defaultTitle}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
     </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start Date:</label>
-      <input type="date" id="eventStart" value="${startDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">End Date:</label>
-      <input type="date" id="eventEnd" value="${endDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start:</label>
+        <input type="date" id="eventStart" value="${startDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">End:</label>
+        <input type="date" id="eventEnd" value="${endDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+      </div>
     </div>
     <div style="margin-bottom: 15px;">
       <label style="display: block; font-weight: 600; margin-bottom: 5px;">Description:</label>
@@ -678,13 +680,15 @@ async function showEventModal(event) {
       <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
       <input type="text" id="eventTitle" value="${event.content}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
     </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start Date:</label>
-      <input type="date" id="eventStart" value="${event.start}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">End Date:</label>
-      <input type="date" id="eventEnd" value="${event.end}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start:</label>
+        <input type="date" id="eventStart" value="${event.start}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">End:</label>
+        <input type="date" id="eventEnd" value="${event.end}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+      </div>
     </div>
     <div style="margin-bottom: 15px;">
       <label style="display: block; font-weight: 600; margin-bottom: 5px;">Description:</label>
