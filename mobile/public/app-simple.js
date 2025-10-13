@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760274800 loaded');
+console.log('📱 Mobile Timeline v1760274900 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -540,21 +540,49 @@ async function showCreateEventModal(calendar, clickedDate) {
   
   // Show modal FIRST so Ionic can see the content
   await modal.present();
+  console.log('✅ Modal presented');
   
   // Wait for modal animation and components to initialize
   await new Promise(resolve => setTimeout(resolve, 500));
+  console.log('⏱️ Waited 500ms for modal animation');
+  
+  // Debug: Check what's in modalBody
+  console.log('📋 modalBody innerHTML length:', modalBody.innerHTML.length);
+  console.log('📋 modalBody first 200 chars:', modalBody.innerHTML.substring(0, 200));
   
   // Force Ionic to hydrate/upgrade custom elements in modal
   const ionList = modalBody.querySelector('ion-list');
+  console.log('🔍 Found ion-list:', !!ionList);
+  console.log('🔍 ion-list tagName:', ionList?.tagName);
+  console.log('🔍 ion-list has componentOnReady:', !!ionList?.componentOnReady);
+  
   if (ionList && ionList.componentOnReady) {
+    console.log('⏳ Calling componentOnReady on ion-list...');
     await ionList.componentOnReady();
+    console.log('✅ ion-list ready');
   }
   
   // Force each input to be ready
   const inputs = modalBody.querySelectorAll('ion-input, ion-textarea, ion-select');
-  await Promise.all(Array.from(inputs).map(el => 
-    el.componentOnReady ? el.componentOnReady() : Promise.resolve()
-  ));
+  console.log('🔍 Found inputs:', inputs.length);
+  
+  for (let i = 0; i < inputs.length; i++) {
+    const el = inputs[i];
+    console.log(`🔍 Input ${i}: ${el.tagName}, id=${el.id}, hasComponentOnReady=${!!el.componentOnReady}`);
+  }
+  
+  await Promise.all(Array.from(inputs).map(async (el, i) => {
+    if (el.componentOnReady) {
+      console.log(`⏳ Waiting for ${el.tagName} ${i} to be ready...`);
+      await el.componentOnReady();
+      console.log(`✅ ${el.tagName} ${i} ready`);
+      return;
+    }
+    console.log(`⚠️ ${el.tagName} ${i} has no componentOnReady method`);
+    return Promise.resolve();
+  }));
+  
+  console.log('✅ All components ready');
   
   // Access buttons inside modal's shadow DOM
   const closeModal = document.getElementById('closeModal');
