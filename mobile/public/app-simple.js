@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760275600 loaded');
+console.log('📱 Mobile Timeline v1760275700 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -532,14 +532,14 @@ async function showCreateEventModal(calendar, clickedDate) {
   const deleteEventBtn = document.getElementById('deleteEventBtn');
   if (deleteEventBtn) deleteEventBtn.style.display = 'none';
   
-  // Show modal (Ionic)
-  await modal.present();
+  // Show modal
+  modal.classList.add('active');
   
   const closeModal = document.getElementById('closeModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const saveEventBtn = document.getElementById('saveEventBtn');
   
-  const closeHandler = () => modal.dismiss();
+  const closeHandler = () => modal.classList.remove('active');
   
   const newSaveBtn = saveEventBtn.cloneNode(true);
   saveEventBtn.parentNode.replaceChild(newSaveBtn, saveEventBtn);
@@ -611,7 +611,7 @@ async function showCreateEventModal(calendar, clickedDate) {
       console.log('Create response data:', responseData);
       
       // Success - close modal
-      await modal.dismiss();
+      modal.classList.remove('active');
       console.log('Event created successfully, waiting before reload...');
       
       // Wait 2 seconds for backend to finish saving to CalDAV
@@ -725,11 +725,11 @@ async function showEventModal(event) {
   // Show delete button in edit mode
   if (deleteEventBtn) deleteEventBtn.style.display = '';
   
-  // Show modal (Ionic)
-  await modal.present();
+  // Show modal
+  modal.classList.add('active');
   
   const closeHandler = () => {
-    modal.dismiss();
+    modal.classList.remove('active');
   };
   
   closeModal?.addEventListener('click', closeHandler);
@@ -769,7 +769,7 @@ async function showEventModal(event) {
       console.log('DELETE response status:', response.status);
       
       if (response.ok) {
-        await modal.dismiss();
+        modal.classList.remove('active');
         console.log('Event deleted successfully, waiting before reload...');
         
         // Wait 2 seconds for backend to finish saving to CalDAV
