@@ -10,6 +10,9 @@ services:
       - "5175:5173"
     volumes:
       - ./data:/usr/src/support-planner/data
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     restart: unless-stopped
 
   backend-tests:
@@ -42,3 +45,6 @@ services:
     container_name: frontend-unit-tests
     # No ports exposed; this is a one-shot runner
     restart: "no"
+
+  # mobile-planner is now integrated into support-planner
+  # Device detection automatically serves mobile app for mobile devices

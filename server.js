@@ -19,7 +19,7 @@ import {
 } from './src/config/index.js';
 
 // Import middleware
-import { initializeAuth } from './src/middleware/index.js';
+import { initializeAuth, deviceBasedStaticMiddleware } from './src/middleware/index.js';
 
 // Import services
 import { calendarCache } from './src/services/index.js';
@@ -55,8 +55,12 @@ app.set('trust proxy', 1);
 // Initialize authentication (OIDC or disabled mode)
 initializeAuth(app);
 
-// Static after auth guard (so guard can apply when enabled)
-app.use(express.static(path.join(__dirname, 'public')));
+// Device-based static file serving
+// Serves mobile app for mobile devices, desktop app for others
+app.use(deviceBasedStaticMiddleware({
+  desktopPublicPath: path.join(__dirname, 'public'),
+  mobilePublicPath: path.join(__dirname, 'mobile', 'public')
+}));
 
 // Register all application routes
 registerRoutes(app);
