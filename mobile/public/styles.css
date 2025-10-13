@@ -673,8 +673,18 @@ body {
 }
 
 .modal-body input[type="date"] {
-    width: 100%;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    flex-shrink: 1;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Force grid children to respect boundaries */
+.modal-body [style*="display: grid"] > div {
     min-width: 0;
+    overflow: hidden;
 }
 
 .modal-footer {
