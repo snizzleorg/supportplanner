@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760274400 loaded');
+console.log('📱 Mobile Timeline v1760274500 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -538,11 +538,14 @@ async function showCreateEventModal(calendar, clickedDate) {
     </ion-list>
   `;
   
+  // Wait for Ionic components in innerHTML to be registered
+  await new Promise(resolve => setTimeout(resolve, 200));
+  
   // Show modal (Ionic)
   await modal.present();
   
   // Wait for modal to be fully rendered
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise(resolve => setTimeout(resolve, 300));
   
   // Access buttons inside modal's shadow DOM
   const closeModal = document.getElementById('closeModal');
@@ -768,6 +771,15 @@ async function showEventModal(event) {
     </ion-list>
   `;
   
+  // Wait for Ionic components in innerHTML to be registered
+  await new Promise(resolve => setTimeout(resolve, 200));
+  
+  // Show modal (Ionic)
+  await modal.present();
+  
+  // Wait for modal to be fully rendered
+  await new Promise(resolve => setTimeout(resolve, 300));
+  
   // Setup modal buttons
   const closeModal = document.getElementById('closeModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
@@ -776,9 +788,6 @@ async function showEventModal(event) {
   
   // Show delete button in edit mode
   if (deleteEventBtn) deleteEventBtn.style.display = '';
-  
-  // Show modal (Ionic)
-  await modal.present();
   
   const closeHandler = () => {
     modal.dismiss();
