@@ -113,19 +113,27 @@
     <script type="module">
         import { defineCustomElements } from 'https://cdn.jsdelivr.net/npm/@ionic/core/loader/index.js';
         
-        // Initialize Ionic with auto platform detection
+        // Detect iOS manually since CDN doesn't auto-detect
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || 
+                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        
+        // Add platform classes to body
+        if (isIOS) {
+            document.body.classList.add('ios', 'plt-ios', 'plt-mobile', 'plt-mobileweb');
+            console.log('🍎 Detected iOS device');
+        } else if (isAndroid) {
+            document.body.classList.add('md', 'plt-android', 'plt-mobile', 'plt-mobileweb');
+            console.log('🤖 Detected Android device');
+        } else {
+            document.body.classList.add('md', 'plt-desktop');
+            console.log('💻 Detected desktop');
+        }
+        
+        // Initialize Ionic components
         defineCustomElements(window).then(() => {
             console.log('✅ Ionic components loaded');
-            
-            // Check what mode Ionic detected
-            setTimeout(() => {
-                const bodyClasses = document.body.className;
-                console.log('📱 Body classes:', bodyClasses);
-                console.log('🎨 Platform mode:', 
-                    bodyClasses.includes('ios') ? 'iOS' : 
-                    bodyClasses.includes('md') ? 'Material Design (Android)' : 
-                    'Desktop/Unknown');
-            }, 200);
+            console.log('📱 Body classes:', document.body.className);
             
             // Signal that Ionic is ready
             window.ionicReady = true;
@@ -133,6 +141,6 @@
         });
     </script>
     
-    <script type="module" src="/app-simple.js?v=1760274500"></script>
+    <script type="module" src="/app-simple.js?v=1760274600"></script>
 </body>
 </html>
