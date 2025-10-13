@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760276500 loaded');
+console.log('📱 Mobile Timeline v1760276600 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -601,14 +601,20 @@ async function showCreateEventModal(calendar, clickedDate) {
       const responseData = await response.json();
       console.log('Create response data:', responseData);
       
-      // Success - close modal
+      // Success - close modal and show loading
       modal.classList.remove('active');
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      const loadingText = loadingOverlay?.querySelector('p');
+      if (loadingText) loadingText.textContent = 'Saving event...';
+      loadingOverlay?.classList.remove('hidden');
+      
       console.log('Event created successfully, triggering CalDAV refresh...');
       
       // Wait a moment for the event to be saved
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Trigger CalDAV cache refresh
+      if (loadingText) loadingText.textContent = 'Updating calendar...';
       console.log('Calling refresh-caldav endpoint...');
       try {
         const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, {
@@ -781,12 +787,18 @@ async function showEventModal(event) {
       
       if (response.ok) {
         modal.classList.remove('active');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = loadingOverlay?.querySelector('p');
+        if (loadingText) loadingText.textContent = 'Deleting event...';
+        loadingOverlay?.classList.remove('hidden');
+        
         console.log('Event deleted successfully, triggering CalDAV refresh...');
         
         // Wait for backend to save
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Trigger CalDAV cache refresh
+        if (loadingText) loadingText.textContent = 'Refreshing calendar...';
         try {
           const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, {
             method: 'POST',
@@ -859,14 +871,20 @@ async function showEventModal(event) {
       });
       
       if (response.ok) {
-        // Close modal and reload to show updated data
+        // Close modal and show loading
         modal.classList.remove('active');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = loadingOverlay?.querySelector('p');
+        if (loadingText) loadingText.textContent = 'Updating event...';
+        loadingOverlay?.classList.remove('hidden');
+        
         console.log('Event updated successfully, triggering CalDAV refresh...');
         
         // Wait for backend to save
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Trigger CalDAV cache refresh
+        if (loadingText) loadingText.textContent = 'Refreshing calendar...';
         try {
           const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, {
             method: 'POST',
