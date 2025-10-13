@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760276700 loaded');
+console.log('📱 Mobile Timeline v1760276800 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -83,7 +83,7 @@ const state = {
   events: [],
   holidays: [],
   dateRange: getDefaultDateRange(),
-  zoom: 'quarter',
+  zoom: 'month',
   searchQuery: '',
   selectedCalendars: new Set()
 };
@@ -175,6 +175,36 @@ async function init() {
   
   // Render
   render();
+  
+  // Scroll to today's position
+  scrollToToday();
+}
+
+/**
+ * Scroll the timeline to show today's date
+ * Centers today in the viewport
+ * @returns {void}
+ */
+function scrollToToday() {
+  const wrapper = document.querySelector('.timeline-wrapper');
+  if (!wrapper) return;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Calculate days from start of date range to today
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const daysFromStart = Math.floor((today - state.dateRange.from) / msPerDay);
+  
+  // Calculate pixel position (100px label width + days * pixels per day)
+  const pixelsPerDay = ZOOM_SETTINGS[state.zoom];
+  const todayPosition = 100 + (daysFromStart * pixelsPerDay);
+  
+  // Center today in the viewport
+  const viewportWidth = wrapper.clientWidth;
+  const scrollPosition = todayPosition - (viewportWidth / 2);
+  
+  wrapper.scrollLeft = Math.max(0, scrollPosition);
 }
 
 // ============================================
