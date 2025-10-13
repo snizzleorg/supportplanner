@@ -13,7 +13,7 @@
     <!-- Custom styles -->
     <link rel="stylesheet" href="/styles.css">
 </head>
-<body>
+<body class="ios">
     <!-- Minimal header - just for safe area -->
     <div class="app-bar">
         <span id="dateRangeText" style="font-size: 12px; color: #666;"></span>
@@ -59,7 +59,7 @@
     </div>
 
     <!-- Event Details Modal (Ionic) -->
-    <ion-modal id="eventModal">
+    <ion-modal id="eventModal" mode="ios">
         <ion-header>
             <ion-toolbar>
                 <ion-title id="modalTitle">Event Details</ion-title>
@@ -113,15 +113,15 @@
     <script type="module">
         import { defineCustomElements } from 'https://cdn.jsdelivr.net/npm/@ionic/core/loader/index.js';
         
-        // Initialize Ionic and then start app
+        // Initialize Ionic in iOS mode and then start app
         defineCustomElements(window).then(() => {
-            console.log('✅ Ionic components loaded');
+            console.log('✅ Ionic components loaded in iOS mode');
             // Signal that Ionic is ready
             window.ionicReady = true;
             window.dispatchEvent(new Event('ionicReady'));
         });
     </script>
     
-    <script type="module" src="/app-simple.js?v=1760273800"></script>
+    <script type="module" src="/app-simple.js?v=1760273900"></script>
 </body>
 </html>
