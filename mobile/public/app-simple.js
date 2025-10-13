@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760276200 loaded');
+console.log('📱 Mobile Timeline v1760276300 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -649,42 +649,17 @@ async function showEventModal(event) {
   const endDate = parseLocalDate(event.end);
   const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   
-  // Parse metadata from description (YAML format: ```yaml ... ```)
-  let description = event.description || '';
-  let metadata = {};
+  // Use clean description (without YAML) and pre-parsed metadata
+  const description = event.description || '';
+  const metadata = event.meta || {};
   
   console.log('=== Event Modal Debug ===');
   console.log('Event title:', event.content);
-  console.log('Event description:', description);
+  console.log('Clean description:', description);
+  console.log('Metadata object:', metadata);
   console.log('Event location:', event.location);
   
-  if (description) {
-    // Look for YAML fence at the end: ```yaml ... ```
-    const yamlMatch = description.match(/```\s*yaml\s*\n([\s\S]*?)```\s*$/i);
-    console.log('YAML match found:', !!yamlMatch);
-    if (yamlMatch) {
-      const yamlText = yamlMatch[1];
-      console.log('YAML text:', yamlText);
-      // Remove YAML block from visible description
-      description = description.replace(/```\s*yaml\s*\n[\s\S]*?```\s*$/i, '').trimEnd();
-      
-      // Simple YAML parser for our metadata
-      // Format: "key: value" per line
-      yamlText.split('\n').forEach(line => {
-        const match = line.match(/^\s*(\w+):\s*(.*)$/);
-        if (match) {
-          const [, key, value] = match;
-          metadata[key] = value.trim();
-          console.log('Parsed metadata:', key, '=', value.trim());
-        }
-      });
-    }
-  }
-  
-  console.log('Final metadata:', metadata);
-  console.log('Final description (clean):', description);
-  
-  const location = metadata.location || event.location || '';
+  const location = event.location || '';
   const orderNumber = metadata.orderNumber || '';
   const ticketLink = metadata.ticketLink || '';
   const systemType = metadata.systemType || '';
