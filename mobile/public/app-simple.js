@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760273400 loaded');
+console.log('📱 Mobile Timeline v1760273500 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -445,7 +445,7 @@ function render() {
  * @param {Date} clickedDate - Date that was clicked
  * @returns {void}
  */
-function showCreateEventModal(calendar, clickedDate) {
+async function showCreateEventModal(calendar, clickedDate) {
   const modal = document.getElementById('eventModal');
   const modalTitle = document.getElementById('modalTitle');
   const modalBody = document.getElementById('modalBody');
@@ -528,16 +528,18 @@ function showCreateEventModal(calendar, clickedDate) {
     </div>
   `;
   
-  modal.classList.add('active');
+  // Hide delete button in create mode
+  const deleteEventBtn = document.getElementById('deleteEventBtn');
+  if (deleteEventBtn) deleteEventBtn.style.display = 'none';
+  
+  // Show modal (Ionic)
+  await modal.present();
   
   const closeModal = document.getElementById('closeModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const saveEventBtn = document.getElementById('saveEventBtn');
-  const deleteEventBtn = document.getElementById('deleteEventBtn');
   
-  if (deleteEventBtn) deleteEventBtn.style.display = 'none';
-  
-  const closeHandler = () => modal.classList.remove('active');
+  const closeHandler = () => modal.dismiss();
   
   const newSaveBtn = saveEventBtn.cloneNode(true);
   saveEventBtn.parentNode.replaceChild(newSaveBtn, saveEventBtn);
@@ -609,7 +611,7 @@ function showCreateEventModal(calendar, clickedDate) {
       console.log('Create response data:', responseData);
       
       // Success - close modal
-      modal.classList.remove('active');
+      await modal.dismiss();
       console.log('Event created successfully, waiting before reload...');
       
       // Wait 2 seconds for backend to finish saving to CalDAV
@@ -633,9 +635,9 @@ function showCreateEventModal(calendar, clickedDate) {
  * Show modal to edit an existing event
  * Loads event data into form fields for editing
  * @param {Object} event - Event object to edit
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function showEventModal(event) {
+async function showEventModal(event) {
   const modal = document.getElementById('eventModal');
   const modalTitle = document.getElementById('modalTitle');
   const modalBody = document.getElementById('modalBody');
@@ -714,8 +716,6 @@ function showEventModal(event) {
     </div>
   `;
   
-  modal.classList.add('active');
-  
   // Setup modal buttons
   const closeModal = document.getElementById('closeModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
@@ -725,8 +725,11 @@ function showEventModal(event) {
   // Show delete button in edit mode
   if (deleteEventBtn) deleteEventBtn.style.display = '';
   
+  // Show modal (Ionic)
+  await modal.present();
+  
   const closeHandler = () => {
-    modal.classList.remove('active');
+    modal.dismiss();
   };
   
   closeModal?.addEventListener('click', closeHandler);
@@ -766,7 +769,7 @@ function showEventModal(event) {
       console.log('DELETE response status:', response.status);
       
       if (response.ok) {
-        modal.classList.remove('active');
+        await modal.dismiss();
         console.log('Event deleted successfully, waiting before reload...');
         
         // Wait 2 seconds for backend to finish saving to CalDAV
