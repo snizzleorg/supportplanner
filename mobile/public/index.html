@@ -7,19 +7,21 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>SupportPlanner Mobile</title>
     
-    <!-- Ionic CSS from CDN -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css">
+    <!-- Ionic CSS from CDN with crossorigin -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.5.0/css/ionic.bundle.css" crossorigin="anonymous">
+    
+    <!-- Additional Ionic CSS files -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.5.0/css/core.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.5.0/css/normalize.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.5.0/css/structure.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.5.0/css/typography.css" crossorigin="anonymous">
     
     <!-- Check if Ionic CSS loaded -->
     <script>
-        // Debug: Check if CSS is loaded
         window.addEventListener('load', () => {
-            const ionicLink = document.querySelector('link[href*="ionic.bundle.css"]');
-            console.log('🎨 Ionic CSS link element:', ionicLink);
-            console.log('🎨 Ionic CSS loaded:', ionicLink?.sheet ? 'YES' : 'NO');
-            if (ionicLink?.sheet) {
-                console.log('🎨 Ionic CSS rules count:', ionicLink.sheet.cssRules?.length || 0);
-            }
+            console.log('🎨 All CSS files loaded');
+            const links = document.querySelectorAll('link[href*="ionic"]');
+            console.log('🎨 Found', links.length, 'Ionic CSS links');
         });
     </script>
     
@@ -154,6 +156,6 @@
         });
     </script>
     
-    <script type="module" src="/app-simple.js?v=1760275000"></script>
+    <script type="module" src="/app-simple.js?v=1760275100"></script>
 </body>
 </html>
