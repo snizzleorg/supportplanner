@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>SupportPlanner Mobile</title>
+    
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <!-- Minimal header - just for safe area -->
+    <div class="app-bar">
+        <span id="dateRangeText" style="font-size: 12px; color: #666;"></span>
+    </div>
+
+    <!-- Search Overlay (hidden by default) -->
+    <div class="search-overlay" id="searchOverlay">
+        <div class="search-container">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search events, locations, people...">
+            <button class="icon-btn" id="closeSearch">✕</button>
+        </div>
+    </div>
+
+    <!-- Filter Panel (hidden by default) -->
+    <div class="filter-panel" id="filterPanel">
+        <div class="filter-header">
+            <h2>Filters</h2>
+            <button class="icon-btn" id="closeFilter">✕</button>
+        </div>
+        <div class="filter-content">
+            <div class="filter-section">
+                <h3>Event Types</h3>
+                <div id="eventTypeFilters" class="filter-chips"></div>
+            </div>
+            <div class="filter-section">
+                <h3>Calendars</h3>
+                <div id="calendarFilters" class="filter-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>Loading timeline...</p>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-wrapper">
+        <div class="timeline-container" id="timelineContainer">
+            <!-- Timeline content populated by JS -->
+        </div>
+    </div>
+
+    <!-- Event Details Modal -->
+    <div class="modal" id="eventModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Event Details</h2>
+                <button class="icon-btn" id="closeModal">✕</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Event details will be populated here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="deleteEventBtn">Delete</button>
+                <button class="btn btn-secondary" id="closeModalBtn">Cancel</button>
+                <button class="btn btn-primary" id="saveEventBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="bottom-controls">
+        <button class="icon-btn" id="searchBtn" title="Search">🔍</button>
+        <div class="zoom-controls">
+            <button class="control-btn" data-zoom="week">Week</button>
+            <button class="control-btn active" data-zoom="month">Month</button>
+            <button class="control-btn" data-zoom="quarter">Quarter</button>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar" id="statusBar"></div>
+    
+    <script type="module" src="/app-simple.js?v=1760276600"></script>
+</body>
+</html>
