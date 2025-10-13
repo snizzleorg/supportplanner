@@ -10,6 +10,7 @@ services:
       - "5175:5173"
     volumes:
       - ./data:/usr/src/support-planner/data
+      - ./mobile/public:/usr/src/support-planner/mobile/public
     dns:
       - 8.8.8.8
       - 8.8.4.4
