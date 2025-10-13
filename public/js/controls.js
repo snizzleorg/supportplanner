@@ -242,6 +242,10 @@ export function initTimelinePanEvents() {
       if (props && props.byUser) {
         setIsPanning(false);
         setLastPanEnd(Date.now());
+        
+        // Update axis density based on new window
+        const window = timeline.getWindow();
+        updateAxisDensity(dayjs(window.start), dayjs(window.end));
       }
     } catch (_) {}
   });
