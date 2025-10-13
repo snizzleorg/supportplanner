@@ -1058,7 +1058,7 @@ async function refresh() {
     // Add holiday highlights via helper (de-duplicates IDs across refreshes)
     try {
       console.log('Fetching holidays...');
-      await upsertHolidayBackgrounds(items, from, to, getHolidaysInRange, dayjs);
+      await upsertHolidayBackgrounds(items, fetchFrom, fetchTo, getHolidaysInRange, dayjs);
     } catch (e) {
       console.error('Failed to add holiday highlights:', e);
     }
