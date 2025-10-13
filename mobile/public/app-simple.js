@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760274300 loaded');
+console.log('📱 Mobile Timeline v1760274400 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -570,16 +570,36 @@ async function showCreateEventModal(calendar, clickedDate) {
   newSaveBtn.addEventListener('click', async () => {
     console.log('Save button clicked!');
     try {
-      const title = document.getElementById('eventTitle').value;
+      // Get Ionic input values - need to wait for component to be ready
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const titleEl = document.getElementById('eventTitle');
+      const title = await titleEl.getInputElement().then(el => el.value);
       console.log('Creating event with title:', title);
-      const calendarUrl = document.getElementById('eventCalendar').value;
-      const start = document.getElementById('eventStart').value;
-      const end = document.getElementById('eventEnd').value;
-      const description = document.getElementById('eventDescription').value;
-      const location = document.getElementById('eventLocation').value;
-      const orderNumber = document.getElementById('eventOrderNumber').value;
-      const ticketLink = document.getElementById('eventTicketLink').value;
-      const systemType = document.getElementById('eventSystemType').value;
+      
+      const calendarEl = document.getElementById('eventCalendar');
+      const calendarUrl = calendarEl.value;
+      
+      const startEl = document.getElementById('eventStart');
+      const start = await startEl.getInputElement().then(el => el.value);
+      
+      const endEl = document.getElementById('eventEnd');
+      const end = await endEl.getInputElement().then(el => el.value);
+      
+      const descEl = document.getElementById('eventDescription');
+      const description = descEl.value || '';
+      
+      const locEl = document.getElementById('eventLocation');
+      const location = await locEl.getInputElement().then(el => el.value).catch(() => '');
+      
+      const orderEl = document.getElementById('eventOrderNumber');
+      const orderNumber = await orderEl.getInputElement().then(el => el.value).catch(() => '');
+      
+      const ticketEl = document.getElementById('eventTicketLink');
+      const ticketLink = await ticketEl.getInputElement().then(el => el.value).catch(() => '');
+      
+      const systemEl = document.getElementById('eventSystemType');
+      const systemType = await systemEl.getInputElement().then(el => el.value).catch(() => '');
       
       if (!title || !start || !end) {
         alert('Please fill in title, start date, and end date');
@@ -822,35 +842,56 @@ async function showEventModal(event) {
   
   // Save event handler
   saveEventBtn?.addEventListener('click', async () => {
-    const title = document.getElementById('eventTitle').value;
-    const calendarId = document.getElementById('eventCalendar').value;
-    const start = document.getElementById('eventStart').value;
-    const end = document.getElementById('eventEnd').value;
-    const description = document.getElementById('eventDescription').value;
-    const location = document.getElementById('eventLocation').value;
-    const orderNumber = document.getElementById('eventOrderNumber').value;
-    const ticketLink = document.getElementById('eventTicketLink').value;
-    const systemType = document.getElementById('eventSystemType').value;
-    
-    if (!title || !start || !end) {
-      alert('Please fill in title, start date, and end date');
-      return;
-    }
-    
-    // Build metadata object
-    const metadata = {
-      description: description || '',
-      location: location || '',
-      orderNumber: orderNumber || '',
-      ticketLink: ticketLink || '',
-      systemType: systemType || ''
-    };
-    
-    // Use event.uid if available, otherwise extract from id and remove leading hyphen
-    const eventUid = event.uid || event.id.split('/').pop().replace(/^-/, '');
-    console.log('Updating event with UID:', eventUid, 'Original event.id:', event.id, 'event.uid:', event.uid);
-    
+    console.log('Edit save button clicked!');
     try {
+      // Get Ionic input values
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const titleEl = document.getElementById('eventTitle');
+      const title = await titleEl.getInputElement().then(el => el.value);
+      
+      const calendarEl = document.getElementById('eventCalendar');
+      const calendarId = calendarEl.value;
+      
+      const startEl = document.getElementById('eventStart');
+      const start = await startEl.getInputElement().then(el => el.value);
+      
+      const endEl = document.getElementById('eventEnd');
+      const end = await endEl.getInputElement().then(el => el.value);
+      
+      const descEl = document.getElementById('eventDescription');
+      const description = descEl.value || '';
+      
+      const locEl = document.getElementById('eventLocation');
+      const location = await locEl.getInputElement().then(el => el.value).catch(() => '');
+      
+      const orderEl = document.getElementById('eventOrderNumber');
+      const orderNumber = await orderEl.getInputElement().then(el => el.value).catch(() => '');
+      
+      const ticketEl = document.getElementById('eventTicketLink');
+      const ticketLink = await ticketEl.getInputElement().then(el => el.value).catch(() => '');
+      
+      const systemEl = document.getElementById('eventSystemType');
+      const systemType = await systemEl.getInputElement().then(el => el.value).catch(() => '');
+      
+      if (!title || !start || !end) {
+        alert('Please fill in title, start date, and end date');
+        return;
+      }
+      
+      // Build metadata object
+      const metadata = {
+        description: description || '',
+        location: location || '',
+        orderNumber: orderNumber || '',
+        ticketLink: ticketLink || '',
+        systemType: systemType || ''
+      };
+      
+      // Use event.uid if available, otherwise extract from id and remove leading hyphen
+      const eventUid = event.uid || event.id.split('/').pop().replace(/^-/, '');
+      console.log('Updating event with UID:', eventUid, 'Original event.id:', event.id, 'event.uid:', event.uid);
+      
       const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventUid)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -871,8 +912,11 @@ async function showEventModal(event) {
         event.end = end;
         event.description = JSON.stringify(metadata);
         
-        modal.classList.remove('active');
-        render();
+        await modal.dismiss();
+        
+        // Wait for backend to save
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        window.location.reload();
       } else {
         const errorText = await response.text();
         console.error('Failed to update event:', response.status, errorText);
