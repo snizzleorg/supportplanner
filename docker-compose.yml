@@ -2,12 +2,11 @@ services:
   support-planner:
     build: .
     container_name: support-planner
+    network_mode: host
     env_file:
       - .env
     environment:
       - SKIP_SESSION_SECRET_CHECK=true
-    ports:
-      - "5175:5173"
     volumes:
       - ./data:/usr/src/support-planner/data
     restart: unless-stopped
@@ -48,8 +47,7 @@ services:
       context: .
       dockerfile: mobile/Dockerfile
     container_name: mobile-planner
-    ports:
-      - "5174:5174"
+    network_mode: host
     volumes:
       - ./mobile/public:/usr/src/mobile-planner/public
     depends_on:
