@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760274700 loaded');
+console.log('📱 Mobile Timeline v1760274800 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -538,14 +538,23 @@ async function showCreateEventModal(calendar, clickedDate) {
     </ion-list>
   `;
   
-  // Wait for Ionic components in innerHTML to be registered
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  // Show modal (Ionic)
+  // Show modal FIRST so Ionic can see the content
   await modal.present();
   
-  // Wait for modal to be fully rendered
-  await new Promise(resolve => setTimeout(resolve, 300));
+  // Wait for modal animation and components to initialize
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Force Ionic to hydrate/upgrade custom elements in modal
+  const ionList = modalBody.querySelector('ion-list');
+  if (ionList && ionList.componentOnReady) {
+    await ionList.componentOnReady();
+  }
+  
+  // Force each input to be ready
+  const inputs = modalBody.querySelectorAll('ion-input, ion-textarea, ion-select');
+  await Promise.all(Array.from(inputs).map(el => 
+    el.componentOnReady ? el.componentOnReady() : Promise.resolve()
+  ));
   
   // Access buttons inside modal's shadow DOM
   const closeModal = document.getElementById('closeModal');
@@ -771,14 +780,23 @@ async function showEventModal(event) {
     </ion-list>
   `;
   
-  // Wait for Ionic components in innerHTML to be registered
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  // Show modal (Ionic)
+  // Show modal FIRST so Ionic can see the content
   await modal.present();
   
-  // Wait for modal to be fully rendered
-  await new Promise(resolve => setTimeout(resolve, 300));
+  // Wait for modal animation and components to initialize
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Force Ionic to hydrate/upgrade custom elements in modal
+  const ionListEdit = modalBody.querySelector('ion-list');
+  if (ionListEdit && ionListEdit.componentOnReady) {
+    await ionListEdit.componentOnReady();
+  }
+  
+  // Force each input to be ready
+  const inputsEdit = modalBody.querySelectorAll('ion-input, ion-textarea, ion-select');
+  await Promise.all(Array.from(inputsEdit).map(el => 
+    el.componentOnReady ? el.componentOnReady() : Promise.resolve()
+  ));
   
   // Setup modal buttons
   const closeModal = document.getElementById('closeModal');
