@@ -10,6 +10,19 @@
     <!-- Ionic CSS from CDN -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css">
     
+    <!-- Check if Ionic CSS loaded -->
+    <script>
+        // Debug: Check if CSS is loaded
+        window.addEventListener('load', () => {
+            const ionicLink = document.querySelector('link[href*="ionic.bundle.css"]');
+            console.log('🎨 Ionic CSS link element:', ionicLink);
+            console.log('🎨 Ionic CSS loaded:', ionicLink?.sheet ? 'YES' : 'NO');
+            if (ionicLink?.sheet) {
+                console.log('🎨 Ionic CSS rules count:', ionicLink.sheet.cssRules?.length || 0);
+            }
+        });
+    </script>
+    
     <!-- Custom styles -->
     <link rel="stylesheet" href="/styles.css">
 </head>
@@ -141,6 +154,6 @@
         });
     </script>
     
-    <script type="module" src="/app-simple.js?v=1760274900"></script>
+    <script type="module" src="/app-simple.js?v=1760275000"></script>
 </body>
 </html>
