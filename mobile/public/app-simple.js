@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760277000 loaded');
+console.log('📱 Mobile Timeline v1760277100 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -120,11 +120,25 @@ async function init() {
   // Setup zoom buttons
   document.querySelectorAll('.zoom-controls .control-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      const container = document.querySelector('.timeline-container');
+      if (!container) return;
+      
+      // Calculate which date is currently at the left edge of the viewport
+      const oldPixelsPerDay = ZOOM_SETTINGS[state.zoom];
+      const currentScrollLeft = container.scrollLeft;
+      const daysFromStart = Math.floor((currentScrollLeft - 100) / oldPixelsPerDay);
+      
+      // Change zoom and re-render
       state.zoom = btn.dataset.zoom;
       document.querySelectorAll('.zoom-controls .control-btn').forEach(b => 
         b.classList.toggle('active', b.dataset.zoom === state.zoom)
       );
       render();
+      
+      // Scroll to maintain the same date position
+      const newPixelsPerDay = ZOOM_SETTINGS[state.zoom];
+      const newScrollLeft = 100 + (daysFromStart * newPixelsPerDay);
+      container.scrollLeft = Math.max(0, newScrollLeft);
     });
   });
   
@@ -181,8 +195,8 @@ async function init() {
 }
 
 /**
- * Scroll the timeline to show today's date
- * Centers today in the viewport
+ * Scroll the timeline to show one week before today
+ * Positions the view to start one week in the past
  * @returns {void}
  */
 function scrollToToday() {
@@ -198,22 +212,20 @@ function scrollToToday() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Calculate days from start of date range to today
+    // Go back one week (7 days)
+    const oneWeekAgo = new Date(today);
+    oneWeekAgo.setDate(today.getDate() - 7);
+    
+    // Calculate days from start of date range to one week ago
     const msPerDay = 1000 * 60 * 60 * 24;
-    const daysFromStart = Math.floor((today - state.dateRange.from) / msPerDay);
+    const daysFromStart = Math.floor((oneWeekAgo - state.dateRange.from) / msPerDay);
     
     // Calculate pixel position (100px label width + days * pixels per day)
     const pixelsPerDay = ZOOM_SETTINGS[state.zoom];
-    const todayPosition = 100 + (daysFromStart * pixelsPerDay);
+    const scrollPosition = 100 + (daysFromStart * pixelsPerDay);
     
-    // Center today in the viewport
-    const viewportWidth = container.clientWidth;
-    const scrollPosition = todayPosition - (viewportWidth / 2);
-    
-    console.log('Scrolling to today:', {
+    console.log('Scrolling to one week before today:', {
       daysFromStart,
-      todayPosition,
-      viewportWidth,
       scrollPosition: Math.max(0, scrollPosition)
     });
     
