@@ -134,12 +134,9 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'calendarUrls must be a non-empty array' });
     }
 
-    // Validate date range (max ~15 months total: -3 to +12)
+    // Validate date range (max ~24 months total: -12 to +12 for mobile support)
     const fromDate = new Date(from);
     const toDate = new Date(to);
-    // Note: not used below, but keep for potential sanity checks/logging if needed
-    const twelveMonthsFromNow = new Date();
-    twelveMonthsFromNow.setMonth(twelveMonthsFromNow.getMonth() + 12);
     
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
       return res.status(400).json({ 
@@ -149,7 +146,7 @@ router.post('/', async (req, res) => {
     }
     
     // Ensure the date range is not too large
-    const maxDays = 460; // ~15 months (~30.67 days/month * 15)
+    const maxDays = 750; // ~24 months (~30.42 days/month * 24) for 2-year view
     const diffTime = Math.abs(toDate - fromDate);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     

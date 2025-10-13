@@ -207,6 +207,8 @@ async function loadData() {
     const toStr = state.dateRange.to.toISOString().split('T')[0];
     
     console.log('Loading events...');
+    console.log('Date range:', fromStr, 'to', toStr);
+    console.log('Calendar URLs count:', calendarUrls.length);
     const evtRes = await fetch(`${API_BASE}/api/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
