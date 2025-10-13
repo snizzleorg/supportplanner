@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760273900 loaded');
+console.log('📱 Mobile Timeline v1760274000 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -528,19 +528,29 @@ async function showCreateEventModal(calendar, clickedDate) {
     </div>
   `;
   
-  // Hide delete button in create mode
-  const deleteEventBtn = document.getElementById('deleteEventBtn');
-  if (deleteEventBtn) deleteEventBtn.style.display = 'none';
-  
   // Show modal (Ionic)
   await modal.present();
   
+  // Wait for modal to be fully rendered
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // Access buttons inside modal's shadow DOM
   const closeModal = document.getElementById('closeModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const saveEventBtn = document.getElementById('saveEventBtn');
+  const deleteEventBtn = document.getElementById('deleteEventBtn');
   
-  const closeHandler = () => modal.dismiss();
+  // Hide delete button in create mode
+  if (deleteEventBtn) deleteEventBtn.style.display = 'none';
   
+  console.log('Buttons found:', { closeModal, closeModalBtn, saveEventBtn, deleteEventBtn });
+  
+  const closeHandler = () => {
+    console.log('Close clicked');
+    modal.dismiss();
+  };
+  
+  // Remove old event listeners by cloning
   const newSaveBtn = saveEventBtn.cloneNode(true);
   saveEventBtn.parentNode.replaceChild(newSaveBtn, saveEventBtn);
   
@@ -548,8 +558,10 @@ async function showCreateEventModal(calendar, clickedDate) {
   closeModalBtn?.addEventListener('click', closeHandler);
   
   newSaveBtn.addEventListener('click', async () => {
+    console.log('Save button clicked!');
     try {
       const title = document.getElementById('eventTitle').value;
+      console.log('Creating event with title:', title);
       const calendarUrl = document.getElementById('eventCalendar').value;
       const start = document.getElementById('eventStart').value;
       const end = document.getElementById('eventEnd').value;
