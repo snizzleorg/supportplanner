@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760276800 loaded');
+console.log('📱 Mobile Timeline v1760276900 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -186,25 +186,38 @@ async function init() {
  * @returns {void}
  */
 function scrollToToday() {
-  const wrapper = document.querySelector('.timeline-wrapper');
-  if (!wrapper) return;
-  
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  // Calculate days from start of date range to today
-  const msPerDay = 1000 * 60 * 60 * 24;
-  const daysFromStart = Math.floor((today - state.dateRange.from) / msPerDay);
-  
-  // Calculate pixel position (100px label width + days * pixels per day)
-  const pixelsPerDay = ZOOM_SETTINGS[state.zoom];
-  const todayPosition = 100 + (daysFromStart * pixelsPerDay);
-  
-  // Center today in the viewport
-  const viewportWidth = wrapper.clientWidth;
-  const scrollPosition = todayPosition - (viewportWidth / 2);
-  
-  wrapper.scrollLeft = Math.max(0, scrollPosition);
+  // Small delay to ensure DOM is fully rendered
+  setTimeout(() => {
+    const wrapper = document.querySelector('.timeline-wrapper');
+    if (!wrapper) {
+      console.warn('Timeline wrapper not found for scrolling');
+      return;
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculate days from start of date range to today
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const daysFromStart = Math.floor((today - state.dateRange.from) / msPerDay);
+    
+    // Calculate pixel position (100px label width + days * pixels per day)
+    const pixelsPerDay = ZOOM_SETTINGS[state.zoom];
+    const todayPosition = 100 + (daysFromStart * pixelsPerDay);
+    
+    // Center today in the viewport
+    const viewportWidth = wrapper.clientWidth;
+    const scrollPosition = todayPosition - (viewportWidth / 2);
+    
+    console.log('Scrolling to today:', {
+      daysFromStart,
+      todayPosition,
+      viewportWidth,
+      scrollPosition: Math.max(0, scrollPosition)
+    });
+    
+    wrapper.scrollLeft = Math.max(0, scrollPosition);
+  }, 100);
 }
 
 // ============================================
