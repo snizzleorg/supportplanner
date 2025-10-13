@@ -128,7 +128,8 @@ export function applyWindow(from, to) {
 export function updateAxisDensity(from, to) {
   if (!timeline) return;
   const spanDays = dayjs(to).diff(dayjs(from), 'day') + 1;
-  const condensed = spanDays > 45;
+  // Show day numbers up to 6 months (180 days) to support quarter view
+  const condensed = spanDays > 180;
   
   if (condensed) {
     timeline.setOptions({ showMinorLabels: false });
