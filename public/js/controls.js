@@ -11,7 +11,7 @@ import dayjs from 'https://cdn.jsdelivr.net/npm/dayjs@1.11.13/+esm';
 import { timeline, setIsPanning, setLastPanEnd } from './state.js';
 import { 
   fromEl, toEl, fromDateDisplay, toDateDisplay,
-  refreshBtn, fitBtn, todayBtn, monthViewBtn, quarterViewBtn
+  refreshBtn, todayBtn, monthViewBtn, quarterViewBtn
 } from './dom.js';
 import { renderWeekBar } from './timeline-ui.js';
 import { TOUCH } from './constants.js';
@@ -143,9 +143,6 @@ export function updateAxisDensity(from, to) {
  */
 export function initTimelineControls(forceRefreshCache) {
   if (!timeline) return;
-  
-  // Fit button - fit timeline to all items
-  fitBtn?.addEventListener('click', () => timeline.fit());
   
   // Today button - center timeline on current date
   todayBtn?.addEventListener('click', () => {
