@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760276400 loaded');
+console.log('📱 Mobile Timeline v1760276500 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -493,11 +493,11 @@ async function showCreateEventModal(calendar, clickedDate) {
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
       <div>
         <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start:</label>
-        <input type="date" id="eventStart" value="${startDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        <input type="date" id="eventStart" value="${startDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
       </div>
       <div>
         <label style="display: block; font-weight: 600; margin-bottom: 5px;">End:</label>
-        <input type="date" id="eventEnd" value="${endDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        <input type="date" id="eventEnd" value="${endDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
       </div>
     </div>
     <div style="margin-bottom: 15px;">
@@ -690,11 +690,11 @@ async function showEventModal(event) {
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
       <div>
         <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start:</label>
-        <input type="date" id="eventStart" value="${event.start}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        <input type="date" id="eventStart" value="${event.start}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
       </div>
       <div>
         <label style="display: block; font-weight: 600; margin-bottom: 5px;">End:</label>
-        <input type="date" id="eventEnd" value="${event.end}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        <input type="date" id="eventEnd" value="${event.end}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
       </div>
     </div>
     <div style="margin-bottom: 15px;">
