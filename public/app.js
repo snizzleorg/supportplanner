@@ -851,12 +851,12 @@ async function refresh() {
     const dividerItems = [];
     const stagedGroups = [];
     const stagedItems = [];
-    const spanDays = dayjs(to).diff(dayjs(from), 'day') + 1;
-    const toBound = dayjs(to).endOf('day');
+    const spanDays = dayjs(fetchTo).diff(dayjs(fetchFrom), 'day') + 1;
+    const toBound = dayjs(fetchTo).endOf('day');
     
     // Generate week (or day) dividers only; week labels are rendered by overlay
     if (spanDays > 45) {
-      let ws = dayjs(from).startOf('day');
+      let ws = dayjs(fetchFrom).startOf('day');
       while (ws.day() !== 1) ws = ws.add(1, 'day');
       while (ws.isBefore(toBound)) {
         dividerItems.push({
@@ -872,7 +872,7 @@ async function refresh() {
       }
     } else {
       // Daily lines
-      let d = dayjs(from).startOf('day');
+      let d = dayjs(fetchFrom).startOf('day');
       while (d.isBefore(toBound)) {
         dividerItems.push({
           id: `dayline-${d.format('YYYY-MM-DD')}`,
@@ -894,8 +894,8 @@ async function refresh() {
 
     // Add weekend background bands as a single block from Saturday to Monday
     {
-      // Find the first Saturday on/after from
-      let sat = dayjs(from).startOf('day');
+      // Find the first Saturday on/after fetchFrom
+      let sat = dayjs(fetchFrom).startOf('day');
       while (sat.day() !== 6) sat = sat.add(1, 'day');
       while (sat.isBefore(toBound)) {
         const mon = sat.add(2, 'day'); // Saturday + 2 days => Monday start
