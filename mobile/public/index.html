@@ -15,19 +15,41 @@
     
     <!-- Override Ionic CSS that conflicts with timeline -->
     <style>
-        /* Prevent Ionic from hiding our timeline */
+        /* Force ALL our elements to display */
+        body > *:not(ion-modal):not(script) {
+            display: block !important;
+        }
+        
         .timeline-wrapper,
         .timeline-container,
+        .timeline-container > *,
         .app-bar,
         .controls-bar,
-        .status-bar {
+        .status-bar,
+        .search-overlay {
             display: block !important;
             position: relative !important;
         }
         
-        /* Ensure our layout stays intact */
+        .timeline-wrapper {
+            position: relative !important;
+            overflow: auto !important;
+        }
+        
+        /* Ensure body layout */
         body {
             overflow: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        
+        /* Make sure modal doesn't interfere with layout */
+        ion-modal {
+            display: none !important;
+        }
+        
+        ion-modal.show-modal {
+            display: block !important;
         }
     </style>
 </head>
@@ -159,6 +181,6 @@
         });
     </script>
     
-    <script type="module" src="/app-simple.js?v=1760275400"></script>
+    <script type="module" src="/app-simple.js?v=1760275500"></script>
 </body>
 </html>
