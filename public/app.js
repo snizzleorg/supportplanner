@@ -825,21 +825,20 @@ async function refresh() {
   const allItems = [];
   const allGroups = [];
 
-  // Get current window from timeline or use defaults
-  const currentWindow = timeline ? timeline.getWindow() : null;
-  let from = currentWindow ? dayjs(currentWindow.start).format('YYYY-MM-DD') : dayjs().subtract(1, 'week').format('YYYY-MM-DD');
-  let to = currentWindow ? dayjs(currentWindow.end).format('YYYY-MM-DD') : dayjs().add(4, 'week').format('YYYY-MM-DD');
-  const fClamped = clampToWindow(from);
-  const tClamped = clampToWindow(to);
-  from = fClamped || from;
-  to = tClamped || to;
-  // Ensure ordering
-  if (dayjs(to).isBefore(dayjs(from))) to = from;
+  // Fetch data for the full allowed range (24 months)
+  const { minDay, maxDay } = getWindowBounds();
+  const fetchFrom = minDay.format('YYYY-MM-DD');
+  const fetchTo = maxDay.format('YYYY-MM-DD');
+  
+  // Initial visible window: month view (today-1w to today+4w)
+  const now = dayjs();
+  const viewFrom = now.subtract(1, 'week').startOf('day').format('YYYY-MM-DD');
+  const viewTo = now.add(4, 'week').endOf('day').format('YYYY-MM-DD');
   
   try {
     // Prepare timeline window immediately
     initTimeline();
-    applyWindow(from, to);
+    applyWindow(viewFrom, viewTo);
     setStatus(`Loading ${total} calendars...`);
 
     // Note: Do not clear datasets yet to avoid flicker. We'll clear right before we apply new data.
@@ -920,7 +919,7 @@ async function refresh() {
       const response = await fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ calendarUrls: allCalendarUrls, from, to }),
+        body: JSON.stringify({ calendarUrls: allCalendarUrls, from: fetchFrom, to: fetchTo }),
       });
       
       if (!response.ok) {
