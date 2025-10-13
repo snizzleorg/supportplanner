@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760276000 loaded');
+console.log('📱 Mobile Timeline v1760276100 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -649,11 +649,18 @@ async function showEventModal(event) {
   let description = event.description || '';
   let metadata = {};
   
+  console.log('=== Event Modal Debug ===');
+  console.log('Event title:', event.content);
+  console.log('Event description:', description);
+  console.log('Event location:', event.location);
+  
   if (description) {
     // Look for YAML fence at the end: ```yaml ... ```
     const yamlMatch = description.match(/```\s*yaml\s*\n([\s\S]*?)```\s*$/i);
+    console.log('YAML match found:', !!yamlMatch);
     if (yamlMatch) {
       const yamlText = yamlMatch[1];
+      console.log('YAML text:', yamlText);
       // Remove YAML block from visible description
       description = description.replace(/```\s*yaml\s*\n[\s\S]*?```\s*$/i, '').trimEnd();
       
@@ -664,15 +671,22 @@ async function showEventModal(event) {
         if (match) {
           const [, key, value] = match;
           metadata[key] = value.trim();
+          console.log('Parsed metadata:', key, '=', value.trim());
         }
       });
     }
   }
   
+  console.log('Final metadata:', metadata);
+  console.log('Final description (clean):', description);
+  
   const location = metadata.location || event.location || '';
   const orderNumber = metadata.orderNumber || '';
   const ticketLink = metadata.ticketLink || '';
   const systemType = metadata.systemType || '';
+  
+  console.log('Form values - orderNumber:', orderNumber, 'ticketLink:', ticketLink, 'systemType:', systemType);
+  console.log('=== End Debug ===');
   
   modalBody.innerHTML = `
     <div style="margin-bottom: 15px;">
