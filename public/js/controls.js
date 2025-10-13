@@ -17,7 +17,7 @@ import { renderWeekBar } from './timeline-ui.js';
 import { TOUCH } from './constants.js';
 
 // Configuration constants
-const WINDOW_PAST_MONTHS = 6;
+const WINDOW_PAST_MONTHS = 12;
 const WINDOW_FUTURE_MONTHS = 12;
 
 /**
@@ -86,8 +86,8 @@ function formatForDisplay(dateStr) {
  * Updates the date display elements with formatted dates
  */
 export function updateDateDisplays() {
-  if (fromDateDisplay) fromDateDisplay.textContent = formatForDisplay(fromEl.value);
-  if (toDateDisplay) toDateDisplay.textContent = formatForDisplay(toEl.value);
+  if (fromEl && fromDateDisplay) fromDateDisplay.textContent = formatForDisplay(fromEl.value);
+  if (toEl && toDateDisplay) toDateDisplay.textContent = formatForDisplay(toEl.value);
 }
 
 /**
@@ -186,6 +186,9 @@ export function initTimelineControls(forceRefreshCache) {
  * @param {Function} refresh - Callback to refresh data
  */
 export function initDateInputs(refresh) {
+  // Date inputs removed from UI - no longer needed
+  if (!fromEl || !toEl) return;
+  
   /**
    * Applies and validates date inputs
    */
@@ -252,9 +255,13 @@ export function initTimelinePanEvents() {
 export function initResizeHandler() {
   window.addEventListener('resize', () => {
     if (!timeline) return;
+    // Get current window from timeline
+    const currentWindow = timeline.getWindow();
+    const from = dayjs(currentWindow.start).format('YYYY-MM-DD');
+    const to = dayjs(currentWindow.end).format('YYYY-MM-DD');
     // Re-apply window after resize to prevent drift
-    requestAnimationFrame(() => applyWindow(fromEl.value, toEl.value));
-    requestAnimationFrame(() => updateAxisDensity(fromEl.value, toEl.value));
+    requestAnimationFrame(() => applyWindow(from, to));
+    requestAnimationFrame(() => updateAxisDensity(from, to));
     // Repaint week labels to current positions
     try { 
       requestAnimationFrame(() => renderWeekBar(timeline)); 

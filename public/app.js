@@ -825,9 +825,10 @@ async function refresh() {
   const allItems = [];
   const allGroups = [];
 
-  // Fallbacks within allowed window
-  let from = fromEl.value || dayjs().startOf('month').format('YYYY-MM-DD');
-  let to = toEl.value || dayjs().add(3, 'month').endOf('month').format('YYYY-MM-DD');
+  // Get current window from timeline or use defaults
+  const currentWindow = timeline ? timeline.getWindow() : null;
+  let from = currentWindow ? dayjs(currentWindow.start).format('YYYY-MM-DD') : dayjs().subtract(1, 'week').format('YYYY-MM-DD');
+  let to = currentWindow ? dayjs(currentWindow.end).format('YYYY-MM-DD') : dayjs().add(4, 'week').format('YYYY-MM-DD');
   const fClamped = clampToWindow(from);
   const tClamped = clampToWindow(to);
   from = fClamped || from;
@@ -1081,17 +1082,8 @@ async function refresh() {
 
 function setDefaults() {
   setDateInputBounds();
-  const { minDay, maxDay } = getWindowBounds();
-  // Use current month window but clamp to allowed bounds
-  let start = dayjs().startOf('month');
-  let end = dayjs().add(5, 'month').endOf('month'); // default ~6-month span
-  if (start.isBefore(minDay)) start = minDay;
-  if (end.isAfter(maxDay)) end = maxDay;
-  const startStr = start.format('YYYY-MM-DD');
-  const endStr = end.format('YYYY-MM-DD');
-  fromEl.value = startStr;
-  toEl.value = endStr;
-  updateDateDisplays();
+  // Date inputs removed from UI - initial window set directly on timeline
+  // Default window: today-1w to today+4w (month view)
 }
 
 function wireEvents() {
