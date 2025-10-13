@@ -1,42 +1,115 @@
 /**
  * Simple Mobile Timeline - Clean Implementation
  * Version: 1760265400
+ * 
+ * A mobile-optimized timeline view for support planning.
+ * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760273300 loaded');
+console.log('📱 Mobile Timeline v1760273400 loaded');
 
-// Configuration
+// ============================================
+// CONFIGURATION & CONSTANTS
+// ============================================
+
+/**
+ * API base URL - automatically detects localhost vs production
+ * @constant {string}
+ */
 const API_BASE = window.location.hostname === 'localhost' 
   ? 'http://localhost:5175'
   : window.location.origin.replace(':5174', ':5175');
 
-// Calculate date range: 6 months from today
-function getDefaultDateRange() {
-  const today = new Date();
-  const from = new Date(today.getFullYear(), today.getMonth(), 1); // Start of current month
-  const to = new Date(today.getFullYear(), today.getMonth() + 6, 1); // 6 months ahead
-  return { from, to };
-}
-
-// State
-const state = {
-  calendars: [],
-  events: [],
-  holidays: [],
-  dateRange: getDefaultDateRange(),
-  zoom: 'month', // week, month, quarter
-  searchQuery: '', // search filter
-  selectedCalendars: new Set() // selected calendar IDs (empty = all)
+/**
+ * Layout constants for timeline rendering
+ * @constant {Object}
+ */
+const LAYOUT = {
+  LABEL_WIDTH: 100,           // Width of calendar name labels
+  MONTH_HEADER_HEIGHT: 40,    // Height of month header row
+  WEEK_HEADER_HEIGHT: 20,     // Height of week number row
+  DAY_HEADER_HEIGHT: 25,      // Height of day number row
+  LANE_HEIGHT: 60,            // Height of each calendar lane
+  EVENT_HEIGHT: 24,           // Height of event bars
+  EVENT_GAP: 2                // Gap between stacked events
 };
 
-// Zoom settings: pixels per day
+/**
+ * Z-index layers for stacking elements
+ * @constant {Object}
+ */
+const Z_INDEX = {
+  BACKGROUND: 1,
+  EVENTS: 2,
+  DAY_HEADER: 100,
+  WEEK_HEADER: 101,
+  MONTH_HEADER: 102,
+  MONTH_LINES: 103,
+  TODAY_INDICATOR: 104
+};
+
+/**
+ * Zoom settings: pixels per day for each zoom level
+ * @constant {Object}
+ */
 const ZOOM_SETTINGS = {
   week: 20,    // 20px per day = 140px per week
   month: 10,   // 10px per day = 300px per month
   quarter: 5   // 5px per day = 150px per month
 };
 
-// Initialize
+/**
+ * Timing constants for async operations
+ * @constant {Object}
+ */
+const TIMING = {
+  SAVE_DELAY_MS: 2000,    // Wait time before reload after create
+  DELETE_DELAY_MS: 2000   // Wait time before reload after delete
+};
+
+/**
+ * Application state object
+ * @type {Object}
+ * @property {Array} calendars - List of calendars from API
+ * @property {Array} events - List of events from API
+ * @property {Array} holidays - Berlin holidays for shading
+ * @property {Object} dateRange - Display date range {from, to}
+ * @property {string} zoom - Current zoom level (week|month|quarter)
+ * @property {string} searchQuery - Current search filter text
+ * @property {Set} selectedCalendars - Set of selected calendar IDs
+ */
+const state = {
+  calendars: [],
+  events: [],
+  holidays: [],
+  dateRange: getDefaultDateRange(),
+  zoom: 'month',
+  searchQuery: '',
+  selectedCalendars: new Set()
+};
+
+// ============================================
+// CORE APPLICATION FUNCTIONS
+// ============================================
+
+/**
+ * Calculate default date range for timeline display
+ * Returns range from start of current month to 6 months ahead
+ * @returns {{from: Date, to: Date}} Date range object
+ */
+function getDefaultDateRange() {
+  const today = new Date();
+  const from = new Date(today.getFullYear(), today.getMonth(), 1);
+  const to = new Date(today.getFullYear(), today.getMonth() + 6, 1);
+  return { from, to };
+}
+
+/**
+ * Initialize the application
+ * Sets up event listeners, loads data, and renders the timeline
+ * @async
+ * @returns {Promise<void>}
+ */
 async function init() {
   console.log('Initializing simple timeline...');
   
@@ -104,7 +177,18 @@ async function init() {
   render();
 }
 
-// Load data from API
+// ============================================
+// DATA LOADING
+// ============================================
+
+/**
+ * Load calendar and event data from the API
+ * Fetches calendars, events for date range, and Berlin holidays
+ * Updates application state with loaded data
+ * @async
+ * @returns {Promise<void>}
+ * @throws {Error} If calendar or event fetch fails
+ */
 async function loadData() {
   try {
     console.log('Loading calendars...');
@@ -189,7 +273,16 @@ async function loadData() {
   }
 }
 
-// Render everything
+// ============================================
+// RENDERING
+// ============================================
+
+/**
+ * Render the complete timeline view
+ * Builds HTML for headers, calendar lanes, and events
+ * Applies search and calendar filters
+ * @returns {void}
+ */
 function render() {
   const container = document.getElementById('timelineContainer');
   const pixelsPerDay = ZOOM_SETTINGS[state.zoom];
@@ -339,7 +432,19 @@ function render() {
   });
 }
 
-// Show create event modal
+// ============================================
+// EVENT HANDLERS - MODALS (WILL BE REPLACED WITH IONIC)
+// ============================================
+
+// TODO: These functions will be replaced with Ionic modal components during migration
+
+/**
+ * Show modal to create a new event
+ * Pre-fills with week number and Mon-Fri dates based on clicked position
+ * @param {Object} calendar - Calendar object to create event in
+ * @param {Date} clickedDate - Date that was clicked
+ * @returns {void}
+ */
 function showCreateEventModal(calendar, clickedDate) {
   const modal = document.getElementById('eventModal');
   const modalTitle = document.getElementById('modalTitle');
@@ -524,7 +629,12 @@ function showCreateEventModal(calendar, clickedDate) {
   });
 }
 
-// Show event modal
+/**
+ * Show modal to edit an existing event
+ * Loads event data into form fields for editing
+ * @param {Object} event - Event object to edit
+ * @returns {void}
+ */
 function showEventModal(event) {
   const modal = document.getElementById('eventModal');
   const modalTitle = document.getElementById('modalTitle');
@@ -740,7 +850,15 @@ function showEventModal(event) {
   });
 }
 
-// Render weekend and holiday backgrounds
+// ============================================
+// RENDERING HELPERS
+// ============================================
+
+/**
+ * Render background shading for weekends and holidays
+ * @param {number} pixelsPerDay - Current zoom level pixels per day
+ * @returns {string} HTML string for background overlays
+ */
 function renderWeekendAndHolidayBackgrounds(pixelsPerDay) {
   let html = '';
   const holidayDates = new Set(state.holidays.map(h => h.date));
@@ -824,7 +942,11 @@ function renderMonthHeaders(pixelsPerDay) {
   return html;
 }
 
-// Get ISO week number
+/**
+ * Calculate ISO week number for a given date
+ * @param {Date} date - Date to calculate week number for
+ * @returns {number} ISO week number (1-53)
+ */
 function getWeekNumber(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7;
@@ -980,13 +1102,27 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
   return html;
 }
 
-// Parse date string as local date (not UTC)
+// ============================================
+// UTILITIES
+// ============================================
+
+/**
+ * Parse date string as local date (not UTC)
+ * Prevents timezone issues by parsing as local midnight
+ * @param {string} dateStr - Date string in YYYY-MM-DD format
+ * @returns {Date} Local date object
+ */
 function parseLocalDate(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day);
 }
 
-// Calculate event position
+/**
+ * Calculate event position and width in pixels
+ * @param {Object} event - Event object with start and end dates
+ * @param {number} pixelsPerDay - Current zoom level pixels per day
+ * @returns {{left: number, width: number}} Position object
+ */
 function calculateEventPosition(event, pixelsPerDay) {
   // Parse as local dates to avoid timezone issues
   const eventStart = parseLocalDate(event.start);
@@ -1006,13 +1142,17 @@ function calculateEventPosition(event, pixelsPerDay) {
     duration += 1;
   }
   
-  return {
-    left: daysFromStart * pixelsPerDay,
-    width: Math.max(duration * pixelsPerDay, 30)
-  };
+  const left = daysFromStart * pixelsPerDay;
+  const width = Math.max(duration * pixelsPerDay, 30);
+  return { left, width };
 }
 
-// Get contrast color (white or black) based on background
+/**
+ * Get contrast color (white or black) based on background brightness
+ * Uses luminance calculation to determine readable text color
+ * @param {string} color - Background color (hex, rgb, or named color)
+ * @returns {string} 'white' or 'black' for best contrast
+ */
 function getContrastColor(color) {
   let r, g, b;
   
@@ -1036,10 +1176,15 @@ function getContrastColor(color) {
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   
   // Return black for light backgrounds, white for dark
-  return luminance > 0.5 ? '#000000' : '#ffffff';
+  return luminance > 0.5 ? 'black' : 'white';
 }
 
-// Get event color
+/**
+ * Get color for an event (event color or fallback to calendar color)
+ * @param {Object} event - Event object
+ * @param {Object} calendar - Calendar object
+ * @returns {string} Color string (hex or rgb)
+ */
 function getEventColor(event, calendar) {
   // First check if event has its own color
   if (event.color) {
