@@ -112,9 +112,16 @@
     <!-- Ionic Core -->
     <script type="module">
         import { defineCustomElements } from '/node_modules/@ionic/core/loader/index.js';
-        defineCustomElements(window);
+        
+        // Initialize Ionic and then start app
+        defineCustomElements(window).then(() => {
+            console.log('✅ Ionic components loaded');
+            // Signal that Ionic is ready
+            window.ionicReady = true;
+            window.dispatchEvent(new Event('ionicReady'));
+        });
     </script>
     
-    <script type="module" src="/app-simple.js?v=1760273500"></script>
+    <script type="module" src="/app-simple.js?v=1760273600"></script>
 </body>
 </html>

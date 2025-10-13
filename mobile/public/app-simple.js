@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760273500 loaded');
+console.log('📱 Mobile Timeline v1760273600 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -1222,5 +1222,28 @@ function getEventColor(event, calendar) {
   return '#007aff';
 }
 
-// Start
-init();
+// ============================================
+// APP INITIALIZATION
+// ============================================
+
+/**
+ * Wait for Ionic components to be ready before starting the app
+ */
+async function waitForIonic() {
+  if (window.ionicReady) {
+    return Promise.resolve();
+  }
+  return new Promise(resolve => {
+    window.addEventListener('ionicReady', resolve, { once: true });
+  });
+}
+
+// Start app after DOM and Ionic are ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', async () => {
+    await waitForIonic();
+    init();
+  });
+} else {
+  waitForIonic().then(() => init());
+}

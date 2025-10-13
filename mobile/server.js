@@ -17,6 +17,9 @@ const PORT = process.env.PORT || 5174;
 // Enable CORS for API calls to main backend
 app.use(cors());
 
+// Serve node_modules for Ionic
+app.use('/node_modules', express.static(join(__dirname, 'node_modules')));
+
 // Serve static files from public directory
 app.use(express.static(join(__dirname, 'public')));
 
