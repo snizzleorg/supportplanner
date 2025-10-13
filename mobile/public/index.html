@@ -6,6 +6,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>SupportPlanner Mobile</title>
+    
+    <!-- Ionic CSS -->
+    <link rel="stylesheet" href="/node_modules/@ionic/core/css/ionic.bundle.css">
+    
+    <!-- Custom styles -->
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -53,23 +58,43 @@
         </div>
     </div>
 
-    <!-- Event Details Modal -->
-    <div class="event-modal" id="eventModal">
-        <div class="event-modal-content">
-            <div class="event-modal-header">
-                <h2 id="modalTitle">Event Details</h2>
-                <button class="icon-btn" id="closeModal">✕</button>
-            </div>
-            <div class="event-modal-body" id="modalBody">
+    <!-- Event Details Modal (Ionic) -->
+    <ion-modal id="eventModal">
+        <ion-header>
+            <ion-toolbar>
+                <ion-title id="modalTitle">Event Details</ion-title>
+                <ion-buttons slot="end">
+                    <ion-button id="closeModal">
+                        <ion-icon name="close"></ion-icon>
+                    </ion-button>
+                </ion-buttons>
+            </ion-toolbar>
+        </ion-header>
+        
+        <ion-content class="ion-padding">
+            <div id="modalBody">
                 <!-- Event details will be populated here -->
             </div>
-            <div class="event-modal-actions">
-                <button class="btn btn-danger" id="deleteEventBtn">Delete</button>
-                <button class="btn btn-secondary" id="closeModalBtn">Cancel</button>
-                <button class="btn btn-primary" id="saveEventBtn">Save Changes</button>
-            </div>
-        </div>
-    </div>
+        </ion-content>
+        
+        <ion-footer>
+            <ion-toolbar>
+                <ion-buttons slot="start">
+                    <ion-button id="deleteEventBtn" color="danger" fill="solid">
+                        Delete
+                    </ion-button>
+                </ion-buttons>
+                <ion-buttons slot="end">
+                    <ion-button id="closeModalBtn" fill="outline">
+                        Cancel
+                    </ion-button>
+                    <ion-button id="saveEventBtn" color="primary" fill="solid">
+                        Save
+                    </ion-button>
+                </ion-buttons>
+            </ion-toolbar>
+        </ion-footer>
+    </ion-modal>
 
     <!-- Bottom Controls -->
     <div class="bottom-controls">
@@ -84,6 +109,12 @@
     <!-- Status Bar -->
     <div class="status-bar" id="statusBar"></div>
 
-    <script type="module" src="/app-simple.js?v=1760273400"></script>
+    <!-- Ionic Core -->
+    <script type="module">
+        import { defineCustomElements } from '/node_modules/@ionic/core/loader/index.js';
+        defineCustomElements(window);
+    </script>
+    
+    <script type="module" src="/app-simple.js?v=1760273500"></script>
 </body>
 </html>
