@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760273600 loaded');
+console.log('📱 Mobile Timeline v1760273700 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -1228,22 +1228,47 @@ function getEventColor(event, calendar) {
 
 /**
  * Wait for Ionic components to be ready before starting the app
+ * Times out after 5 seconds if Ionic doesn't load
  */
 async function waitForIonic() {
   if (window.ionicReady) {
+    console.log('Ionic already ready');
     return Promise.resolve();
   }
-  return new Promise(resolve => {
-    window.addEventListener('ionicReady', resolve, { once: true });
+  
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      console.warn('⚠️ Ionic loading timeout - continuing without Ionic');
+      resolve(); // Continue anyway
+    }, 5000);
+    
+    window.addEventListener('ionicReady', () => {
+      clearTimeout(timeout);
+      resolve();
+    }, { once: true });
   });
 }
 
 // Start app after DOM and Ionic are ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', async () => {
+    console.log('DOM loaded, waiting for Ionic...');
     await waitForIonic();
-    init();
+    console.log('Ionic ready, starting init...');
+    init().catch(err => {
+      console.error('Init failed:', err);
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      if (loadingOverlay) loadingOverlay.classList.add('hidden');
+    });
   });
 } else {
-  waitForIonic().then(() => init());
+  console.log('DOM already loaded, waiting for Ionic...');
+  waitForIonic().then(() => {
+    console.log('Ionic ready, starting init...');
+    init().catch(err => {
+      console.error('Init failed:', err);
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      if (loadingOverlay) loadingOverlay.classList.add('hidden');
+    });
+  });
 }
