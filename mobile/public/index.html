@@ -7,8 +7,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>SupportPlanner Mobile</title>
     
-    <!-- Ionic CSS -->
-    <link rel="stylesheet" href="/node_modules/@ionic/core/css/ionic.bundle.css">
+    <!-- Ionic CSS from CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css">
     
     <!-- Custom styles -->
     <link rel="stylesheet" href="/styles.css">
@@ -109,9 +109,9 @@
     <!-- Status Bar -->
     <div class="status-bar" id="statusBar"></div>
 
-    <!-- Ionic Core -->
+    <!-- Ionic Core from CDN -->
     <script type="module">
-        import { defineCustomElements } from '/node_modules/@ionic/core/loader/index.js';
+        import { defineCustomElements } from 'https://cdn.jsdelivr.net/npm/@ionic/core/loader/index.js';
         
         // Initialize Ionic and then start app
         defineCustomElements(window).then(() => {
@@ -122,6 +122,6 @@
         });
     </script>
     
-    <script type="module" src="/app-simple.js?v=1760273700"></script>
+    <script type="module" src="/app-simple.js?v=1760273800"></script>
 </body>
 </html>
