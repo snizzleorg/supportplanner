@@ -13,7 +13,7 @@
     <!-- Custom styles -->
     <link rel="stylesheet" href="/styles.css">
 </head>
-<body class="ios">
+<body>
     <!-- Minimal header - just for safe area -->
     <div class="app-bar">
         <span id="dateRangeText" style="font-size: 12px; color: #666;"></span>
@@ -59,7 +59,7 @@
     </div>
 
     <!-- Event Details Modal (Ionic) -->
-    <ion-modal id="eventModal" mode="ios">
+    <ion-modal id="eventModal">
         <ion-header>
             <ion-toolbar>
                 <ion-title id="modalTitle">Event Details</ion-title>
@@ -111,17 +111,22 @@
 
     <!-- Ionic Core from CDN -->
     <script type="module">
-        import { defineCustomElements } from 'https://cdn.jsdelivr.net/npm/@ionic/core/loader/index.js';
+        import { defineCustomElements, getPlatforms } from 'https://cdn.jsdelivr.net/npm/@ionic/core/loader/index.js';
         
-        // Initialize Ionic in iOS mode and then start app
+        // Initialize Ionic with auto platform detection
         defineCustomElements(window).then(() => {
-            console.log('✅ Ionic components loaded in iOS mode');
+            const platforms = getPlatforms(window);
+            console.log('✅ Ionic components loaded');
+            console.log('📱 Detected platforms:', platforms);
+            console.log('🎨 Active mode:', document.body.classList.contains('ios') ? 'iOS' : 
+                                        document.body.classList.contains('md') ? 'Material Design' : 'Unknown');
+            
             // Signal that Ionic is ready
             window.ionicReady = true;
             window.dispatchEvent(new Event('ionicReady'));
         });
     </script>
     
-    <script type="module" src="/app-simple.js?v=1760274000"></script>
+    <script type="module" src="/app-simple.js?v=1760274100"></script>
 </body>
 </html>
