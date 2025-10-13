@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760275700 loaded');
+console.log('📱 Mobile Timeline v1760275800 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
