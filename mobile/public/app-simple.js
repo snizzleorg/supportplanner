@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760274600 loaded');
+console.log('📱 Mobile Timeline v1760274700 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -487,49 +487,49 @@ async function showCreateEventModal(calendar, clickedDate) {
   
   modalBody.innerHTML = `
     <ion-list lines="full">
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Title</ion-label>
-        <ion-input id="eventTitle" value="${defaultTitle}" placeholder="Event title"></ion-input>
+        <ion-input mode="ios" id="eventTitle" value="${defaultTitle}" placeholder="Event title"></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Start Date</ion-label>
-        <ion-input type="date" id="eventStart" value="${startDateStr}"></ion-input>
+        <ion-input mode="ios" type="date" id="eventStart" value="${startDateStr}"></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">End Date</ion-label>
-        <ion-input type="date" id="eventEnd" value="${endDateStr}"></ion-input>
+        <ion-input mode="ios" type="date" id="eventEnd" value="${endDateStr}"></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Description</ion-label>
-        <ion-textarea id="eventDescription" rows="3" placeholder="Description"></ion-textarea>
+        <ion-textarea mode="ios" id="eventDescription" rows="3" placeholder="Description"></ion-textarea>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Location</ion-label>
-        <ion-input id="eventLocation" placeholder="Location"></ion-input>
+        <ion-input mode="ios" id="eventLocation" placeholder="Location"></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Order Number</ion-label>
-        <ion-input id="eventOrderNumber" placeholder="e.g., SO-12345"></ion-input>
+        <ion-input mode="ios" id="eventOrderNumber" placeholder="e.g., SO-12345"></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Ticket Link</ion-label>
-        <ion-input type="url" id="eventTicketLink" placeholder="https://..."></ion-input>
+        <ion-input mode="ios" type="url" id="eventTicketLink" placeholder="https://..."></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">System Type</ion-label>
-        <ion-input id="eventSystemType" placeholder="e.g., Laser Q-Switch"></ion-input>
+        <ion-input mode="ios" id="eventSystemType" placeholder="e.g., Laser Q-Switch"></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Calendar</ion-label>
-        <ion-select id="eventCalendar" value="${calendar.url}">
+        <ion-select mode="ios" id="eventCalendar" value="${calendar.url}">
           ${state.calendars.map(cal => 
             `<ion-select-option value="${cal.url}">${cal.content || cal.displayName}</ion-select-option>`
           ).join('')}
@@ -720,49 +720,49 @@ async function showEventModal(event) {
   
   modalBody.innerHTML = `
     <ion-list lines="full">
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Title</ion-label>
-        <ion-input id="eventTitle" value="${event.content}" placeholder="Event title"></ion-input>
+        <ion-input mode="ios" id="eventTitle" value="${event.content}" placeholder="Event title"></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Start Date</ion-label>
-        <ion-input type="date" id="eventStart" value="${event.start}"></ion-input>
+        <ion-input mode="ios" type="date" id="eventStart" value="${event.start}"></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">End Date</ion-label>
-        <ion-input type="date" id="eventEnd" value="${event.end}"></ion-input>
+        <ion-input mode="ios" type="date" id="eventEnd" value="${event.end}"></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Description</ion-label>
-        <ion-textarea id="eventDescription" rows="3" placeholder="Description">${description}</ion-textarea>
+        <ion-textarea mode="ios" id="eventDescription" rows="3" placeholder="Description">${description}</ion-textarea>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Location</ion-label>
-        <ion-input id="eventLocation" value="${location}" placeholder="Location"></ion-input>
+        <ion-input mode="ios" id="eventLocation" value="${location}" placeholder="Location"></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Order Number</ion-label>
-        <ion-input id="eventOrderNumber" value="${orderNumber}" placeholder="e.g., SO-12345"></ion-input>
+        <ion-input mode="ios" id="eventOrderNumber" value="${orderNumber}" placeholder="e.g., SO-12345"></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Ticket Link</ion-label>
-        <ion-input type="url" id="eventTicketLink" value="${ticketLink}" placeholder="https://..."></ion-input>
+        <ion-input mode="ios" type="url" id="eventTicketLink" value="${ticketLink}" placeholder="https://..."></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">System Type</ion-label>
-        <ion-input id="eventSystemType" value="${systemType}" placeholder="e.g., Laser Q-Switch"></ion-input>
+        <ion-input mode="ios" id="eventSystemType" value="${systemType}" placeholder="e.g., Laser Q-Switch"></ion-input>
       </ion-item>
       
-      <ion-item>
+      <ion-item mode="ios">
         <ion-label position="stacked">Calendar</ion-label>
-        <ion-select id="eventCalendar" value="${event.group}">
+        <ion-select mode="ios" id="eventCalendar" value="${event.group}">
           ${state.calendars.map(cal => 
             `<ion-select-option value="${cal.id}">${cal.content || cal.displayName}</ion-select-option>`
           ).join('')}
