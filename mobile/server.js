@@ -17,14 +17,27 @@ const PORT = process.env.PORT || 5174;
 // Enable CORS for API calls to main backend
 app.use(cors());
 
-// Serve node_modules for Ionic
-app.use('/node_modules', express.static(join(__dirname, 'node_modules')));
+// Serve node_modules for Ionic (must be before catch-all)
+app.use('/node_modules', express.static(join(__dirname, 'node_modules'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (path.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+  }
+}));
 
 // Serve static files from public directory
 app.use(express.static(join(__dirname, 'public')));
 
 // Serve index.html for all routes (SPA behavior)
-app.get('*', (req, res) => {
+// But exclude static file requests
+app.get('*', (req, res, next) => {
+  // Don't catch static file requests
+  if (req.path.startsWith('/node_modules/')) {
+    return next();
+  }
   res.sendFile(join(__dirname, 'public', 'index.html'));
 });
 
