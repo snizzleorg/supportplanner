@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760275900 loaded');
+console.log('📱 Mobile Timeline v1760276000 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -566,20 +566,13 @@ async function showCreateEventModal(calendar, clickedDate) {
         return;
       }
       
-      const metadata = {
-        description: description || '',
-        location: location || '',
-        orderNumber: orderNumber || '',
-        ticketLink: ticketLink || '',
-        systemType: systemType || ''
-      };
+      // Build meta object (only include non-empty fields)
+      const meta = {};
+      if (orderNumber) meta.orderNumber = orderNumber;
+      if (ticketLink) meta.ticketLink = ticketLink;
+      if (systemType) meta.systemType = systemType;
       
-      console.log('Creating event...', {
-        calendarUrl,
-        title,
-        start,
-        end
-      });
+      console.log('Creating event with description:', description, 'and meta:', meta);
       
       const response = await fetch(`${API_BASE}/api/events/all-day`, {
         method: 'POST',
@@ -589,13 +582,9 @@ async function showCreateEventModal(calendar, clickedDate) {
           summary: title,
           start: start,
           end: end,
-          description: JSON.stringify(metadata),
-          location: location,
-          meta: {
-            orderNumber: orderNumber || undefined,
-            ticketLink: ticketLink || undefined,
-            systemType: systemType || undefined
-          }
+          description: description || '',
+          location: location || '',
+          meta: Object.keys(meta).length > 0 ? meta : undefined
         })
       });
       
@@ -656,21 +645,31 @@ async function showEventModal(event) {
   const endDate = parseLocalDate(event.end);
   const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   
-  // Parse metadata if it exists
+  // Parse metadata from description (YAML format: ```yaml ... ```)
+  let description = event.description || '';
   let metadata = {};
-  try {
-    if (event.description) {
-      const parsed = JSON.parse(event.description);
-      if (typeof parsed === 'object' && parsed !== null) {
-        metadata = parsed;
-      }
+  
+  if (description) {
+    // Look for YAML fence at the end: ```yaml ... ```
+    const yamlMatch = description.match(/```\s*yaml\s*\n([\s\S]*?)```\s*$/i);
+    if (yamlMatch) {
+      const yamlText = yamlMatch[1];
+      // Remove YAML block from visible description
+      description = description.replace(/```\s*yaml\s*\n[\s\S]*?```\s*$/i, '').trimEnd();
+      
+      // Simple YAML parser for our metadata
+      // Format: "key: value" per line
+      yamlText.split('\n').forEach(line => {
+        const match = line.match(/^\s*(\w+):\s*(.*)$/);
+        if (match) {
+          const [, key, value] = match;
+          metadata[key] = value.trim();
+        }
+      });
     }
-  } catch (e) {
-    // Not JSON, treat as plain text description
   }
   
-  const description = typeof metadata === 'object' && metadata !== null ? (metadata.description || '') : (event.description || '');
-  const location = metadata.location || '';
+  const location = metadata.location || event.location || '';
   const orderNumber = metadata.orderNumber || '';
   const ticketLink = metadata.ticketLink || '';
   const systemType = metadata.systemType || '';
@@ -809,42 +808,43 @@ async function showEventModal(event) {
       return;
     }
     
-    // Build metadata object
-    const metadata = {
-      description: description || '',
-      location: location || '',
-      orderNumber: orderNumber || '',
-      ticketLink: ticketLink || '',
-      systemType: systemType || ''
-    };
+    // Build metadata YAML block (matching desktop format)
+    const meta = {};
+    if (orderNumber) meta.orderNumber = orderNumber;
+    if (ticketLink) meta.ticketLink = ticketLink;
+    if (systemType) meta.systemType = systemType;
+    
+    // Build description with YAML fence (if there's metadata)
+    let fullDescription = description || '';
+    if (Object.keys(meta).length > 0) {
+      const yamlLines = Object.entries(meta).map(([key, value]) => `${key}: ${value}`).join('\n');
+      fullDescription = (fullDescription ? fullDescription + '\n\n' : '') + '\n```yaml\n' + yamlLines + '\n```\n';
+    }
     
     // Use event.uid if available, otherwise extract from id and remove leading hyphen
     const eventUid = event.uid || event.id.split('/').pop().replace(/^-/, '');
-    console.log('Updating event with UID:', eventUid, 'Original event.id:', event.id, 'event.uid:', event.uid);
+    console.log('Updating event with UID:', eventUid, 'description:', fullDescription);
     
     try {
       const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventUid)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          content: title,
-          group: calendarId,
+          summary: title,
           start: start,
           end: end,
-          description: JSON.stringify(metadata)
+          description: fullDescription,
+          location: location || ''
         })
       });
       
       if (response.ok) {
-        // Update local state
-        event.content = title;
-        event.group = calendarId;
-        event.start = start;
-        event.end = end;
-        event.description = JSON.stringify(metadata);
-        
+        // Close modal and reload to show updated data
         modal.classList.remove('active');
-        render();
+        
+        // Wait for backend to save
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        window.location.reload();
       } else {
         const errorText = await response.text();
         console.error('Failed to update event:', response.status, errorText);
