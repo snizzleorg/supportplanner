@@ -46,18 +46,5 @@ services:
     # No ports exposed; this is a one-shot runner
     restart: "no"
 
-  mobile-planner:
-    build:
-      context: .
-      dockerfile: mobile/Dockerfile
-    container_name: mobile-planner
-    ports:
-      - "5174:5174"
-    volumes:
-      - ./mobile/public:/usr/src/mobile-planner/public
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
-    depends_on:
-      - support-planner
-    restart: unless-stopped
+  # mobile-planner is now integrated into support-planner
+  # Device detection automatically serves mobile app for mobile devices
