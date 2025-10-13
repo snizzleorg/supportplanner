@@ -661,7 +661,15 @@ body {
 .modal-body {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 16px;
+}
+
+.modal-body input,
+.modal-body textarea,
+.modal-body select {
+    box-sizing: border-box;
+    max-width: 100%;
 }
 
 .modal-footer {
