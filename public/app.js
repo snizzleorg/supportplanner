@@ -830,10 +830,10 @@ async function refresh() {
   const fetchFrom = minDay.format('YYYY-MM-DD');
   const fetchTo = maxDay.format('YYYY-MM-DD');
   
-  // Initial visible window: month view (today-1w to today+4w)
+  // Initial visible window: quarter view (today-1w to today+3m)
   const now = dayjs();
   const viewFrom = now.subtract(1, 'week').startOf('day').format('YYYY-MM-DD');
-  const viewTo = now.add(4, 'week').endOf('day').format('YYYY-MM-DD');
+  const viewTo = now.add(3, 'month').endOf('day').format('YYYY-MM-DD');
   
   try {
     // Prepare timeline window immediately
@@ -1082,7 +1082,7 @@ async function refresh() {
 function setDefaults() {
   setDateInputBounds();
   // Date inputs removed from UI - initial window set directly on timeline
-  // Default window: today-1w to today+4w (month view)
+  // Default window: today-1w to today+3m (quarter view)
 }
 
 function wireEvents() {
