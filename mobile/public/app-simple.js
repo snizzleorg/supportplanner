@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760276300 loaded');
+console.log('📱 Mobile Timeline v1760276400 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -603,12 +603,27 @@ async function showCreateEventModal(calendar, clickedDate) {
       
       // Success - close modal
       modal.classList.remove('active');
-      console.log('Event created successfully, waiting before reload...');
+      console.log('Event created successfully, triggering CalDAV refresh...');
       
-      // Wait 2 seconds for backend to finish saving to CalDAV
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait a moment for the event to be saved
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      console.log('Calling window.location.reload()');
+      // Trigger CalDAV cache refresh
+      console.log('Calling refresh-caldav endpoint...');
+      try {
+        const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+        console.log('Refresh response:', refreshResponse.status);
+      } catch (refreshError) {
+        console.error('Refresh failed (non-fatal):', refreshError);
+      }
+      
+      // Wait another moment for refresh to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('Reloading page...');
       window.location.reload();
       
     } catch (error) {
@@ -766,11 +781,23 @@ async function showEventModal(event) {
       
       if (response.ok) {
         modal.classList.remove('active');
-        console.log('Event deleted successfully, waiting before reload...');
+        console.log('Event deleted successfully, triggering CalDAV refresh...');
         
-        // Wait 2 seconds for backend to finish saving to CalDAV
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Wait for backend to save
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
+        // Trigger CalDAV cache refresh
+        try {
+          const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, {
+            method: 'POST',
+            credentials: 'include'
+          });
+          console.log('Refresh response:', refreshResponse.status);
+        } catch (refreshError) {
+          console.error('Refresh failed (non-fatal):', refreshError);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
         console.log('Reloading page after delete...');
         window.location.reload();
       } else {
@@ -834,9 +861,23 @@ async function showEventModal(event) {
       if (response.ok) {
         // Close modal and reload to show updated data
         modal.classList.remove('active');
+        console.log('Event updated successfully, triggering CalDAV refresh...');
         
         // Wait for backend to save
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Trigger CalDAV cache refresh
+        try {
+          const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, {
+            method: 'POST',
+            credentials: 'include'
+          });
+          console.log('Refresh response:', refreshResponse.status);
+        } catch (refreshError) {
+          console.error('Refresh failed (non-fatal):', refreshError);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
         window.location.reload();
       } else {
         const errorText = await response.text();
