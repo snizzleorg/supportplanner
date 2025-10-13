@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760276100 loaded');
+console.log('📱 Mobile Timeline v1760276200 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -632,6 +632,10 @@ async function showEventModal(event) {
   const modal = document.getElementById('eventModal');
   const modalTitle = document.getElementById('modalTitle');
   const modalBody = document.getElementById('modalBody');
+  
+  console.log('=== Full Event Object ===');
+  console.log(JSON.stringify(event, null, 2));
+  console.log('=== End Full Event ===');
   
   if (!modal || !modalTitle || !modalBody) return;
   
