@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760276600 loaded');
+console.log('📱 Mobile Timeline v1760276700 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -83,7 +83,7 @@ const state = {
   events: [],
   holidays: [],
   dateRange: getDefaultDateRange(),
-  zoom: 'month',
+  zoom: 'quarter',
   searchQuery: '',
   selectedCalendars: new Set()
 };
@@ -94,13 +94,13 @@ const state = {
 
 /**
  * Calculate default date range for timeline display
- * Returns range from start of current month to 6 months ahead
+ * Returns range from 12 months before today to 12 months after today (2 years total)
  * @returns {{from: Date, to: Date}} Date range object
  */
 function getDefaultDateRange() {
   const today = new Date();
-  const from = new Date(today.getFullYear(), today.getMonth(), 1);
-  const to = new Date(today.getFullYear(), today.getMonth() + 6, 1);
+  const from = new Date(today.getFullYear(), today.getMonth() - 12, 1);
+  const to = new Date(today.getFullYear(), today.getMonth() + 12, 1);
   return { from, to };
 }
 
