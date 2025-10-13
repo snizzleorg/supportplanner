@@ -3,7 +3,7 @@
  * Version: 1760265400
  */
 
-console.log('📱 Mobile Timeline v1760273200 loaded');
+console.log('📱 Mobile Timeline v1760273300 loaded');
 
 // Configuration
 const API_BASE = window.location.hostname === 'localhost' 
