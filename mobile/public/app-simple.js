@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760274200 loaded');
+console.log('📱 Mobile Timeline v1760274300 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -486,46 +486,56 @@ async function showCreateEventModal(calendar, clickedDate) {
   const endDateStr = formatDate(friday);
   
   modalBody.innerHTML = `
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
-      <input type="text" id="eventTitle" value="${defaultTitle}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start Date:</label>
-      <input type="date" id="eventStart" value="${startDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">End Date:</label>
-      <input type="date" id="eventEnd" value="${endDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Description:</label>
-      <textarea id="eventDescription" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit;"></textarea>
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Location:</label>
-      <input type="text" id="eventLocation" value="" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Order Number:</label>
-      <input type="text" id="eventOrderNumber" value="" placeholder="e.g., SO-12345" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Ticket Link:</label>
-      <input type="url" id="eventTicketLink" value="" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">System Type:</label>
-      <input type="text" id="eventSystemType" value="" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
-      <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-        ${state.calendars.map(cal => 
-          `<option value="${cal.url}" ${cal.id === calendar.id ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
-        ).join('')}
-      </select>
-    </div>
+    <ion-list lines="full">
+      <ion-item>
+        <ion-label position="stacked">Title</ion-label>
+        <ion-input id="eventTitle" value="${defaultTitle}" placeholder="Event title"></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">Start Date</ion-label>
+        <ion-input type="date" id="eventStart" value="${startDateStr}"></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">End Date</ion-label>
+        <ion-input type="date" id="eventEnd" value="${endDateStr}"></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">Description</ion-label>
+        <ion-textarea id="eventDescription" rows="3" placeholder="Description"></ion-textarea>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">Location</ion-label>
+        <ion-input id="eventLocation" placeholder="Location"></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">Order Number</ion-label>
+        <ion-input id="eventOrderNumber" placeholder="e.g., SO-12345"></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">Ticket Link</ion-label>
+        <ion-input type="url" id="eventTicketLink" placeholder="https://..."></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">System Type</ion-label>
+        <ion-input id="eventSystemType" placeholder="e.g., Laser Q-Switch"></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">Calendar</ion-label>
+        <ion-select id="eventCalendar" value="${calendar.url}">
+          ${state.calendars.map(cal => 
+            `<ion-select-option value="${cal.url}">${cal.content || cal.displayName}</ion-select-option>`
+          ).join('')}
+        </ion-select>
+      </ion-item>
+    </ion-list>
   `;
   
   // Show modal (Ionic)
@@ -686,46 +696,56 @@ async function showEventModal(event) {
   const systemType = metadata.systemType || '';
   
   modalBody.innerHTML = `
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
-      <input type="text" id="eventTitle" value="${event.content}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start Date:</label>
-      <input type="date" id="eventStart" value="${event.start}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">End Date:</label>
-      <input type="date" id="eventEnd" value="${event.end}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Description:</label>
-      <textarea id="eventDescription" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit;">${description}</textarea>
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Location:</label>
-      <input type="text" id="eventLocation" value="${location}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Order Number:</label>
-      <input type="text" id="eventOrderNumber" value="${orderNumber}" placeholder="e.g., SO-12345" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Ticket Link:</label>
-      <input type="url" id="eventTicketLink" value="${ticketLink}" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">System Type:</label>
-      <input type="text" id="eventSystemType" value="${systemType}" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
-      <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-        ${state.calendars.map(cal => 
-          `<option value="${cal.id}" ${cal.id === event.group ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
-        ).join('')}
-      </select>
-    </div>
+    <ion-list lines="full">
+      <ion-item>
+        <ion-label position="stacked">Title</ion-label>
+        <ion-input id="eventTitle" value="${event.content}" placeholder="Event title"></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">Start Date</ion-label>
+        <ion-input type="date" id="eventStart" value="${event.start}"></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">End Date</ion-label>
+        <ion-input type="date" id="eventEnd" value="${event.end}"></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">Description</ion-label>
+        <ion-textarea id="eventDescription" rows="3" placeholder="Description">${description}</ion-textarea>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">Location</ion-label>
+        <ion-input id="eventLocation" value="${location}" placeholder="Location"></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">Order Number</ion-label>
+        <ion-input id="eventOrderNumber" value="${orderNumber}" placeholder="e.g., SO-12345"></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">Ticket Link</ion-label>
+        <ion-input type="url" id="eventTicketLink" value="${ticketLink}" placeholder="https://..."></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">System Type</ion-label>
+        <ion-input id="eventSystemType" value="${systemType}" placeholder="e.g., Laser Q-Switch"></ion-input>
+      </ion-item>
+      
+      <ion-item>
+        <ion-label position="stacked">Calendar</ion-label>
+        <ion-select id="eventCalendar" value="${event.group}">
+          ${state.calendars.map(cal => 
+            `<ion-select-option value="${cal.id}">${cal.content || cal.displayName}</ion-select-option>`
+          ).join('')}
+        </ion-select>
+      </ion-item>
+    </ion-list>
   `;
   
   // Setup modal buttons
