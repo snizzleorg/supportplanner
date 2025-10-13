@@ -7,51 +7,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>SupportPlanner Mobile</title>
     
-    <!-- Custom styles FIRST -->
+    <!-- Ionic CSS -->
+    <link rel="stylesheet" href="/node_modules/@ionic/core/css/ionic.bundle.css">
+    
+    <!-- Custom styles -->
     <link rel="stylesheet" href="/styles.css">
-    
-    <!-- Ionic CSS for modal components -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.5.0/css/ionic.bundle.css" crossorigin="anonymous">
-    
-    <!-- Override Ionic CSS that conflicts with timeline -->
-    <style>
-        /* Force ALL our elements to display */
-        body > *:not(ion-modal):not(script) {
-            display: block !important;
-        }
-        
-        .timeline-wrapper,
-        .timeline-container,
-        .timeline-container > *,
-        .app-bar,
-        .controls-bar,
-        .status-bar,
-        .search-overlay {
-            display: block !important;
-            position: relative !important;
-        }
-        
-        .timeline-wrapper {
-            position: relative !important;
-            overflow: auto !important;
-        }
-        
-        /* Ensure body layout */
-        body {
-            overflow: auto !important;
-            display: flex !important;
-            flex-direction: column !important;
-        }
-        
-        /* Make sure modal doesn't interfere with layout */
-        ion-modal {
-            display: none !important;
-        }
-        
-        ion-modal.show-modal {
-            display: block !important;
-        }
-    </style>
 </head>
 <body>
     <!-- Minimal header - just for safe area -->
@@ -149,38 +109,12 @@
     <!-- Status Bar -->
     <div class="status-bar" id="statusBar"></div>
 
-    <!-- Ionic Core from CDN -->
+    <!-- Ionic Core -->
     <script type="module">
-        import { defineCustomElements } from 'https://cdn.jsdelivr.net/npm/@ionic/core/loader/index.js';
-        
-        // Detect iOS manually since CDN doesn't auto-detect
-        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || 
-                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        const isAndroid = /Android/i.test(navigator.userAgent);
-        
-        // Add platform classes to body
-        if (isIOS) {
-            document.body.classList.add('ios', 'plt-ios', 'plt-mobile', 'plt-mobileweb');
-            console.log('🍎 Detected iOS device');
-        } else if (isAndroid) {
-            document.body.classList.add('md', 'plt-android', 'plt-mobile', 'plt-mobileweb');
-            console.log('🤖 Detected Android device');
-        } else {
-            document.body.classList.add('md', 'plt-desktop');
-            console.log('💻 Detected desktop');
-        }
-        
-        // Initialize Ionic components
-        defineCustomElements(window).then(() => {
-            console.log('✅ Ionic components loaded');
-            console.log('📱 Body classes:', document.body.className);
-            
-            // Signal that Ionic is ready
-            window.ionicReady = true;
-            window.dispatchEvent(new Event('ionicReady'));
-        });
+        import { defineCustomElements } from '/node_modules/@ionic/core/loader/index.js';
+        defineCustomElements(window);
     </script>
     
-    <script type="module" src="/app-simple.js?v=1760275500"></script>
+    <script type="module" src="/app-simple.js?v=1760273500"></script>
 </body>
 </html>

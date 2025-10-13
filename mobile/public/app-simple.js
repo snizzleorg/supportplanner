@@ -6,7 +6,7 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-console.log('📱 Mobile Timeline v1760275500 loaded');
+console.log('📱 Mobile Timeline v1760273500 loaded');
 
 // ============================================
 // CONFIGURATION & CONSTANTS
@@ -486,121 +486,61 @@ async function showCreateEventModal(calendar, clickedDate) {
   const endDateStr = formatDate(friday);
   
   modalBody.innerHTML = `
-    <ion-list lines="full">
-      <ion-item mode="ios">
-        <ion-label position="stacked">Title</ion-label>
-        <ion-input mode="ios" id="eventTitle" value="${defaultTitle}" placeholder="Event title"></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">Start Date</ion-label>
-        <ion-input mode="ios" type="date" id="eventStart" value="${startDateStr}"></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">End Date</ion-label>
-        <ion-input mode="ios" type="date" id="eventEnd" value="${endDateStr}"></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">Description</ion-label>
-        <ion-textarea mode="ios" id="eventDescription" rows="3" placeholder="Description"></ion-textarea>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">Location</ion-label>
-        <ion-input mode="ios" id="eventLocation" placeholder="Location"></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">Order Number</ion-label>
-        <ion-input mode="ios" id="eventOrderNumber" placeholder="e.g., SO-12345"></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">Ticket Link</ion-label>
-        <ion-input mode="ios" type="url" id="eventTicketLink" placeholder="https://..."></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">System Type</ion-label>
-        <ion-input mode="ios" id="eventSystemType" placeholder="e.g., Laser Q-Switch"></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">Calendar</ion-label>
-        <ion-select mode="ios" id="eventCalendar" value="${calendar.url}">
-          ${state.calendars.map(cal => 
-            `<ion-select-option value="${cal.url}">${cal.content || cal.displayName}</ion-select-option>`
-          ).join('')}
-        </ion-select>
-      </ion-item>
-    </ion-list>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
+      <input type="text" id="eventTitle" value="${defaultTitle}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start Date:</label>
+      <input type="date" id="eventStart" value="${startDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">End Date:</label>
+      <input type="date" id="eventEnd" value="${endDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Description:</label>
+      <textarea id="eventDescription" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit;"></textarea>
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Location:</label>
+      <input type="text" id="eventLocation" value="" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Order Number:</label>
+      <input type="text" id="eventOrderNumber" value="" placeholder="e.g., SO-12345" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Ticket Link:</label>
+      <input type="url" id="eventTicketLink" value="" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">System Type:</label>
+      <input type="text" id="eventSystemType" value="" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
+      <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        ${state.calendars.map(cal => 
+          `<option value="${cal.url}" ${cal.id === calendar.id ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
+        ).join('')}
+      </select>
+    </div>
   `;
   
-  // Show modal FIRST so Ionic can see the content
+  // Hide delete button in create mode
+  const deleteEventBtn = document.getElementById('deleteEventBtn');
+  if (deleteEventBtn) deleteEventBtn.style.display = 'none';
+  
+  // Show modal (Ionic)
   await modal.present();
-  console.log('✅ Modal presented');
   
-  // Wait for modal animation and components to initialize
-  await new Promise(resolve => setTimeout(resolve, 500));
-  console.log('⏱️ Waited 500ms for modal animation');
-  
-  // Debug: Check what's in modalBody
-  console.log('📋 modalBody innerHTML length:', modalBody.innerHTML.length);
-  console.log('📋 modalBody first 200 chars:', modalBody.innerHTML.substring(0, 200));
-  
-  // Force Ionic to hydrate/upgrade custom elements in modal
-  const ionList = modalBody.querySelector('ion-list');
-  console.log('🔍 Found ion-list:', !!ionList);
-  console.log('🔍 ion-list tagName:', ionList?.tagName);
-  console.log('🔍 ion-list has componentOnReady:', !!ionList?.componentOnReady);
-  
-  if (ionList && ionList.componentOnReady) {
-    console.log('⏳ Calling componentOnReady on ion-list...');
-    await ionList.componentOnReady();
-    console.log('✅ ion-list ready');
-  }
-  
-  // Force each input to be ready
-  const inputs = modalBody.querySelectorAll('ion-input, ion-textarea, ion-select');
-  console.log('🔍 Found inputs:', inputs.length);
-  
-  for (let i = 0; i < inputs.length; i++) {
-    const el = inputs[i];
-    console.log(`🔍 Input ${i}: ${el.tagName}, id=${el.id}, hasComponentOnReady=${!!el.componentOnReady}`);
-  }
-  
-  await Promise.all(Array.from(inputs).map(async (el, i) => {
-    if (el.componentOnReady) {
-      console.log(`⏳ Waiting for ${el.tagName} ${i} to be ready...`);
-      await el.componentOnReady();
-      console.log(`✅ ${el.tagName} ${i} ready`);
-      return;
-    }
-    console.log(`⚠️ ${el.tagName} ${i} has no componentOnReady method`);
-    return Promise.resolve();
-  }));
-  
-  console.log('✅ All components ready');
-  
-  // Access buttons inside modal's shadow DOM
   const closeModal = document.getElementById('closeModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const saveEventBtn = document.getElementById('saveEventBtn');
-  const deleteEventBtn = document.getElementById('deleteEventBtn');
   
-  // Hide delete button in create mode
-  if (deleteEventBtn) deleteEventBtn.style.display = 'none';
+  const closeHandler = () => modal.dismiss();
   
-  console.log('Buttons found:', { closeModal, closeModalBtn, saveEventBtn, deleteEventBtn });
-  
-  const closeHandler = () => {
-    console.log('Close clicked');
-    modal.dismiss();
-  };
-  
-  // Remove old event listeners by cloning
   const newSaveBtn = saveEventBtn.cloneNode(true);
   saveEventBtn.parentNode.replaceChild(newSaveBtn, saveEventBtn);
   
@@ -608,38 +548,16 @@ async function showCreateEventModal(calendar, clickedDate) {
   closeModalBtn?.addEventListener('click', closeHandler);
   
   newSaveBtn.addEventListener('click', async () => {
-    console.log('Save button clicked!');
     try {
-      // Get Ionic input values - need to wait for component to be ready
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      const titleEl = document.getElementById('eventTitle');
-      const title = await titleEl.getInputElement().then(el => el.value);
-      console.log('Creating event with title:', title);
-      
-      const calendarEl = document.getElementById('eventCalendar');
-      const calendarUrl = calendarEl.value;
-      
-      const startEl = document.getElementById('eventStart');
-      const start = await startEl.getInputElement().then(el => el.value);
-      
-      const endEl = document.getElementById('eventEnd');
-      const end = await endEl.getInputElement().then(el => el.value);
-      
-      const descEl = document.getElementById('eventDescription');
-      const description = descEl.value || '';
-      
-      const locEl = document.getElementById('eventLocation');
-      const location = await locEl.getInputElement().then(el => el.value).catch(() => '');
-      
-      const orderEl = document.getElementById('eventOrderNumber');
-      const orderNumber = await orderEl.getInputElement().then(el => el.value).catch(() => '');
-      
-      const ticketEl = document.getElementById('eventTicketLink');
-      const ticketLink = await ticketEl.getInputElement().then(el => el.value).catch(() => '');
-      
-      const systemEl = document.getElementById('eventSystemType');
-      const systemType = await systemEl.getInputElement().then(el => el.value).catch(() => '');
+      const title = document.getElementById('eventTitle').value;
+      const calendarUrl = document.getElementById('eventCalendar').value;
+      const start = document.getElementById('eventStart').value;
+      const end = document.getElementById('eventEnd').value;
+      const description = document.getElementById('eventDescription').value;
+      const location = document.getElementById('eventLocation').value;
+      const orderNumber = document.getElementById('eventOrderNumber').value;
+      const ticketLink = document.getElementById('eventTicketLink').value;
+      const systemType = document.getElementById('eventSystemType').value;
       
       if (!title || !start || !end) {
         alert('Please fill in title, start date, and end date');
@@ -756,75 +674,47 @@ async function showEventModal(event) {
   const systemType = metadata.systemType || '';
   
   modalBody.innerHTML = `
-    <ion-list lines="full">
-      <ion-item mode="ios">
-        <ion-label position="stacked">Title</ion-label>
-        <ion-input mode="ios" id="eventTitle" value="${event.content}" placeholder="Event title"></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">Start Date</ion-label>
-        <ion-input mode="ios" type="date" id="eventStart" value="${event.start}"></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">End Date</ion-label>
-        <ion-input mode="ios" type="date" id="eventEnd" value="${event.end}"></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">Description</ion-label>
-        <ion-textarea mode="ios" id="eventDescription" rows="3" placeholder="Description">${description}</ion-textarea>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">Location</ion-label>
-        <ion-input mode="ios" id="eventLocation" value="${location}" placeholder="Location"></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">Order Number</ion-label>
-        <ion-input mode="ios" id="eventOrderNumber" value="${orderNumber}" placeholder="e.g., SO-12345"></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">Ticket Link</ion-label>
-        <ion-input mode="ios" type="url" id="eventTicketLink" value="${ticketLink}" placeholder="https://..."></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">System Type</ion-label>
-        <ion-input mode="ios" id="eventSystemType" value="${systemType}" placeholder="e.g., Laser Q-Switch"></ion-input>
-      </ion-item>
-      
-      <ion-item mode="ios">
-        <ion-label position="stacked">Calendar</ion-label>
-        <ion-select mode="ios" id="eventCalendar" value="${event.group}">
-          ${state.calendars.map(cal => 
-            `<ion-select-option value="${cal.id}">${cal.content || cal.displayName}</ion-select-option>`
-          ).join('')}
-        </ion-select>
-      </ion-item>
-    </ion-list>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
+      <input type="text" id="eventTitle" value="${event.content}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start Date:</label>
+      <input type="date" id="eventStart" value="${event.start}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">End Date:</label>
+      <input type="date" id="eventEnd" value="${event.end}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Description:</label>
+      <textarea id="eventDescription" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit;">${description}</textarea>
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Location:</label>
+      <input type="text" id="eventLocation" value="${location}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Order Number:</label>
+      <input type="text" id="eventOrderNumber" value="${orderNumber}" placeholder="e.g., SO-12345" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Ticket Link:</label>
+      <input type="url" id="eventTicketLink" value="${ticketLink}" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">System Type:</label>
+      <input type="text" id="eventSystemType" value="${systemType}" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
+      <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        ${state.calendars.map(cal => 
+          `<option value="${cal.id}" ${cal.id === event.group ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
+        ).join('')}
+      </select>
+    </div>
   `;
-  
-  // Show modal FIRST so Ionic can see the content
-  await modal.present();
-  
-  // Wait for modal animation and components to initialize
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Force Ionic to hydrate/upgrade custom elements in modal
-  const ionListEdit = modalBody.querySelector('ion-list');
-  if (ionListEdit && ionListEdit.componentOnReady) {
-    await ionListEdit.componentOnReady();
-  }
-  
-  // Force each input to be ready
-  const inputsEdit = modalBody.querySelectorAll('ion-input, ion-textarea, ion-select');
-  await Promise.all(Array.from(inputsEdit).map(el => 
-    el.componentOnReady ? el.componentOnReady() : Promise.resolve()
-  ));
   
   // Setup modal buttons
   const closeModal = document.getElementById('closeModal');
@@ -834,6 +724,9 @@ async function showEventModal(event) {
   
   // Show delete button in edit mode
   if (deleteEventBtn) deleteEventBtn.style.display = '';
+  
+  // Show modal (Ionic)
+  await modal.present();
   
   const closeHandler = () => {
     modal.dismiss();
@@ -897,56 +790,35 @@ async function showEventModal(event) {
   
   // Save event handler
   saveEventBtn?.addEventListener('click', async () => {
-    console.log('Edit save button clicked!');
+    const title = document.getElementById('eventTitle').value;
+    const calendarId = document.getElementById('eventCalendar').value;
+    const start = document.getElementById('eventStart').value;
+    const end = document.getElementById('eventEnd').value;
+    const description = document.getElementById('eventDescription').value;
+    const location = document.getElementById('eventLocation').value;
+    const orderNumber = document.getElementById('eventOrderNumber').value;
+    const ticketLink = document.getElementById('eventTicketLink').value;
+    const systemType = document.getElementById('eventSystemType').value;
+    
+    if (!title || !start || !end) {
+      alert('Please fill in title, start date, and end date');
+      return;
+    }
+    
+    // Build metadata object
+    const metadata = {
+      description: description || '',
+      location: location || '',
+      orderNumber: orderNumber || '',
+      ticketLink: ticketLink || '',
+      systemType: systemType || ''
+    };
+    
+    // Use event.uid if available, otherwise extract from id and remove leading hyphen
+    const eventUid = event.uid || event.id.split('/').pop().replace(/^-/, '');
+    console.log('Updating event with UID:', eventUid, 'Original event.id:', event.id, 'event.uid:', event.uid);
+    
     try {
-      // Get Ionic input values
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      const titleEl = document.getElementById('eventTitle');
-      const title = await titleEl.getInputElement().then(el => el.value);
-      
-      const calendarEl = document.getElementById('eventCalendar');
-      const calendarId = calendarEl.value;
-      
-      const startEl = document.getElementById('eventStart');
-      const start = await startEl.getInputElement().then(el => el.value);
-      
-      const endEl = document.getElementById('eventEnd');
-      const end = await endEl.getInputElement().then(el => el.value);
-      
-      const descEl = document.getElementById('eventDescription');
-      const description = descEl.value || '';
-      
-      const locEl = document.getElementById('eventLocation');
-      const location = await locEl.getInputElement().then(el => el.value).catch(() => '');
-      
-      const orderEl = document.getElementById('eventOrderNumber');
-      const orderNumber = await orderEl.getInputElement().then(el => el.value).catch(() => '');
-      
-      const ticketEl = document.getElementById('eventTicketLink');
-      const ticketLink = await ticketEl.getInputElement().then(el => el.value).catch(() => '');
-      
-      const systemEl = document.getElementById('eventSystemType');
-      const systemType = await systemEl.getInputElement().then(el => el.value).catch(() => '');
-      
-      if (!title || !start || !end) {
-        alert('Please fill in title, start date, and end date');
-        return;
-      }
-      
-      // Build metadata object
-      const metadata = {
-        description: description || '',
-        location: location || '',
-        orderNumber: orderNumber || '',
-        ticketLink: ticketLink || '',
-        systemType: systemType || ''
-      };
-      
-      // Use event.uid if available, otherwise extract from id and remove leading hyphen
-      const eventUid = event.uid || event.id.split('/').pop().replace(/^-/, '');
-      console.log('Updating event with UID:', eventUid, 'Original event.id:', event.id, 'event.uid:', event.uid);
-      
       const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventUid)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -967,11 +839,8 @@ async function showEventModal(event) {
         event.end = end;
         event.description = JSON.stringify(metadata);
         
-        await modal.dismiss();
-        
-        // Wait for backend to save
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        window.location.reload();
+        modal.classList.remove('active');
+        render();
       } else {
         const errorText = await response.text();
         console.error('Failed to update event:', response.status, errorText);
@@ -1353,53 +1222,5 @@ function getEventColor(event, calendar) {
   return '#007aff';
 }
 
-// ============================================
-// APP INITIALIZATION
-// ============================================
-
-/**
- * Wait for Ionic components to be ready before starting the app
- * Times out after 5 seconds if Ionic doesn't load
- */
-async function waitForIonic() {
-  if (window.ionicReady) {
-    console.log('Ionic already ready');
-    return Promise.resolve();
-  }
-  
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      console.warn('⚠️ Ionic loading timeout - continuing without Ionic');
-      resolve(); // Continue anyway
-    }, 5000);
-    
-    window.addEventListener('ionicReady', () => {
-      clearTimeout(timeout);
-      resolve();
-    }, { once: true });
-  });
-}
-
-// Start app after DOM and Ionic are ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOM loaded, waiting for Ionic...');
-    await waitForIonic();
-    console.log('Ionic ready, starting init...');
-    init().catch(err => {
-      console.error('Init failed:', err);
-      const loadingOverlay = document.getElementById('loadingOverlay');
-      if (loadingOverlay) loadingOverlay.classList.add('hidden');
-    });
-  });
-} else {
-  console.log('DOM already loaded, waiting for Ionic...');
-  waitForIonic().then(() => {
-    console.log('Ionic ready, starting init...');
-    init().catch(err => {
-      console.error('Init failed:', err);
-      const loadingOverlay = document.getElementById('loadingOverlay');
-      if (loadingOverlay) loadingOverlay.classList.add('hidden');
-    });
-  });
-}
+// Start
+init();
