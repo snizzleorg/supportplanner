@@ -672,6 +672,11 @@ body {
     max-width: 100%;
 }
 
+.modal-body input[type="date"] {
+    width: 100%;
+    min-width: 0;
+}
+
 .modal-footer {
     display: flex;
     gap: 8px;
