@@ -1,29 +1,39 @@
 {
   "eventTypes": {
     "Install": {
-      "color": "#3b82f6",       
+      "color": "#007aff",       
       "borderColor": "#2563eb",
       "patterns": ["install", "installation"]
     },
-    "Service": {
-      "color": "#f59e0b",       
+    "Service/Training": {
+      "color": "#5856d6",       
       "borderColor": "#d97706",
-      "patterns": ["service", "maintenance", "maint", "srv"]
+      "patterns": ["Service", "Training", "Maintenance", "maint", "training"]
     },
-    "Support1": {
-      "color": "#8b5cf6",       
+    "Support 1": {
+      "color": "#ff9500",       
       "borderColor": "#7c3aed",
       "patterns": ["support1", "support 1", "sup1"]
     },
-    "SUPPORT2": {
-      "color": "#10b981",       
+    "SUPPORT 2": {
+      "color": "#ff9500",       
       "borderColor": "#059669",
       "patterns": ["support2", "support 2", "sup2"]
     },
     "Demo": {
-      "color": "#06b6d4",       
+      "color": "#34c759",       
       "borderColor": "#0891b2",
       "patterns": ["demo", "demonstration", "poc", "proof of concept"]
+    },
+    "DEV": {
+      "color": "#ff2d55",       
+      "borderColor": "#0891b2",
+      "patterns": ["DEV", "development", "entwicklung"]
+    },
+    "Final Check": {
+      "color": "#5ac8fa",       
+      "borderColor": "#0891b2",
+      "patterns": ["final check", "endabnahme", "Prep"]
     },
     "Vacation": {
       "color": "#9CA3AF",       
@@ -45,3 +55,4 @@
     }
   }
 }
+

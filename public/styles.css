@@ -523,6 +523,21 @@ textarea:focus {
 /* In condensed mode (week scale), keep labels but reduce clutter via smaller font */
 body.axis-condensed .vis-time-axis .vis-text { font-size: 11px; }
 
+/* Lane background tinting for better visibility */
+.vis-timeline .vis-itemset .vis-group {
+  transition: background-color 0.2s ease;
+}
+
+/* Add subtle separator between lanes */
+.vis-timeline .vis-itemset .vis-foreground .vis-group {
+  border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+/* Ensure labels stay aligned */
+.vis-timeline .vis-labelset .vis-label {
+  box-sizing: border-box;
+}
+
 /* Slight transparency for items so grid lines remain perceptible through them */
 .vis-item .vis-item-content {
   background-color: rgba(255, 255, 255, 0.9);
@@ -535,10 +550,9 @@ body.axis-condensed .vis-time-axis .vis-text { font-size: 11px; }
 /* Override any single-line truncation coming from dynamic styles */
 .vis-timeline .vis-item:not(.vis-background) {
   white-space: normal !important;
-  /* Make items a bit taller for two lines and improve perceived centering */
-  padding-top: 4px !important;   /* override inline padding from server */
-  padding-bottom: 6px !important;/* override inline padding from server */
-  /* Nudge horizontal padding: slightly smaller on the left */
+  /* Center items vertically within the fixed-height lanes */
+  display: flex !important;
+  align-items: center !important;
   padding-left: 2px !important;  /* as tight as possible on the left */
   padding-right: 2px !important; /* small right padding for ellipsis */
   min-height: 36px; /* ensures enough height for 2 lines at 1.3 line-height */

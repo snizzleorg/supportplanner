@@ -6,37 +6,67 @@
  * @module timeline-ui
  */
 
-/**
- * Color palette for group label backgrounds
- * @type {Array<string>}
- * @constant
- */
-const LABEL_PALETTE = ['#e0f2fe','#fce7f3','#dcfce7','#fff7ed','#ede9fe','#f1f5f9','#fef9c3','#fee2e2','#e9d5ff','#cffafe'];
+import { LABEL_PALETTE, LANE_OPACITY } from './ui-config.js';
 
 /**
- * Applies background colors to timeline group labels
+ * Converts a hex color to rgba with specified opacity
+ * @param {string} hex - Hex color code (e.g., '#e0f2fe')
+ * @param {number} alpha - Opacity value between 0 and 1
+ * @returns {string} RGBA color string
+ * @private
+ */
+function hexToRgba(hex, alpha) {
+  try {
+    // Remove # if present
+    hex = hex.replace('#', '');
+    
+    // Parse hex values
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  } catch (_) {
+    return `rgba(255, 255, 255, ${alpha})`;
+  }
+}
+
+/**
+ * Applies background colors to timeline group labels and lane backgrounds
  * @param {Object} groups - vis-timeline groups DataSet
  * @returns {void}
  */
 export function applyGroupLabelColors(groups) {
   try {
     const labelNodes = document.querySelectorAll('.vis-timeline .vis-labelset .vis-label');
+    
     if (!labelNodes || labelNodes.length === 0) return;
-    const gs = (groups && typeof groups.get === 'function') ? groups.get() : [];
-    labelNodes.forEach((node, idx) => {
-      let color = '';
-      const g = gs[idx];
-      if (g) {
-        color = g.bg || '';
-        if (!color && g.style) {
-          const m = String(g.style).match(/background-color:\s*([^;]+)/i);
-          if (m && m[1]) color = m[1].trim();
+    
+    labelNodes.forEach((labelNode, idx) => {
+      // Use LABEL_PALETTE as the single source of truth for colors
+      const color = LABEL_PALETTE[idx % LABEL_PALETTE.length];
+      
+      // Apply color to label
+      labelNode.style.backgroundColor = color;
+      const inner = labelNode.querySelector('.vis-inner');
+      if (inner) inner.style.backgroundColor = color;
+      
+      // Find the corresponding lane by matching the vertical position
+      // Labels and lanes are rendered in the same order by vis-timeline
+      const itemSet = document.querySelector('.vis-timeline .vis-itemset');
+      if (itemSet) {
+        // Get all lane background elements (they're in .vis-background)
+        const allBackgroundLanes = itemSet.querySelectorAll('.vis-background .vis-group');
+        if (allBackgroundLanes[idx]) {
+          allBackgroundLanes[idx].style.backgroundColor = hexToRgba(color, LANE_OPACITY);
+        }
+        
+        // Also apply to foreground lanes for full coverage
+        const allForegroundLanes = itemSet.querySelectorAll('.vis-foreground .vis-group');
+        if (allForegroundLanes[idx]) {
+          allForegroundLanes[idx].style.backgroundColor = hexToRgba(color, LANE_OPACITY);
         }
       }
-      if (!color) color = LABEL_PALETTE[idx % LABEL_PALETTE.length];
-      node.style.backgroundColor = color;
-      const inner = node.querySelector('.vis-inner');
-      if (inner) inner.style.backgroundColor = color;
     });
   } catch (_) {}
 }

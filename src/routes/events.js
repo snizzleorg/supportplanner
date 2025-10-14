@@ -331,28 +331,16 @@ router.post('/', async (req, res) => {
     const eventCount = items.filter(i => i.type === 'event').length;
     const occurrenceCount = items.filter(i => i.type === 'occurrence').length;
 
-    // Deterministic palette for calendar group backgrounds (fallback only)
-    const CAL_GROUP_COLORS = ['#3b82f6','#f97316','#22c55e','#ef4444','#a855f7','#14b8a6','#eab308','#fb7185','#06b6d4','#84cc16'];
-    const pickGroupColor = (g, idx) => {
-      // Prefer the per-calendar color computed in calendarCache (e.g., based on displayName)
-      if (g && g.color) return g.color;
-      return CAL_GROUP_COLORS[idx % CAL_GROUP_COLORS.length];
-    };
-
     // Format groups for vis-timeline
+    // Colors are now managed client-side in timeline-ui.js LABEL_PALETTE
     const formattedGroups = groups.map((g, i) => {
       const groupId = `cal-${i + 1}`;
-      const bg = pickGroupColor(g, i);
       return {
         id: groupId,
         content: g.content,
         title: g.content,
-        // Inline style so vis applies it directly to the label element
-        style: `background-color: ${bg};`,
         // Unique class for targeting from the client
         className: `calendar-group-cal-${i + 1}`,
-        // Expose background color for client features (e.g., map pin colors)
-        bg,
         // Add any additional group properties here
         url: g.url
       };
@@ -427,7 +415,18 @@ router.put('/:uid', requireRole('editor'), uidValidation, eventValidation, valid
     
   } catch (error) {
     console.error('Error updating event:', error);
-    res.json({
+    
+    // Determine appropriate status code based on error
+    let statusCode = 500;
+    if (error.message.includes('not found')) {
+      statusCode = 404;
+    } else if (error.message.includes('412') || error.message.includes('Precondition Failed')) {
+      statusCode = 409; // Conflict - someone else modified the event
+    } else if (error.message.includes('No client found') || error.message.includes('No calendar')) {
+      statusCode = 400; // Bad request - invalid calendar reference
+    }
+    
+    res.status(statusCode).json({
       success: false,
       error: error.message || 'Failed to update event',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined

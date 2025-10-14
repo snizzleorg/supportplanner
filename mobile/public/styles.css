@@ -36,9 +36,11 @@ body {
     top: 0;
     background: #fff;
     border-bottom: 1px solid var(--border-color);
-    padding: max(4px, var(--safe-area-top)) 12px 4px;
+    padding: max(8px, var(--safe-area-top)) 12px 8px;
     z-index: 100;
-    text-align: center;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
 }
 
 .icon-btn {
@@ -645,6 +647,78 @@ body {
     }
 }
 
+/* Desktop modal - centered dialog */
+@media (min-width: 768px) {
+    .modal {
+        align-items: center;
+    }
+    
+    .modal-content {
+        width: 800px;
+        max-width: 90vw;
+        max-height: 85vh;
+        border-radius: 12px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        animation: fadeInScale 0.3s ease-out;
+    }
+    
+    @keyframes fadeInScale {
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    
+    /* Desktop modal footer */
+    .modal-footer {
+        justify-content: space-between;
+        padding: 10px 20px;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .modal-footer .btn {
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 500;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .modal-footer .btn-primary {
+        background: #007aff;
+        color: white;
+    }
+    
+    .modal-footer .btn-primary:hover {
+        background: #0051d5;
+    }
+    
+    .modal-footer .btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+    }
+    
+    .modal-footer .btn-secondary:hover {
+        background: #e5e7eb;
+    }
+    
+    .modal-footer .btn-danger {
+        background: #ef4444;
+        color: white;
+        margin-right: auto;
+    }
+    
+    .modal-footer .btn-danger:hover {
+        background: #dc2626;
+    }
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -732,3 +806,4 @@ body {
 .btn-danger:active {
     opacity: 0.8;
 }
+

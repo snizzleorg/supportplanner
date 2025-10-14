@@ -6,6 +6,8 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
+import { LABEL_PALETTE, LANE_OPACITY, UNCONFIRMED_EVENT_OPACITY } from '/js/ui-config.js';
+
 console.log('📱 Mobile Timeline v1760277100 loaded');
 
 // ============================================
@@ -77,6 +79,7 @@ const TIMING = {
  * @property {string} zoom - Current zoom level (week|month|quarter)
  * @property {string} searchQuery - Current search filter text
  * @property {Set} selectedCalendars - Set of selected calendar IDs
+ * @property {Object} eventTypes - Event type configuration with colors
  */
 const state = {
   calendars: [],
@@ -85,7 +88,8 @@ const state = {
   dateRange: getDefaultDateRange(),
   zoom: 'month',
   searchQuery: '',
-  selectedCalendars: new Set()
+  selectedCalendars: new Set(),
+  eventTypes: null
 };
 
 // ============================================
@@ -113,6 +117,17 @@ function getDefaultDateRange() {
 async function init() {
   console.log('Initializing simple timeline...');
   
+  // Load event types configuration
+  try {
+    const response = await fetch('/event-types.json');
+    const data = await response.json();
+    state.eventTypes = data.eventTypes;
+    console.log('Event types loaded:', Object.keys(state.eventTypes).length);
+  } catch (err) {
+    console.error('Failed to load event types:', err);
+    state.eventTypes = {};
+  }
+  
   // Hide loading state
   const loadingState = document.getElementById('loadingState');
   if (loadingState) loadingState.style.display = 'none';
@@ -133,31 +148,64 @@ async function init() {
       document.querySelectorAll('.zoom-controls .control-btn').forEach(b => 
         b.classList.toggle('active', b.dataset.zoom === state.zoom)
       );
+      
+      // Update slider to match preset
+      const newPixelsPerDay = ZOOM_SETTINGS[state.zoom];
+      const zoomSlider = document.getElementById('zoomSlider');
+      if (zoomSlider) {
+        zoomSlider.value = newPixelsPerDay;
+      }
+      
       render();
       
       // Scroll to maintain the same date position
-      const newPixelsPerDay = ZOOM_SETTINGS[state.zoom];
       const newScrollLeft = 100 + (daysFromStart * newPixelsPerDay);
       container.scrollLeft = Math.max(0, newScrollLeft);
     });
   });
   
-  // Setup search
-  const searchBtn = document.getElementById('searchBtn');
-  const searchOverlay = document.getElementById('searchOverlay');
-  const searchInput = document.getElementById('searchInput');
-  const closeSearch = document.getElementById('closeSearch');
-  
-  searchBtn?.addEventListener('click', () => {
-    searchOverlay?.classList.add('active');
-    searchInput?.focus();
+  // Setup zoom slider for continuous zoom control
+  const zoomSlider = document.getElementById('zoomSlider');
+  zoomSlider?.addEventListener('input', (e) => {
+    const container = document.querySelector('.timeline-container');
+    if (!container) return;
+    
+    // Calculate which date is currently at the left edge of the viewport
+    const oldPixelsPerDay = ZOOM_SETTINGS[state.zoom];
+    const currentScrollLeft = container.scrollLeft;
+    const daysFromStart = Math.floor((currentScrollLeft - 100) / oldPixelsPerDay);
+    
+    // Update zoom settings with slider value (pixels per day)
+    const newPixelsPerDay = parseInt(e.target.value);
+    ZOOM_SETTINGS.custom = newPixelsPerDay;
+    state.zoom = 'custom';
+    
+    // Deactivate preset buttons when using custom zoom
+    document.querySelectorAll('.zoom-controls .control-btn').forEach(b => 
+      b.classList.remove('active')
+    );
+    
+    render();
+    
+    // Scroll to maintain the same date position
+    const newScrollLeft = 100 + (daysFromStart * newPixelsPerDay);
+    container.scrollLeft = Math.max(0, newScrollLeft);
   });
   
-  closeSearch?.addEventListener('click', () => {
-    searchOverlay?.classList.remove('active');
-    searchInput.value = '';
-    state.searchQuery = '';
-    render();
+  // Setup search - toggle inline search input
+  const searchBtn = document.getElementById('searchBtn');
+  const searchInput = document.getElementById('searchInput');
+  
+  searchBtn?.addEventListener('click', () => {
+    if (searchInput.style.display === 'none') {
+      searchInput.style.display = 'flex';
+      searchInput.focus();
+    } else {
+      searchInput.style.display = 'none';
+      searchInput.value = '';
+      state.searchQuery = '';
+      render();
+    }
   });
   
   searchInput?.addEventListener('input', (e) => {
@@ -259,8 +307,15 @@ async function loadData() {
     
     // Fetch events
     const calendarUrls = state.calendars.map(c => c.url);
-    const fromStr = state.dateRange.from.toISOString().split('T')[0];
-    const toStr = state.dateRange.to.toISOString().split('T')[0];
+    // Format dates as local YYYY-MM-DD to avoid timezone issues
+    const formatLocalDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    const fromStr = formatLocalDate(state.dateRange.from);
+    const toStr = formatLocalDate(state.dateRange.to);
     
     console.log('Loading events...');
     console.log('Date range:', fromStr, 'to', toStr);
@@ -405,25 +460,34 @@ function render() {
   html += '</div>';
   
   // Calendar lanes (in normal flow)
-  state.calendars.forEach(calendar => {
+  state.calendars.forEach((calendar, index) => {
     const isSelected = state.selectedCalendars.size === 0 || state.selectedCalendars.has(calendar.id);
     const opacity = isSelected ? '1' : '0.3';
     
     html += `<div style="display: flex; height: 50px; border-bottom: 1px solid #eee; opacity: ${opacity};">`;
     
-    const bgColor = calendar.bg || '#f5f5f5';
+    // Use LABEL_PALETTE based on calendar index
+    const bgColor = LABEL_PALETTE[index % LABEL_PALETTE.length];
     const textColor = getContrastColor(bgColor);
     const name = calendar.content || calendar.displayName;
     const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    const isDesktop = window.innerWidth >= 768;
     
-    // Full name label (visible at start, scrolls away) - clickable
-    html += `<div data-calendar-id="${calendar.id}" class="calendar-label" style="width: 100px; padding: 8px; font-size: 12px; font-weight: 600; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; display: flex; align-items: center; z-index: 20; cursor: pointer;">${name}</div>`;
+    // Full name label - on desktop it's sticky, on mobile it scrolls away
+    const labelStyle = isDesktop 
+      ? `width: 100px; padding: 8px; font-size: 12px; font-weight: 600; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; display: flex; align-items: center; z-index: 20; cursor: pointer; position: sticky; left: 0;`
+      : `width: 100px; padding: 8px; font-size: 12px; font-weight: 600; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; display: flex; align-items: center; z-index: 20; cursor: pointer;`;
+    html += `<div data-calendar-id="${calendar.id}" class="calendar-label" style="${labelStyle}">${name}</div>`;
     
-    // Lane indicator - narrow colored bar (sticky, appears when scrolling) - clickable
-    html += `<div data-calendar-id="${calendar.id}" class="calendar-label" style="width: 30px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; z-index: 10; position: sticky; left: 0; margin-left: -30px; cursor: pointer;">${initials}</div>`;
+    // Lane indicator - narrow colored bar (sticky, appears when scrolling) - only on mobile
+    if (!isDesktop) {
+      html += `<div data-calendar-id="${calendar.id}" class="calendar-label" style="width: 30px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; border-right: 2px solid #ccc; flex-shrink: 0; background: ${bgColor}; color: ${textColor}; z-index: 10; position: sticky; left: 0; margin-left: -30px; cursor: pointer;">${initials}</div>`;
+    }
     
     // Lane content (with overflow hidden to prevent events from piercing through)
-    html += `<div class="calendar-lane-area" data-calendar-id="${calendar.id}" style="position: relative; flex: 1; overflow: hidden;">`;
+    // Apply dimmed background color using LANE_OPACITY
+    const laneBgColor = hexToRgba(bgColor, LANE_OPACITY);
+    html += `<div class="calendar-lane-area" data-calendar-id="${calendar.id}" style="position: relative; flex: 1; overflow: hidden; background: ${laneBgColor}; padding-left: 0;">`;
     html += renderEventsForCalendar(calendar.id, pixelsPerDay);
     html += '</div>';
     
@@ -543,50 +607,119 @@ async function showCreateEventModal(calendar, clickedDate) {
   const startDateStr = formatDate(monday);
   const endDateStr = formatDate(friday);
   
-  modalBody.innerHTML = `
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
-      <input type="text" id="eventTitle" value="${defaultTitle}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start:</label>
-        <input type="date" id="eventStart" value="${startDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+  // Check if desktop (wider than 768px)
+  const isDesktop = window.innerWidth >= 768;
+  
+  if (isDesktop) {
+    // Desktop layout with two columns and map preview
+    modalBody.innerHTML = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Left column: Form fields -->
+        <div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Title</label>
+            <input type="text" id="eventTitle" value="${defaultTitle}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Start</label>
+              <input type="date" id="eventStart" value="${startDateStr}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">End</label>
+              <input type="date" id="eventEnd" value="${endDateStr}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+            </div>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Description</label>
+            <textarea id="eventDescription" rows="3" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-family: inherit; resize: vertical;"></textarea>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Location</label>
+            <input type="text" id="eventLocation" value="" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Calendar</label>
+            <select id="eventCalendar" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+              ${state.calendars.map(cal => 
+                `<option value="${cal.url}" ${cal.id === calendar.id ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
+              ).join('')}
+            </select>
+          </div>
+        </div>
+        
+        <!-- Right column: Metadata and map -->
+        <div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Order Number</label>
+            <input type="text" id="eventOrderNumber" value="" placeholder="e.g., SO-12345" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Ticket Link</label>
+            <input type="url" id="eventTicketLink" value="" placeholder="https://..." style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">System Type</label>
+            <input type="text" id="eventSystemType" value="" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+          </div>
+          
+          <!-- Map preview placeholder -->
+          <div style="margin-top: 16px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Location Map</label>
+            <div id="createMapPreview" style="width: 100%; height: 200px; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px;">
+              Enter a location to see map preview
+            </div>
+          </div>
+        </div>
       </div>
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 5px;">End:</label>
-        <input type="date" id="eventEnd" value="${endDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+    `;
+  } else {
+    // Mobile layout (original)
+    modalBody.innerHTML = `
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
+        <input type="text" id="eventTitle" value="${defaultTitle}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
       </div>
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Description:</label>
-      <textarea id="eventDescription" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit;"></textarea>
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Location:</label>
-      <input type="text" id="eventLocation" value="" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Order Number:</label>
-      <input type="text" id="eventOrderNumber" value="" placeholder="e.g., SO-12345" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Ticket Link:</label>
-      <input type="url" id="eventTicketLink" value="" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">System Type:</label>
-      <input type="text" id="eventSystemType" value="" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
-      <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-        ${state.calendars.map(cal => 
-          `<option value="${cal.url}" ${cal.id === calendar.id ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
-        ).join('')}
-      </select>
-    </div>
-  `;
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start:</label>
+          <input type="date" id="eventStart" value="${startDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+        </div>
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 5px;">End:</label>
+          <input type="date" id="eventEnd" value="${endDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+        </div>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Description:</label>
+        <textarea id="eventDescription" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit;"></textarea>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Location:</label>
+        <input type="text" id="eventLocation" value="" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Order Number:</label>
+        <input type="text" id="eventOrderNumber" value="" placeholder="e.g., SO-12345" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Ticket Link:</label>
+        <input type="url" id="eventTicketLink" value="" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">System Type:</label>
+        <input type="text" id="eventSystemType" value="" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
+        <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+          ${state.calendars.map(cal => 
+            `<option value="${cal.url}" ${cal.id === calendar.id ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
+          ).join('')}
+        </select>
+      </div>
+    `;
+  }
   
   // Hide delete button in create mode
   const deleteEventBtn = document.getElementById('deleteEventBtn');
@@ -721,7 +854,19 @@ async function showEventModal(event) {
   const calendar = state.calendars.find(c => c.id === event.group);
   const calendarName = calendar?.content || calendar?.displayName || 'Unknown';
   
-  modalTitle.textContent = event.content;
+  // Check if event is unconfirmed
+  const isUnconfirmed = event.content.includes('???');
+  const systemType = (event.meta || {}).systemType || '';
+  
+  // Strip ??? from title for display
+  const displayTitle = event.content.replace(/\s*\?\?\?\s*/g, '').trim();
+  
+  // Build modal title with pills
+  const pillsHtml = `
+    ${systemType ? `<span style="display: inline-flex; align-items: center; padding: 2px 8px; background: #e5e7eb; color: #374151; border-radius: 12px; font-size: 11px; font-weight: 500; margin-left: 8px;">${systemType}</span>` : ''}
+    ${isUnconfirmed ? `<span style="display: inline-flex; align-items: center; padding: 2px 8px; background: #fef3c7; color: #92400e; border-radius: 12px; font-size: 11px; font-weight: 500; margin-left: 8px;">⚠️ Unconfirmed</span>` : ''}
+  `;
+  modalTitle.innerHTML = `${displayTitle}${pillsHtml}`;
   
   // Format dates
   const startDate = parseLocalDate(event.start);
@@ -741,55 +886,147 @@ async function showEventModal(event) {
   const location = event.location || '';
   const orderNumber = metadata.orderNumber || '';
   const ticketLink = metadata.ticketLink || '';
-  const systemType = metadata.systemType || '';
   
   console.log('Form values - orderNumber:', orderNumber, 'ticketLink:', ticketLink, 'systemType:', systemType);
   console.log('=== End Debug ===');
   
-  modalBody.innerHTML = `
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
-      <input type="text" id="eventTitle" value="${event.content}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start:</label>
-        <input type="date" id="eventStart" value="${event.start}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+  // Check if desktop (wider than 768px)
+  const isDesktop = window.innerWidth >= 768;
+  
+  if (isDesktop) {
+    // Desktop layout with map and compact styling
+    modalBody.innerHTML = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Left column: Form fields -->
+        <div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Title</label>
+            <input type="text" id="eventTitle" value="${event.content}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Start</label>
+              <input type="date" id="eventStart" value="${event.start}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+            </div>
+            <div>
+              <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">End</label>
+              <input type="date" id="eventEnd" value="${event.end}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+            </div>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Description</label>
+            <textarea id="eventDescription" rows="2" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-family: inherit; resize: vertical;">${description}</textarea>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Location</label>
+            <input type="text" id="eventLocation" value="${location}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Calendar</label>
+            <select id="eventCalendar" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+              ${state.calendars.map(cal => 
+                `<option value="${cal.id}" ${cal.id === event.group ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
+              ).join('')}
+            </select>
+          </div>
+        </div>
+        
+        <!-- Right column: Metadata and map -->
+        <div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Order Number</label>
+            <input type="text" id="eventOrderNumber" value="${orderNumber}" placeholder="e.g., SO-12345" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Ticket Link</label>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <input type="url" id="eventTicketLink" value="${ticketLink}" placeholder="https://..." style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+              ${ticketLink ? `<a href="${ticketLink}" target="_blank" rel="noopener noreferrer" style="padding: 6px 10px; background: #007aff; color: white; border-radius: 4px; text-decoration: none; font-size: 13px; white-space: nowrap;" title="Open ticket">🔗 Open</a>` : ''}
+            </div>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">System Type</label>
+            <input type="text" id="eventSystemType" value="${systemType}" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+          </div>
+          
+          <!-- Map preview -->
+          <div style="margin-top: 16px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Location Map</label>
+            <div id="eventMapPreview" style="width: 100%; height: 200px; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px;">
+              ${location ? 'Loading map...' : 'No location specified'}
+            </div>
+            ${location ? `
+              <div style="display: flex; gap: 8px; margin-top: 8px; font-size: 12px;">
+                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}" target="_blank" rel="noopener noreferrer" style="padding: 4px 8px; background: #4285f4; color: white; border-radius: 4px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="white"/>
+                  </svg>
+                  Google Maps
+                </a>
+                <a href="https://maps.apple.com/?q=${encodeURIComponent(location)}" target="_blank" rel="noopener noreferrer" style="padding: 4px 8px; background: #000; color: white; border-radius: 4px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" fill="white"/>
+                  </svg>
+                  Apple Maps
+                </a>
+              </div>
+            ` : ''}
+          </div>
+        </div>
       </div>
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 5px;">End:</label>
-        <input type="date" id="eventEnd" value="${event.end}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+    `;
+  } else {
+    // Mobile layout (original)
+    modalBody.innerHTML = `
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
+        <input type="text" id="eventTitle" value="${event.content}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
       </div>
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Description:</label>
-      <textarea id="eventDescription" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit;">${description}</textarea>
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Location:</label>
-      <input type="text" id="eventLocation" value="${location}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Order Number:</label>
-      <input type="text" id="eventOrderNumber" value="${orderNumber}" placeholder="e.g., SO-12345" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Ticket Link:</label>
-      <input type="url" id="eventTicketLink" value="${ticketLink}" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">System Type:</label>
-      <input type="text" id="eventSystemType" value="${systemType}" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-    </div>
-    <div style="margin-bottom: 15px;">
-      <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
-      <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-        ${state.calendars.map(cal => 
-          `<option value="${cal.id}" ${cal.id === event.group ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
-        ).join('')}
-      </select>
-    </div>
-  `;
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start:</label>
+          <input type="date" id="eventStart" value="${event.start}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+        </div>
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 5px;">End:</label>
+          <input type="date" id="eventEnd" value="${event.end}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+        </div>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Description:</label>
+        <textarea id="eventDescription" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit;">${description}</textarea>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Location:</label>
+        <input type="text" id="eventLocation" value="${location}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Order Number:</label>
+        <input type="text" id="eventOrderNumber" value="${orderNumber}" placeholder="e.g., SO-12345" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Ticket Link:</label>
+        <input type="url" id="eventTicketLink" value="${ticketLink}" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">System Type:</label>
+        <input type="text" id="eventSystemType" value="${systemType}" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
+        <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+          ${state.calendars.map(cal => 
+            `<option value="${cal.id}" ${cal.id === event.group ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
+          ).join('')}
+        </select>
+      </div>
+    `;
+  }
+  
+  // Initialize map if desktop and location exists
+  if (isDesktop && location) {
+    initEventMap(location);
+  }
   
   // Setup modal buttons
   const closeModal = document.getElementById('closeModal');
@@ -1213,7 +1450,11 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
     const fontSize = eventHeight < 25 ? 9 : 10;
     const lineClamp = eventHeight < 25 ? 1 : 2;
     
-    html += `<div class="timeline-event" data-event-id="${event.id}" style="position: absolute; left: ${pos.left}px; width: ${pos.width}px; top: ${top}px; height: ${eventHeight}px; background: ${color}; color: white; border-radius: 3px; padding: 2px 4px; font-size: ${fontSize}px; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: ${lineClamp}; -webkit-box-orient: vertical; box-shadow: 0 1px 2px rgba(0,0,0,0.2); cursor: pointer;">${event.content}</div>`;
+    // Check if event is unconfirmed (contains ???)
+    const isUnconfirmed = (event.content || event.summary || '').includes('???');
+    const opacity = isUnconfirmed ? UNCONFIRMED_EVENT_OPACITY : 1;
+    
+    html += `<div class="timeline-event" data-event-id="${event.id}" style="position: absolute; left: ${pos.left}px; width: ${pos.width}px; top: ${top}px; height: ${eventHeight}px; background: ${color}; color: white; border-radius: 3px; padding: 2px 4px; font-size: ${fontSize}px; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: ${lineClamp}; -webkit-box-orient: vertical; box-shadow: 0 1px 2px rgba(0,0,0,0.2); cursor: pointer; opacity: ${opacity};">${event.content}</div>`;
   });
   
   return html;
@@ -1246,6 +1487,18 @@ function calculateEventPosition(event, pixelsPerDay) {
   const eventEnd = parseLocalDate(event.end);
   const rangeStart = new Date(state.dateRange.from);
   rangeStart.setHours(0, 0, 0, 0);
+  
+  // Debug logging for events starting on Oct 13
+  if (event.start === '2025-10-13') {
+    console.log('=== Event Position Debug (Oct 13) ===');
+    console.log('Event:', event.content);
+    console.log('event.start string:', event.start);
+    console.log('Parsed eventStart:', eventStart, eventStart.toDateString());
+    console.log('rangeStart:', rangeStart, rangeStart.toDateString());
+    console.log('Difference in ms:', eventStart - rangeStart);
+    console.log('Days from start:', Math.round((eventStart - rangeStart) / (1000 * 60 * 60 * 24)));
+    console.log('Calculated left position:', Math.round((eventStart - rangeStart) / (1000 * 60 * 60 * 24)) * pixelsPerDay);
+  }
   
   // Calculate days from start (should be whole days)
   const msPerDay = 1000 * 60 * 60 * 24;
@@ -1297,6 +1550,19 @@ function getContrastColor(color) {
 }
 
 /**
+ * Convert hex color to rgba with opacity
+ * @param {string} hex - Hex color (e.g., '#FF8A95')
+ * @param {number} opacity - Opacity value (0-1)
+ * @returns {string} RGBA color string
+ */
+function hexToRgba(hex, opacity) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
+/**
  * Get color for an event (event color or fallback to calendar color)
  * @param {Object} event - Event object
  * @param {Object} calendar - Calendar object
@@ -1308,23 +1574,26 @@ function getEventColor(event, calendar) {
     return event.color;
   }
   
-  // Then check event type from className
-  const match = event.className?.match(/event-type-(\w+)/i);
-  const type = match ? match[1].toLowerCase() : null;
-  
-  const typeColors = {
-    install: '#34c759',        // Green - installations
-    installation: '#34c759',   // Green - installations
-    training: '#ff9500',       // Orange - training
-    maintenance: '#5856d6',    // Purple - maintenance
-    vacation: '#ff3b30',       // Red - vacation
-    sick: '#ff3b30',           // Red - sick leave
-    support: '#007aff',        // Blue - support
-    default: null              // Use calendar color for default
-  };
-  
-  if (type && typeColors[type]) {
-    return typeColors[type];
+  // Use event types from configuration
+  if (state.eventTypes) {
+    const eventTitle = (event.content || event.summary || '').toLowerCase();
+    
+    // Check each event type's patterns
+    for (const [typeName, typeConfig] of Object.entries(state.eventTypes)) {
+      if (typeName === '_default') continue;
+      
+      const patterns = typeConfig.patterns || [];
+      for (const pattern of patterns) {
+        if (eventTitle.includes(pattern.toLowerCase())) {
+          return typeConfig.color;
+        }
+      }
+    }
+    
+    // Use default color if configured
+    if (state.eventTypes._default) {
+      return state.eventTypes._default.color;
+    }
   }
   
   // Finally use calendar color
@@ -1333,7 +1602,54 @@ function getEventColor(event, calendar) {
   }
   
   // Default fallback
-  return '#007aff';
+  return '#64748B';
+}
+
+/**
+ * Initialize map for event location preview
+ * @param {string} location - Location string to geocode and display
+ */
+async function initEventMap(location) {
+  const mapContainer = document.getElementById('eventMapPreview');
+  if (!mapContainer || !location) return;
+  
+  try {
+    // Geocode the location using Nominatim
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
+    const results = await response.json();
+    
+    if (results && results.length > 0) {
+      const { lat, lon, display_name } = results[0];
+      
+      // Clear loading message
+      mapContainer.innerHTML = '';
+      
+      // Initialize Leaflet map
+      const map = L.map(mapContainer, {
+        center: [lat, lon],
+        zoom: 13,
+        zoomControl: false,
+        attributionControl: false
+      });
+      
+      // Add tile layer
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      }).addTo(map);
+      
+      // Add marker
+      L.marker([lat, lon]).addTo(map)
+        .bindPopup(display_name);
+      
+      // Invalidate size after a short delay to ensure proper rendering
+      setTimeout(() => map.invalidateSize(), 100);
+    } else {
+      mapContainer.innerHTML = '<div style="color: #999; font-size: 12px;">Location not found</div>';
+    }
+  } catch (error) {
+    console.error('Failed to load map:', error);
+    mapContainer.innerHTML = '<div style="color: #999; font-size: 12px;">Failed to load map</div>';
+  }
 }
 
 // Start

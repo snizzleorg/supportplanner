@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pure Ionic Test</title>
+    
+    <!-- Try different Ionic CSS approach -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/core.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/normalize.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/structure.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/typography.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/display.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/padding.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/float-elements.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/text-alignment.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/text-transformation.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/flex-utils.css" />
+</head>
+<body>
+    <ion-app>
+        <ion-header>
+            <ion-toolbar>
+                <ion-title>Pure Ionic Test</ion-title>
+            </ion-toolbar>
+        </ion-header>
+        
+        <ion-content>
+            <ion-button id="openModal">Open Modal</ion-button>
+        </ion-content>
+        
+        <ion-modal id="testModal">
+            <ion-header>
+                <ion-toolbar>
+                    <ion-title>Test Form</ion-title>
+                    <ion-buttons slot="end">
+                        <ion-button id="closeModal">Close</ion-button>
+                    </ion-buttons>
+                </ion-toolbar>
+            </ion-header>
+            
+            <ion-content>
+                <ion-list lines="full">
+                    <ion-item lines="full">
+                        <ion-label position="stacked">Title *</ion-label>
+                        <ion-input type="text" value="Test Event" placeholder="Event title"></ion-input>
+                    </ion-item>
+                    
+                    <ion-item lines="full">
+                        <ion-label position="stacked">Start Date *</ion-label>
+                        <ion-input type="date" value="2025-10-13"></ion-input>
+                    </ion-item>
+                    
+                    <ion-item lines="full">
+                        <ion-label position="stacked">Description</ion-label>
+                        <ion-textarea rows="3" placeholder="Event description"></ion-textarea>
+                    </ion-item>
+                    
+                    <ion-item lines="none">
+                        <ion-label position="stacked">Location</ion-label>
+                        <ion-input type="text" placeholder="Event location"></ion-input>
+                    </ion-item>
+                </ion-list>
+            </ion-content>
+            
+            <ion-footer>
+                <ion-toolbar>
+                    <ion-buttons slot="end">
+                        <ion-button id="closeModalBtn">Cancel</ion-button>
+                        <ion-button color="primary">Save</ion-button>
+                    </ion-buttons>
+                </ion-toolbar>
+            </ion-footer>
+        </ion-modal>
+    </ion-app>
+    
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+    
+    <script type="module">
+        document.getElementById('openModal').addEventListener('click', async () => {
+            const modal = document.getElementById('testModal');
+            await modal.present();
+        });
+        
+        document.getElementById('closeModal').addEventListener('click', async () => {
+            const modal = document.getElementById('testModal');
+            await modal.dismiss();
+        });
+        
+        document.getElementById('closeModalBtn').addEventListener('click', async () => {
+            const modal = document.getElementById('testModal');
+            await modal.dismiss();
+        });
+    </script>
+</body>
+</html>
