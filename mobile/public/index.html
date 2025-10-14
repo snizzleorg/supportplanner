@@ -82,6 +82,27 @@
         </div>
     </div>
 
+    <!-- Conflict Resolution Modal -->
+    <div class="modal" id="conflictModal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>⚠️ Conflict Detected</h2>
+                <button class="icon-btn" id="closeConflictModal">✕</button>
+            </div>
+            <div class="modal-body" id="conflictModalBody">
+                <p style="margin-bottom: 16px; color: #666;">Someone else modified this event while you were editing. Choose how to resolve:</p>
+                <div id="conflictComparison" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <!-- Comparison will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="conflictCancelBtn">Cancel</button>
+                <button class="btn btn-secondary" id="conflictUseServerBtn">Use Server Version</button>
+                <button class="btn btn-primary" id="conflictKeepMineBtn">Keep My Changes</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Status Bar -->
     <div class="status-bar" id="statusBar"></div>
     
