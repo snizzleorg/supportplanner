@@ -856,6 +856,118 @@ async function showCreateEventModal(calendar, clickedDate) {
 }
 
 /**
+ * Handle conflict resolution when a 409 error occurs
+ * Shows a comparison modal and lets user choose which version to keep
+ * @param {string} eventUid - UID of the conflicting event
+ * @param {Object} localChanges - User's local changes
+ * @returns {Promise<void>}
+ */
+async function handleConflict(eventUid, localChanges) {
+  try {
+    // Fetch the current server version
+    console.log('Fetching current server version...');
+    const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventUid)}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch current event version');
+    }
+    
+    const serverEvent = await response.json();
+    console.log('Server version:', serverEvent);
+    
+    // Show conflict modal
+    const conflictModal = document.getElementById('conflictModal');
+    const conflictComparison = document.getElementById('conflictComparison');
+    
+    // Build comparison HTML
+    const fields = [
+      { key: 'summary', label: 'Title' },
+      { key: 'start', label: 'Start Date' },
+      { key: 'end', label: 'End Date' },
+      { key: 'description', label: 'Description' },
+      { key: 'location', label: 'Location' }
+    ];
+    
+    let comparisonHTML = '';
+    fields.forEach(field => {
+      const serverValue = serverEvent[field.key] || '';
+      const localValue = localChanges[field.key] || '';
+      const isDifferent = serverValue !== localValue;
+      
+      comparisonHTML += `
+        <div style="border: 1px solid ${isDifferent ? '#ff9800' : '#ddd'}; border-radius: 4px; padding: 12px; background: ${isDifferent ? '#fff3e0' : '#f9f9f9'};">
+          <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #666;">Your Version</h4>
+          <div style="font-weight: 600; margin-bottom: 4px;">${field.label}</div>
+          <div style="font-size: 13px; word-break: break-word;">${localValue || '<em>empty</em>'}</div>
+        </div>
+        <div style="border: 1px solid ${isDifferent ? '#ff9800' : '#ddd'}; border-radius: 4px; padding: 12px; background: ${isDifferent ? '#fff3e0' : '#f9f9f9'};">
+          <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #666;">Server Version</h4>
+          <div style="font-weight: 600; margin-bottom: 4px;">${field.label}</div>
+          <div style="font-size: 13px; word-break: break-word;">${serverValue || '<em>empty</em>'}</div>
+        </div>
+      `;
+    });
+    
+    conflictComparison.innerHTML = comparisonHTML;
+    conflictModal.classList.add('active');
+    
+    // Handle button clicks
+    return new Promise((resolve) => {
+      const closeBtn = document.getElementById('closeConflictModal');
+      const cancelBtn = document.getElementById('conflictCancelBtn');
+      const useServerBtn = document.getElementById('conflictUseServerBtn');
+      const keepMineBtn = document.getElementById('conflictKeepMineBtn');
+      
+      const cleanup = () => {
+        conflictModal.classList.remove('active');
+        closeBtn.removeEventListener('click', handleCancel);
+        cancelBtn.removeEventListener('click', handleCancel);
+        useServerBtn.removeEventListener('click', handleUseServer);
+        keepMineBtn.removeEventListener('click', handleKeepMine);
+      };
+      
+      const handleCancel = () => {
+        cleanup();
+        resolve('cancel');
+      };
+      
+      const handleUseServer = () => {
+        cleanup();
+        console.log('User chose to use server version');
+        window.location.reload(); // Reload to show server version
+        resolve('server');
+      };
+      
+      const handleKeepMine = async () => {
+        cleanup();
+        console.log('User chose to keep their changes - forcing update');
+        
+        // Show loading
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = loadingOverlay?.querySelector('p');
+        if (loadingText) loadingText.textContent = 'Force updating event...';
+        loadingOverlay?.classList.remove('hidden');
+        
+        // TODO: Implement force update (would need backend support for If-Match: *)
+        // For now, just alert the user
+        alert('Force update not yet implemented. Please refresh and try again, or use the server version.');
+        window.location.reload();
+        
+        resolve('mine');
+      };
+      
+      closeBtn.addEventListener('click', handleCancel);
+      cancelBtn.addEventListener('click', handleCancel);
+      useServerBtn.addEventListener('click', handleUseServer);
+      keepMineBtn.addEventListener('click', handleKeepMine);
+    });
+    
+  } catch (error) {
+    console.error('Error handling conflict:', error);
+    alert('Failed to resolve conflict. Please refresh and try again.');
+  }
+}
+
+/**
  * Show modal to edit an existing event
  * Loads event data into form fields for editing
  * @param {Object} event - Event object to edit
@@ -1269,11 +1381,22 @@ async function showEventModal(event) {
         const errorText = await response.text();
         console.error('Failed to update event:', response.status, errorText);
         
-        // Provide user-friendly error messages based on status code
-        let userMessage;
+        // Handle 409 conflict with conflict resolution UI
         if (response.status === 409) {
-          userMessage = 'Someone else modified this event. Please refresh and try again.';
-        } else if (response.status === 404) {
+          console.log('Conflict detected, showing resolution UI...');
+          await handleConflict(eventUid, {
+            summary: title,
+            start: start,
+            end: end,
+            description: fullDescription,
+            location: location || ''
+          });
+          return; // Don't show alert, conflict UI handles it
+        }
+        
+        // Provide user-friendly error messages for other errors
+        let userMessage;
+        if (response.status === 404) {
           userMessage = 'Event not found. It may have been deleted.';
         } else if (response.status === 400) {
           userMessage = 'Invalid request. Please check your input.';
