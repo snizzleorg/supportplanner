@@ -16,12 +16,11 @@
  */
 
 import { DAVClient } from 'tsdav';
-import IcalExpander from 'ical-expander';
-import dayjs from 'dayjs';
-import isSameOrBefore from 'dayjs/plugin/isSameOrBefore.js';
-import isSameOrAfter from 'dayjs/plugin/isSameOrAfter.js';
 import NodeCache from 'node-cache';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
 import { randomUUID } from 'crypto';
+import { logOperation } from '../utils/operation-log.js';
 import YAML from 'yaml';
 import { calendarOrder, calendarExclude } from '../../config/calendar-order.js';
 import { calendarColorOverrides } from '../../config/calendar-colors.js';
@@ -194,6 +193,15 @@ export class CalendarCache {
 
     // Invalidate cache for that calendar so subsequent fetch reflects the new event
     this.cache.del(`calendar:${calendarUrl}`);
+
+    // Log the operation
+    await logOperation('CREATE', {
+      uid,
+      summary,
+      calendarUrl,
+      status: 'SUCCESS',
+      metadata: { start, end, location, allDay: true }
+    });
 
     return {
       success: true,
@@ -816,6 +824,14 @@ export class CalendarCache {
     // 4) Invalidate cache for that calendar
     this.cache.del(`calendar:${calendarUrl}`);
     
+    // Log the operation
+    await logOperation('DELETE', {
+      uid,
+      summary: event.summary || event.content,
+      calendarUrl,
+      status: 'SUCCESS'
+    });
+    
     return true;
   }
   
@@ -1063,6 +1079,19 @@ export class CalendarCache {
         this.cache.del(cacheKey);
         console.log(`[updateEvent] Invalidated cache for ${cacheKey}`);
         
+        // Log the operation
+        await logOperation('UPDATE', {
+          uid,
+          summary: updatedEvent.summary,
+          calendarUrl: event.calendar,
+          status: 'SUCCESS',
+          metadata: { 
+            start: updatedEvent.start, 
+            end: updatedEvent.end,
+            location: updatedEvent.location
+          }
+        });
+        
         // 9. Return the updated event
         return updatedEvent;
       } catch (error) {
@@ -1170,11 +1199,14 @@ export class CalendarCache {
     }
     
     // 4. Create the event in the target calendar
+    let filename;
+    let createdInTarget = false;
+    
     try {
       console.log(`[moveEvent] Creating event in target calendar ${targetCalendarUrl}`);
       
       // Extract the filename from the original URL if it exists, or generate one
-      let filename = `${uid}.ics`;
+      filename = `${uid}.ics`;
       if (eventObject.url) {
         const urlParts = eventObject.url.split('/');
         filename = urlParts[urlParts.length - 1];
@@ -1187,34 +1219,92 @@ export class CalendarCache {
         iCalString: eventObject.data
       });
       
+      createdInTarget = true;
       console.log(`[moveEvent] Successfully created event in target calendar`);
+      
+      // 4.5. Verify the event was created by fetching it
+      console.log(`[moveEvent] Verifying event was created in target...`);
+      const targetObjects = await targetClient.fetchCalendarObjects({
+        calendar: targetCalendarInfo.calendar || { url: targetCalendarUrl },
+        expand: true
+      });
+      
+      const verifyCreated = targetObjects.find(obj => 
+        obj.data && obj.data.includes(`UID:${uid}`)
+      );
+      
+      if (!verifyCreated) {
+        throw new Error('Event creation verification failed - event not found in target calendar');
+      }
+      
+      console.log(`[moveEvent] Verified event exists in target calendar`);
       
       // 5. Delete the event from the source calendar
       try {
+        console.log(`[moveEvent] Deleting event from source calendar...`);
         await sourceClient.deleteCalendarObject({
           calendarObject: eventObject,
           etag: eventObject.etag
         });
         console.log(`[moveEvent] Successfully deleted event from source calendar`);
       } catch (deleteError) {
-        // If deletion fails, we should try to clean up the created event
-        console.error(`[moveEvent] Failed to delete event from source calendar:`, deleteError);
+        // If deletion fails, we have a duplicate - try to clean up
+        console.error(`[moveEvent] CRITICAL: Failed to delete event from source calendar:`, deleteError);
+        console.error(`[moveEvent] Event now exists in both calendars - attempting cleanup...`);
         
+        // Try to delete from target to restore original state
         try {
+          console.log(`[moveEvent] Attempting to rollback - deleting from target...`);
           await targetClient.deleteCalendarObject({
-            calendar: targetCalendarInfo.calendar || { url: targetCalendarUrl },
-            filename: filename
+            calendarObject: verifyCreated,
+            etag: verifyCreated.etag
           });
+          console.log(`[moveEvent] Successfully rolled back - deleted from target`);
+          
+          // Log the failed operation
+          await logOperation('MOVE', {
+            uid,
+            summary: event.summary || event.content,
+            calendarUrl: sourceCalendarUrl,
+            targetCalendarUrl,
+            status: 'FAILED',
+            error: `Could not delete from source: ${deleteError.message}`
+          });
+          
+          throw new Error(`Move failed: Could not delete from source calendar. Operation rolled back.`);
         } catch (cleanupError) {
-          console.error(`[moveEvent] Failed to clean up created event after deletion failed:`, cleanupError);
+          console.error(`[moveEvent] CRITICAL: Rollback failed:`, cleanupError);
+          console.error(`[moveEvent] Event is now duplicated in both calendars!`);
+          
+          // Log the partial failure
+          await logOperation('MOVE', {
+            uid,
+            summary: event.summary || event.content,
+            calendarUrl: sourceCalendarUrl,
+            targetCalendarUrl,
+            status: 'PARTIAL',
+            error: `Event duplicated in both calendars. Delete failed: ${deleteError.message}, Rollback failed: ${cleanupError.message}`
+          });
+          
+          throw new Error(
+            `CRITICAL: Move partially completed. Event exists in both source (${sourceCalendarUrl}) and target (${targetCalendarUrl}). ` +
+            `Manual cleanup required. Original error: ${deleteError.message}`
+          );
         }
-        
-        throw new Error(`Moved event but failed to delete original: ${deleteError.message}`);
       }
       
       // 6. Update the cache (invalidate both involved calendars)
       this.cache.del(`calendar:${sourceCalendarUrl}`);
       this.cache.del(`calendar:${targetCalendarUrl}`);
+
+      // Log the operation
+      await logOperation('MOVE', {
+        uid,
+        summary: event.summary || event.content,
+        calendarUrl: sourceCalendarUrl,
+        targetCalendarUrl,
+        status: 'SUCCESS'
+      });
 
       // 7. Return the moved event without relying on cache fetch
       // We already have the original event data; only the calendar changed.
