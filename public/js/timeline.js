@@ -44,6 +44,8 @@ export function initTimeline(timelineEl, items, groups) {
     margin: { item: 0, axis: 10 },
     timeAxis: { scale: 'day', step: 1 },
     showTooltips: false,
+    groupHeightMode: 'fixed',  // Fixed height for all groups
+    groupHeight: 100,  // Fixed height in pixels
     template: function(item, element) {
       if (!item) return '';
       const div = document.createElement('div');

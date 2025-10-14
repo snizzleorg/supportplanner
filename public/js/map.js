@@ -8,6 +8,8 @@
  * @module map
  */
 
+import { LABEL_PALETTE } from './ui-config.js';
+
 /**
  * Leaflet map instance
  * @type {Object|null}
@@ -156,14 +158,16 @@ export async function renderMapMarkers(allServerItems, groups) {
   const bounds = [];
 
   const getGroupColor = (groupId) => {
-    const g = groups.get(groupId);
-    if (!g) return '#3b82f6';
-    if (g.bg) return g.bg;
-    if (g.style) {
-      const m = String(g.style).match(/background-color:\s*([^;]+)/i);
-      if (m && m[1]) return m[1].trim();
+    // Get all groups to determine the index
+    const allGroups = groups.get();
+    const groupIndex = allGroups.findIndex(g => g.id === groupId);
+    
+    if (groupIndex === -1) {
+      return LABEL_PALETTE[0]; // Fallback to first color
     }
-    return '#3b82f6';
+    
+    // Use LABEL_PALETTE based on group index (same as labels and lanes)
+    return LABEL_PALETTE[groupIndex % LABEL_PALETTE.length];
   };
 
   const byLocThenGroup = new Map();
@@ -211,9 +215,10 @@ export async function renderMapMarkers(allServerItems, groups) {
     const entries = Array.from(inner.entries());
     const total = entries.length;
     entries.forEach(([gid, evs], idx) => {
-      const color = getGroupColor(gid);
+      const pinColor = getGroupColor(gid);
+      // Use the exact color from LABEL_PALETTE without adjustment
       const { lat, lon } = addOffset(latlon.lat, latlon.lon, idx, total);
-      const marker = L.marker([lat, lon], { icon: makePinIcon(color) }).addTo(markersLayer);
+      const marker = L.marker([lat, lon], { icon: makePinIcon(pinColor) }).addTo(markersLayer);
       try {
         if (window.__MAP_TESTING) {
           window.__mapMarkerAddedCount = (window.__mapMarkerAddedCount||0) + 1;

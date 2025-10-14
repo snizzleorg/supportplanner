@@ -55,12 +55,17 @@ app.set('trust proxy', 1);
 // Initialize authentication (OIDC or disabled mode)
 initializeAuth(app);
 
-// Device-based static file serving
-// Serves mobile app for mobile devices, desktop app for others
-app.use(deviceBasedStaticMiddleware({
-  desktopPublicPath: path.join(__dirname, 'public'),
-  mobilePublicPath: path.join(__dirname, 'mobile', 'public')
-}));
+// Serve mobile app for all devices (desktop and mobile)
+// Using horizontal timeline for better lane visibility
+app.use(express.static(path.join(__dirname, 'mobile', 'public')));
+
+// Serve desktop public folder for shared resources (ui-config.js, etc.)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve event-types.json from root
+app.get('/event-types.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'event-types.json'));
+});
 
 // Register all application routes
 registerRoutes(app);
