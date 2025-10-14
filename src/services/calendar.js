@@ -151,13 +151,21 @@ export class CalendarCache {
       throw new Error('start and end must be in YYYY-MM-DD format for all-day events');
     }
 
+    // Validate date range
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    if (endDate < startDate) {
+      throw new Error('End date cannot be before start date');
+    }
+
     const calendarInfo = this.calendarClients[calendarUrl];
     if (!calendarInfo || !calendarInfo.client) {
       throw new Error(`No client found for calendar: ${calendarUrl}`);
     }
 
     // Compute exclusive DTEND (end + 1 day UTC date)
-    const inclusiveEnd = dayjs(start > end ? start : end, 'YYYY-MM-DD');
+    // We've already validated that end >= start, so just use end
+    const inclusiveEnd = dayjs(end, 'YYYY-MM-DD');
     const exclusiveEnd = inclusiveEnd.add(1, 'day');
 
     const formatDate = (dateStr) => {
