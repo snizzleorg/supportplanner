@@ -46,7 +46,7 @@ export const authLimiter = rateLimit({
 /**
  * CalDAV refresh rate limiter
  * 
- * Limits: 10 refresh requests per 5 minutes per IP
+ * Limits: 50 refresh requests per 5 minutes per IP
  * Applied to /api/refresh-caldav
  * Prevents excessive calendar data refreshes
  * 
@@ -54,7 +54,7 @@ export const authLimiter = rateLimit({
  */
 export const refreshLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 10, // Limit refresh to 10 times per 5 minutes
+  max: 50, // Limit refresh to 50 times per 5 minutes (increased for development)
   message: 'Too many refresh requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
