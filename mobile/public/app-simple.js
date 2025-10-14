@@ -856,6 +856,12 @@ async function showCreateEventModal(calendar, clickedDate) {
         return;
       }
       
+      // Validate date range
+      if (new Date(end) < new Date(start)) {
+        alert('End date cannot be before start date. Please check your dates.');
+        return;
+      }
+      
       // Build meta object (only include non-empty fields)
       const meta = {};
       if (orderNumber) meta.orderNumber = orderNumber;
@@ -1399,6 +1405,12 @@ async function showEventModal(event) {
     
     if (!title || !start || !end) {
       alert('Please fill in title, start date, and end date');
+      return;
+    }
+    
+    // Validate date range
+    if (new Date(end) < new Date(start)) {
+      alert('End date cannot be before start date. Please check your dates.');
       return;
     }
     
