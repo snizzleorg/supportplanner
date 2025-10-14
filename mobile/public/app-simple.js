@@ -7,6 +7,7 @@
  */
 
 import { LABEL_PALETTE, LANE_OPACITY, UNCONFIRMED_EVENT_OPACITY } from '/js/ui-config.js';
+import { fetchWithRetry, withTimeout } from './retry-utils.js';
 
 console.log('📱 Mobile Timeline v1760277100 loaded');
 
@@ -765,29 +766,36 @@ async function showCreateEventModal(calendar, clickedDate) {
       
       console.log('Creating event with description:', description, 'and meta:', meta);
       
-      const response = await fetch(`${API_BASE}/api/events/all-day`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          calendarUrl: calendarUrl,
-          summary: title,
-          start: start,
-          end: end,
-          description: description || '',
-          location: location || '',
-          meta: Object.keys(meta).length > 0 ? meta : undefined
-        })
-      });
+      // Use retry logic with timeout
+      const response = await withTimeout(
+        fetchWithRetry(
+          `${API_BASE}/api/events/all-day`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              calendarUrl: calendarUrl,
+              summary: title,
+              start: start,
+              end: end,
+              description: description || '',
+              location: location || '',
+              meta: Object.keys(meta).length > 0 ? meta : undefined
+            })
+          },
+          {
+            maxRetries: 2,
+            onRetry: (error, attempt) => {
+              console.log(`Retrying create (attempt ${attempt})...`);
+            }
+          }
+        ),
+        30000, // 30 second timeout
+        'Create operation timed out'
+      );
       
       console.log('Create response status:', response.status);
       console.log('Create response ok:', response.ok);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to create event:', response.status, errorText);
-        alert(`Failed to create event: ${response.status} - ${errorText.substring(0, 200)}`);
-        return;
-      }
       
       const responseData = await response.json();
       console.log('Create response data:', responseData);
@@ -825,7 +833,20 @@ async function showCreateEventModal(calendar, clickedDate) {
       
     } catch (error) {
       console.error('Unexpected error creating event:', error);
-      alert(`Unexpected error: ${error.message}`);
+      
+      // User-friendly error messages
+      let userMessage;
+      if (error.isTimeout) {
+        userMessage = 'Create timed out. Please check your connection and try again.';
+      } else if (error.message.includes('fetch') || error.message.includes('network')) {
+        userMessage = 'Network error. Please check your connection and try again.';
+      } else if (error.status === 400) {
+        userMessage = 'Invalid request. Please check your input.';
+      } else {
+        userMessage = `Error creating event: ${error.message}`;
+      }
+      
+      alert(userMessage);
       
       // Make sure loading overlay is hidden
       const loadingOverlay = document.getElementById('loadingOverlay');
@@ -1060,24 +1081,36 @@ async function showEventModal(event) {
     try {
       // First fetch the full event (like desktop does) to ensure backend can find it
       console.log('Step 1: Fetching event with GET...');
-      const getResponse = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventUid)}`);
+      const getResponse = await withTimeout(
+        fetchWithRetry(
+          `${API_BASE}/api/events/${encodeURIComponent(eventUid)}`,
+          {},
+          { maxRetries: 1 }
+        ),
+        15000,
+        'Failed to fetch event'
+      );
       console.log('GET response status:', getResponse.status);
-      
-      if (!getResponse.ok) {
-        const errorText = await getResponse.text();
-        console.error('Failed to fetch event before delete:', getResponse.status, errorText);
-        alert(`Cannot find event: ${getResponse.status}`);
-        return;
-      }
       
       const eventData = await getResponse.json();
       console.log('Step 2: GET succeeded, fetched event:', eventData);
       
       // Now delete it
       console.log('Step 3: Attempting DELETE...');
-      const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventUid)}`, {
-        method: 'DELETE'
-      });
+      const response = await withTimeout(
+        fetchWithRetry(
+          `${API_BASE}/api/events/${encodeURIComponent(eventUid)}`,
+          { method: 'DELETE' },
+          {
+            maxRetries: 2,
+            onRetry: (error, attempt) => {
+              console.log(`Retrying delete (attempt ${attempt})...`);
+            }
+          }
+        ),
+        30000,
+        'Delete operation timed out'
+      );
       console.log('DELETE response status:', response.status);
       
       if (response.ok) {
@@ -1110,11 +1143,35 @@ async function showEventModal(event) {
       } else {
         const errorText = await response.text();
         console.error('Failed to delete event:', response.status, errorText);
-        alert(`Failed to delete event: ${response.status} - ${errorText}`);
+        
+        // User-friendly error messages
+        let userMessage;
+        if (response.status === 404) {
+          userMessage = 'Event not found. It may have already been deleted.';
+        } else if (response.status === 400) {
+          userMessage = 'Invalid request. Please try again.';
+        } else {
+          userMessage = `Failed to delete event: ${response.status}`;
+        }
+        
+        alert(userMessage);
       }
     } catch (error) {
       console.error('Error deleting event:', error);
-      alert(`Error deleting event: ${error.message}`);
+      
+      // User-friendly error messages
+      let userMessage;
+      if (error.isTimeout) {
+        userMessage = 'Delete timed out. Please check your connection and try again.';
+      } else if (error.message.includes('fetch') || error.message.includes('network')) {
+        userMessage = 'Network error. Please check your connection and try again.';
+      } else if (error.status === 404) {
+        userMessage = 'Event not found. It may have already been deleted.';
+      } else {
+        userMessage = `Error deleting event: ${error.message}`;
+      }
+      
+      alert(userMessage);
     }
   });
   
@@ -1153,17 +1210,33 @@ async function showEventModal(event) {
     console.log('Updating event with UID:', eventUid, 'description:', fullDescription);
     
     try {
-      const response = await fetch(`${API_BASE}/api/events/${encodeURIComponent(eventUid)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          summary: title,
-          start: start,
-          end: end,
-          description: fullDescription,
-          location: location || ''
-        })
-      });
+      // Use retry logic with timeout
+      const response = await withTimeout(
+        fetchWithRetry(
+          `${API_BASE}/api/events/${encodeURIComponent(eventUid)}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              summary: title,
+              start: start,
+              end: end,
+              description: fullDescription,
+              location: location || ''
+            })
+          },
+          {
+            maxRetries: 2,
+            onRetry: (error, attempt) => {
+              console.log(`Retrying update (attempt ${attempt})...`);
+              const loadingText = document.getElementById('loadingOverlay')?.querySelector('p');
+              if (loadingText) loadingText.textContent = `Retrying update (${attempt}/2)...`;
+            }
+          }
+        ),
+        30000, // 30 second timeout
+        'Update operation timed out'
+      );
       
       if (response.ok) {
         // Close modal and show loading
@@ -1195,11 +1268,35 @@ async function showEventModal(event) {
       } else {
         const errorText = await response.text();
         console.error('Failed to update event:', response.status, errorText);
-        alert(`Failed to update event: ${response.status} - ${errorText}`);
+        
+        // Provide user-friendly error messages based on status code
+        let userMessage;
+        if (response.status === 409) {
+          userMessage = 'Someone else modified this event. Please refresh and try again.';
+        } else if (response.status === 404) {
+          userMessage = 'Event not found. It may have been deleted.';
+        } else if (response.status === 400) {
+          userMessage = 'Invalid request. Please check your input.';
+        } else {
+          userMessage = `Failed to update event: ${response.status}`;
+        }
+        
+        alert(userMessage);
       }
     } catch (error) {
       console.error('Error updating event:', error);
-      alert(`Error updating event: ${error.message}`);
+      
+      // User-friendly error messages
+      let userMessage;
+      if (error.isTimeout) {
+        userMessage = 'Update timed out. Please check your connection and try again.';
+      } else if (error.message.includes('fetch') || error.message.includes('network')) {
+        userMessage = 'Network error. Please check your connection and try again.';
+      } else {
+        userMessage = `Error updating event: ${error.message}`;
+      }
+      
+      alert(userMessage);
     }
   });
 }
