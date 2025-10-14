@@ -830,10 +830,22 @@ export class CalendarCache {
     }
 
     // 3) Delete the calendar object
-    await client.deleteCalendarObject({
-      calendarObject: eventObject,
-      etag: eventObject.etag
+    console.log(`[deleteEvent] Attempting to delete calendar object:`, {
+      url: eventObject.url,
+      etag: eventObject.etag,
+      uid: uid
     });
+    
+    try {
+      await client.deleteCalendarObject({
+        calendarObject: eventObject,
+        etag: eventObject.etag
+      });
+      console.log(`[deleteEvent] Successfully deleted calendar object from Nextcloud`);
+    } catch (deleteError) {
+      console.error(`[deleteEvent] Failed to delete from Nextcloud:`, deleteError);
+      throw new Error(`Failed to delete event from Nextcloud: ${deleteError.message}`);
+    }
 
     // 4) Invalidate cache for that calendar
     this.cache.del(`calendar:${calendarUrl}`);
@@ -1219,12 +1231,10 @@ export class CalendarCache {
     try {
       console.log(`[moveEvent] Creating event in target calendar ${targetCalendarUrl}`);
       
-      // Extract the filename from the original URL if it exists, or generate one
+      // Always use UID for filename to avoid path corruption issues
+      // Using the source filename can cause issues when moving between calendars
       filename = `${uid}.ics`;
-      if (eventObject.url) {
-        const urlParts = eventObject.url.split('/');
-        filename = urlParts[urlParts.length - 1];
-      }
+      console.log(`[moveEvent] Using filename: ${filename}`);
       
       // Add the new event to the target calendar
       await targetClient.createCalendarObject({
