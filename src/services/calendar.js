@@ -23,6 +23,7 @@ import isSameOrBefore from 'dayjs/plugin/isSameOrBefore.js';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter.js';
 import { randomUUID } from 'crypto';
 import { logOperation } from '../utils/operation-log.js';
+import IcalExpander from 'ical-expander';
 import YAML from 'yaml';
 import { calendarOrder, calendarExclude } from '../../config/calendar-order.js';
 import { calendarColorOverrides } from '../../config/calendar-colors.js';
