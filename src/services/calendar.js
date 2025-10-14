@@ -19,6 +19,8 @@ import { DAVClient } from 'tsdav';
 import NodeCache from 'node-cache';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore.js';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter.js';
 import { randomUUID } from 'crypto';
 import { logOperation } from '../utils/operation-log.js';
 import YAML from 'yaml';
@@ -26,6 +28,7 @@ import { calendarOrder, calendarExclude } from '../../config/calendar-order.js';
 import { calendarColorOverrides } from '../../config/calendar-colors.js';
 
 // Enable required Dayjs plugins for comparison helpers used below
+dayjs.extend(utc);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
