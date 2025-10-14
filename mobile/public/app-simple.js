@@ -7,9 +7,107 @@
  */
 
 import { LABEL_PALETTE, LANE_OPACITY, UNCONFIRMED_EVENT_OPACITY } from '/js/ui-config.js';
-import { fetchWithRetry, withTimeout } from './retry-utils.js';
 
 console.log('📱 Mobile Timeline v1760277100 loaded');
+
+// ============================================
+// RETRY UTILITIES (Inlined)
+// ============================================
+
+/**
+ * Sleep for a given number of milliseconds
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Default retry logic - retry on network errors and 5xx server errors
+ */
+function defaultShouldRetry(error, attempt) {
+  if (error.message.includes('fetch') || error.message.includes('network')) {
+    return true;
+  }
+  if (error.status) {
+    if (error.status >= 500 && error.status < 600) return true;
+    if (error.status === 408 || error.status === 429) return true;
+    if (error.status >= 400 && error.status < 500) return false;
+  }
+  return true;
+}
+
+/**
+ * Retry a function with exponential backoff
+ */
+async function retryWithBackoff(fn, options = {}) {
+  const {
+    maxRetries = 3,
+    initialDelay = 1000,
+    maxDelay = 10000,
+    shouldRetry = defaultShouldRetry,
+    onRetry = null
+  } = options;
+
+  let lastError;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt === maxRetries) break;
+      if (!shouldRetry(error, attempt)) throw error;
+      
+      const exponentialDelay = initialDelay * Math.pow(2, attempt);
+      const jitter = Math.random() * 0.3 * exponentialDelay;
+      const delay = Math.min(exponentialDelay + jitter, maxDelay);
+      
+      console.log(`[Retry] Attempt ${attempt + 1}/${maxRetries} failed, retrying in ${Math.round(delay)}ms...`, error.message);
+      if (onRetry) onRetry(error, attempt + 1);
+      await sleep(delay);
+    }
+  }
+  throw lastError;
+}
+
+/**
+ * Create a retry-enabled fetch wrapper
+ */
+async function fetchWithRetry(url, options = {}, retryOptions = {}) {
+  return retryWithBackoff(async () => {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+      error.status = response.status;
+      error.response = response;
+      throw error;
+    }
+    return response;
+  }, retryOptions);
+}
+
+/**
+ * Timeout wrapper for promises
+ */
+async function withTimeout(promise, timeoutMs, timeoutMessage = 'Operation timed out') {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      const error = new Error(timeoutMessage);
+      error.isTimeout = true;
+      reject(error);
+    }, timeoutMs);
+  });
+  
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    clearTimeout(timeoutId);
+    return result;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
 
 // ============================================
 // CONFIGURATION & CONSTANTS
