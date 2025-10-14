@@ -43,10 +43,11 @@ dayjs.extend(isSameOrAfter);
  */
 export class CalendarCache {
   constructor() {
-    // Cache with 30 minute TTL and check for expired items every 5 minutes
+    // Cache with 5 minute TTL and check for expired items every minute
+    // Shorter TTL for multi-user environments to reduce stale data
     this.cache = new NodeCache({
-      stdTTL: 1800, // 30 minutes
-      checkperiod: 300, // 5 minutes
+      stdTTL: 300, // 5 minutes (reduced from 30 for multi-user sync)
+      checkperiod: 60, // 1 minute (check more frequently)
       useClones: false // Better performance with direct references
     });
     
@@ -259,10 +260,11 @@ export class CalendarCache {
       // Initial data load
       await this.refreshAllCalendars();
       
-      // Set up periodic refresh (every 15 minutes)
+      // Set up periodic refresh (every 3 minutes)
+      // More frequent refresh for multi-user environments
       this.refreshInterval = setInterval(
         () => this.refreshAllCalendars(),
-        15 * 60 * 1000
+        3 * 60 * 1000 // 3 minutes
       );
       
       console.log('Calendar cache initialized');

@@ -2004,5 +2004,84 @@ async function initEventMap(location) {
   }
 }
 
+// ============================================
+// AUTO-REFRESH FOR MULTI-USER SYNC
+// ============================================
+
+/**
+ * Auto-refresh data periodically to sync with other users' changes
+ * Runs every 60 seconds to keep data fresh in multi-user environment
+ */
+let autoRefreshInterval = null;
+let lastRefreshTime = Date.now();
+
+function startAutoRefresh() {
+  // Clear any existing interval
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+  }
+  
+  // Refresh every 60 seconds
+  autoRefreshInterval = setInterval(async () => {
+    try {
+      console.log('[AutoRefresh] Checking for updates...');
+      const timeSinceLastRefresh = Date.now() - lastRefreshTime;
+      
+      // Only refresh if no modal is open (don't interrupt user)
+      const modal = document.getElementById('eventModal');
+      const conflictModal = document.getElementById('conflictModal');
+      const isModalOpen = modal?.classList.contains('active') || conflictModal?.classList.contains('active');
+      
+      if (isModalOpen) {
+        console.log('[AutoRefresh] Modal open, skipping refresh');
+        return;
+      }
+      
+      // Silently reload data in background
+      await loadData();
+      render();
+      lastRefreshTime = Date.now();
+      console.log('[AutoRefresh] Data refreshed successfully');
+      
+      // Show subtle notification
+      showRefreshNotification();
+    } catch (error) {
+      console.error('[AutoRefresh] Failed to refresh:', error);
+    }
+  }, 60 * 1000); // 60 seconds
+  
+  console.log('[AutoRefresh] Started (interval: 60s)');
+}
+
+/**
+ * Show a subtle notification that data was refreshed
+ */
+function showRefreshNotification() {
+  const statusBar = document.getElementById('statusBar');
+  if (!statusBar) return;
+  
+  statusBar.textContent = '✓ Updated';
+  statusBar.style.opacity = '1';
+  
+  // Fade out after 2 seconds
+  setTimeout(() => {
+    statusBar.style.opacity = '0';
+  }, 2000);
+}
+
+/**
+ * Stop auto-refresh (e.g., when user is editing)
+ */
+function stopAutoRefresh() {
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = null;
+    console.log('[AutoRefresh] Stopped');
+  }
+}
+
 // Start
-init();
+init().then(() => {
+  // Start auto-refresh after initial load
+  startAutoRefresh();
+});
