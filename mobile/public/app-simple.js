@@ -1415,11 +1415,39 @@ async function showEventModal(event) {
       fullDescription = (fullDescription ? fullDescription + '\n\n' : '') + '\n```yaml\n' + yamlLines + '\n```\n';
     }
     
+    // Check if calendar changed - if so, we need to trigger a MOVE operation
+    const originalCalendarId = event.group;
+    const calendarChanged = calendarId !== originalCalendarId;
+    
+    // Find the target calendar URL if calendar changed
+    let targetCalendarUrl = null;
+    if (calendarChanged) {
+      const targetCalendar = state.calendars.find(cal => cal.id === calendarId);
+      if (targetCalendar) {
+        targetCalendarUrl = targetCalendar.url;
+        console.log(`Calendar changed from ${originalCalendarId} to ${calendarId}, will move to ${targetCalendarUrl}`);
+      }
+    }
+    
     // Use event.uid if available, otherwise extract from id and remove leading hyphen
     const eventUid = event.uid || event.id.split('/').pop().replace(/^-/, '');
     console.log('Updating event with UID:', eventUid, 'description:', fullDescription);
     
     try {
+      // Build request body
+      const requestBody = {
+        summary: title,
+        start: start,
+        end: end,
+        description: fullDescription,
+        location: location || ''
+      };
+      
+      // Add targetCalendarUrl if calendar changed (triggers MOVE operation)
+      if (targetCalendarUrl) {
+        requestBody.targetCalendarUrl = targetCalendarUrl;
+      }
+      
       // Use retry logic with timeout
       const response = await withTimeout(
         fetchWithRetry(
@@ -1427,13 +1455,7 @@ async function showEventModal(event) {
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              summary: title,
-              start: start,
-              end: end,
-              description: fullDescription,
-              location: location || ''
-            })
+            body: JSON.stringify(requestBody)
           },
           {
             maxRetries: 2,
