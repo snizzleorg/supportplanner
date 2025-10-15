@@ -176,7 +176,16 @@ The mobile app has been integrated into the main application. This report identi
 - `public/mobile-timeline-mockup.html` (17,546 bytes)
 
 ### Directories Renamed
-- `public/` → `public-legacy/` - Original desktop app (kept for tests and shared resources)
+- `public/` → `public-legacy/` - Original desktop app (kept for tests only)
+
+### Files Copied to Mobile App
+Copied shared assets from `public-legacy/` to `mobile/public/` for independence:
+- `favicon.svg`, `favicon-16x16.png`, `favicon-32x32.png`
+- `apple-touch-icon.png`
+- `icon-192.png`, `icon-512.png`
+- `manifest.json`
+
+Mobile app is now fully self-contained and independent of legacy code.
 
 ### Files Updated
 - `README.md` - Added mobile integration features and testing info
