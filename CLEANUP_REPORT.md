@@ -179,6 +179,11 @@ The mobile app has been integrated into the main application. This report identi
 - `mobile/package.json` (801 bytes) - Obsolete standalone dependencies
 - `mobile/public/app.js` (23KB) - Unused alternative version
 - `mobile/public/retry-utils.js` (4.6KB) - Unused utility file
+- `public-legacy/tests/` - Legacy frontend integration tests (13 suites)
+- `public-legacy/js/__tests__/` - Legacy frontend unit tests (173 tests)
+- `tests/frontend/` - Legacy frontend test infrastructure
+- `tests/frontend-unit/` - Legacy frontend unit test infrastructure
+- `vitest.config.frontend.js` - Legacy frontend test configuration
 
 ### Directories Renamed
 - `public/` → `public-legacy/` - Original desktop app (kept for tests only)
