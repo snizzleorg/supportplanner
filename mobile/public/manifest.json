@@ -1,7 +1,7 @@
 {
   "name": "SupportPlanner",
   "short_name": "SupportPlanner",
-  "description": "Travel and support planning timeline",
+  "description": "Travel and Support Planning",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
