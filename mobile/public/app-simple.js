@@ -2,13 +2,44 @@
  * Simple Mobile Timeline - Clean Implementation
  * Version: 1760265400
  * 
- * A mobile-optimized timeline view for support planning.
+ * A horizontal scrolling timeline for viewing and managing calendar events.
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
-import { LABEL_PALETTE, LANE_OPACITY, UNCONFIRMED_EVENT_OPACITY } from '/js/ui-config.js';
-
 console.log('📱 Mobile Timeline v1760277100 loaded');
+
+// ============================================
+// UI CONFIGURATION
+// ============================================
+
+/**
+ * High-contrast color palette for calendar lane labels and backgrounds
+ * @constant {Array<string>}
+ */
+const LABEL_PALETTE = [
+  '#FF8A95', // Vibrant coral/pink
+  '#80C7FF', // Vibrant sky blue
+  '#80FF9E', // Vibrant mint green
+  '#FFBC80', // Vibrant peach/orange
+  '#C780FF', // Vibrant purple
+  '#FFFF80', // Vibrant yellow
+  '#80E8FF', // Vibrant cyan
+  '#FF80D5', // Vibrant magenta
+  '#C4C480', // Vibrant olive
+  '#9580FF', // Vibrant periwinkle
+];
+
+/**
+ * Lane background opacity (0-1)
+ * @constant {number}
+ */
+const LANE_OPACITY = 0.30;
+
+/**
+ * Unconfirmed event opacity (0-1) - Events with ??? in title are dimmed
+ * @constant {number}
+ */
+const UNCONFIRMED_EVENT_OPACITY = 0.50;
 
 // ============================================
 // RETRY UTILITIES (Inlined)
