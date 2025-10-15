@@ -25,8 +25,8 @@ import { randomUUID } from 'crypto';
 import { logOperation } from '../utils/operation-log.js';
 import IcalExpander from 'ical-expander';
 import YAML from 'yaml';
-import { calendarOrder, calendarExclude } from '../../config/calendar-order.js';
-import { calendarColorOverrides } from '../../config/calendar-colors.js';
+import { calendarOrder, calendarExclude } from '../config/calendar-order.js';
+import { calendarColorOverrides } from '../config/calendar-colors.js';
 
 // Enable required Dayjs plugins for comparison helpers used below
 dayjs.extend(utc);
