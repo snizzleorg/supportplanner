@@ -1,18 +1,16 @@
 # Mobile App Quick Start Guide
 
-## 🎉 Your Mobile App is Ready!
+## 🎉 Mobile App is Integrated!
 
-The mobile timeline app is now running in Docker alongside your desktop app.
+The mobile timeline app is now **integrated into the main application** with automatic device detection. The same application serves both desktop and mobile experiences.
 
-## Access the Apps
+## Access the App
 
-### Desktop Version (Original)
+### Unified Application
 - **URL**: http://localhost:5175
-- **Features**: Full desktop timeline with vis-timeline library
-
-### Mobile Version (New!)
-- **URL**: http://localhost:5174
-- **Features**: Horizontal scrolling timeline optimized for mobile
+- **Desktop**: Full desktop timeline with vis-timeline library (on desktop browsers)
+- **Mobile**: Horizontal scrolling timeline optimized for mobile (on mobile devices)
+- **Device Detection**: Automatically serves the appropriate UI based on device type
 
 ## Testing on Your Phone
 
@@ -27,25 +25,25 @@ The mobile timeline app is now running in Docker alongside your desktop app.
 
 2. **Open on your phone**:
    - Make sure your phone is on the same WiFi network
-   - Open browser and go to: `http://<your-ip>:5174`
-   - Example: `http://192.168.1.100:5174`
+   - Open browser and go to: `http://<your-ip>:5175`
+   - Example: `http://192.168.1.100:5175`
+   - The mobile UI will be automatically served based on device detection
 
 ## Docker Commands
 
 ```bash
-# Start both apps
-docker compose up -d support-planner mobile-planner
+# Start the application
+docker compose up -d support-planner
 
-# Stop both apps
+# Stop the application
 docker compose down
 
 # View logs
-docker compose logs mobile-planner
 docker compose logs support-planner
 
 # Rebuild after changes
-docker compose build mobile-planner
-docker compose restart mobile-planner
+docker compose build support-planner
+docker compose restart support-planner
 ```
 
 ## Mobile App Features
@@ -78,26 +76,26 @@ docker compose restart mobile-planner
 
 ```
 mobile/
-├── Dockerfile              # Docker configuration
+├── Dockerfile              # Docker configuration (for standalone deployment)
 ├── package.json            # Dependencies
-├── server.js               # Express server
+├── server.js               # Express server (for standalone deployment)
 ├── capacitor.config.json   # Capacitor config (for native apps)
 ├── public/
-│   ├── index.html          # Main HTML
+│   ├── index.html          # Mobile HTML
 │   ├── styles.css          # Mobile-optimized CSS
-│   └── app.js              # Application logic
+│   └── app-simple.js       # Mobile application logic
 └── README.md               # Detailed documentation
 ```
+
+**Note**: The mobile app is served by the main application at port 5175 with automatic device detection. The standalone mobile server (port 5174) is available for development but not required for normal use.
 
 ## Development Workflow
 
 ### Making Changes
 
-The mobile app files are mounted as volumes, so changes to files in `mobile/public/` will be reflected immediately (just refresh the browser).
-
-For changes to `server.js` or `package.json`:
+Changes to mobile app files in `mobile/public/` require restarting the main application:
 ```bash
-docker compose restart mobile-planner
+docker compose restart support-planner
 ```
 
 ### Debugging
@@ -108,7 +106,7 @@ docker compose restart mobile-planner
 
 2. **Check logs**:
    ```bash
-   docker compose logs -f mobile-planner
+   docker compose logs -f support-planner
    ```
 
 ## Building Native Apps (Future)
@@ -136,31 +134,29 @@ npm run cap:open:android # Opens Android Studio
 
 ## API Configuration
 
-The mobile app automatically connects to the backend at:
-- **Development**: `http://localhost:5175`
-- **Production**: Same origin, port 5175
+The mobile app uses the same backend API as the desktop version:
+- **Integrated Mode**: Same origin (automatic)
+- **Standalone Mode**: Configure in `mobile/public/app-simple.js` if needed
 
-To change this, edit `mobile/public/app.js`:
-```javascript
-const API_BASE = 'https://your-backend-url.com';
-```
+Since the mobile app is integrated, no API configuration is needed in most cases.
 
 ## Troubleshooting
 
-### Mobile app won't load
-1. Check if container is running: `docker compose ps`
-2. Check logs: `docker compose logs mobile-planner`
-3. Verify port 5174 is not in use: `lsof -i :5174`
+### Mobile UI not showing on phone
+1. Clear browser cache and reload
+2. Check User-Agent detection in browser DevTools
+3. Try accessing with `?mobile=true` query parameter
 
 ### Can't connect from phone
 1. Verify both devices on same WiFi
 2. Check firewall settings
-3. Try accessing from computer first: `http://localhost:5174`
+3. Try accessing from computer first: `http://localhost:5175`
 
 ### No events showing
 1. Verify backend is running: `http://localhost:5175`
 2. Check browser console for API errors
 3. Verify date range includes events
+4. Check logs: `docker compose logs support-planner`
 
 ## Next Steps
 
@@ -169,18 +165,13 @@ const API_BASE = 'https://your-backend-url.com';
 3. **Request features** you'd like to see
 4. **Consider native app build** if you want app store distribution
 
-## Branch Information
+## Integration Status
 
-- **Branch**: `feature/mobile-app-capacitor`
-- **Commits**: 2 (mockups + mobile app)
-- **Status**: Ready for testing
-
-To merge into develop:
-```bash
-git checkout develop
-git merge feature/mobile-app-capacitor
-```
+- **Status**: ✅ Integrated into main application
+- **Device Detection**: Automatic
+- **Port**: 5175 (unified with desktop)
+- **Deployment**: Single Docker container serves both UIs
 
 ---
 
-**Enjoy your new mobile timeline! 📱✨**
+**Enjoy your unified mobile and desktop timeline! 📱💻✨**

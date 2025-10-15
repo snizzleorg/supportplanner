@@ -7,7 +7,12 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
 - View and manage support schedules
 - Drag-and-drop event rescheduling
 - Real-time updates
-- Mobile phone-optimized UI
+- **Integrated mobile app** with automatic device detection
+  - Horizontal scrolling timeline optimized for touch
+  - Calendar lanes with event color coding
+  - Touch gestures (tap, long-press, pinch-zoom)
+  - Landscape-only mode with rotate guidance
+- Desktop timeline with vis-timeline library
 - Leaflet-based map with per-location markers and group-colored pins
 - Accessible edit modal (focus on open, Escape to close, focus trap)
 - Quick-zoom timeline controls (Month, Quarter)
@@ -532,7 +537,7 @@ Notes for mobile testing
 
 ## Testing
 
-This project has comprehensive test coverage with **99 tests** across backend and frontend.
+This project has comprehensive test coverage with **272+ tests** across backend and frontend.
 
 ### Quick Start
 
@@ -543,7 +548,10 @@ This project has comprehensive test coverage with **99 tests** across backend an
 # Run backend tests only (86 unit tests, ~1s)
 docker compose run --rm backend-tests
 
-# Run frontend tests only (13 integration suites, ~10s)
+# Run frontend unit tests (173 tests, ~2s)
+docker compose run --rm frontend-unit-tests
+
+# Run frontend integration tests (13 suites, ~10s)
 docker compose run --rm frontend-tests
 ```
 
@@ -556,12 +564,20 @@ docker compose run --rm frontend-tests
 - Services: Calendar cache, Event type classification
 - Utils: Date validation, HTML escaping
 
+**Frontend Unit Tests** (173 tests)
+- API Client, Authentication, State Management
+- Geocoding, UI Controls, Search, Events
+- Timeline, Modal, Holidays, Map, DOM utilities
+
 **Frontend Integration Tests** (13 suites)
 - Security: Headers, CSP, XSS protection, Rate limiting
 - API: CRUD operations, Calendar fetching
 - UI: Search, Timeline, Map, Modals, Tooltips
 - Accessibility: Focus management, Keyboard navigation
 - CSS Audit: Unused selectors, Coverage analysis
+
+**Mobile App Tests** (⚠️ Not yet implemented)
+- See [docs/MOBILE_TESTING.md](docs/MOBILE_TESTING.md) for testing strategy
 
 ### Advanced Testing
 
@@ -613,6 +629,9 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for complete release history.
 ## Documentation
 
 - [Testing Guide](TESTING.md) - Comprehensive testing documentation
+- [Mobile Testing Guide](docs/MOBILE_TESTING.md) - Mobile app testing strategy
+- [Mobile Quick Start](MOBILE_QUICKSTART.md) - Mobile app usage guide
 - [Architecture & Refactoring](docs/REFACTORING.md) - Modular architecture details
 - [Code Review](docs/CODE_REVIEW.md) - Security and quality improvements
 - [Roadmap](docs/ROADMAP.md) - Release history and future plans
+- [Cleanup Report](CLEANUP_REPORT.md) - Project cleanup documentation
