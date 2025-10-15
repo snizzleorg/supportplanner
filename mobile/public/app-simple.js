@@ -228,13 +228,13 @@ async function init() {
     if (!container) return;
     
     // Calculate which date is currently at the left edge of the viewport
-    const oldPixelsPerDay = ZOOM_SETTINGS[getZoom()];
+    const currentZoom = getZoom();
+    const oldPixelsPerDay = ZOOM_SETTINGS[currentZoom] || parseInt(zoomSlider.value);
     const currentScrollLeft = container.scrollLeft;
     const daysFromStart = Math.floor((currentScrollLeft - 100) / oldPixelsPerDay);
     
-    // Update zoom settings with slider value (pixels per day)
+    // Update zoom to custom (slider value is used directly)
     const newPixelsPerDay = parseInt(e.target.value);
-    ZOOM_SETTINGS.custom = newPixelsPerDay;
     setZoom('custom');
     
     // Deactivate preset buttons when using custom zoom
@@ -455,7 +455,9 @@ async function loadData() {
  */
 function render() {
   const container = document.getElementById('timelineContainer');
-  const pixelsPerDay = ZOOM_SETTINGS[getZoom()];
+  const currentZoom = getZoom();
+  const zoomSlider = document.getElementById('zoomSlider');
+  const pixelsPerDay = ZOOM_SETTINGS[currentZoom] || parseInt(zoomSlider?.value || 10);
   
   // Calculate total days and width
   const totalDays = Math.ceil((getDateRange().to - getDateRange().from) / (1000 * 60 * 60 * 24));
