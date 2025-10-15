@@ -1605,7 +1605,11 @@ function renderWeekendAndHolidayBackgrounds(pixelsPerDay) {
   return html;
 }
 
-// Render month vertical lines
+/**
+ * Render vertical lines marking month boundaries
+ * @param {number} pixelsPerDay - Current zoom level pixels per day
+ * @returns {string} HTML string for month boundary lines
+ */
 function renderMonthLines(pixelsPerDay) {
   let html = '';
   let current = new Date(state.dateRange.from);
@@ -1631,7 +1635,11 @@ function renderMonthLines(pixelsPerDay) {
   return html;
 }
 
-// Render month headers
+/**
+ * Render month name headers at the top of the timeline
+ * @param {number} pixelsPerDay - Current zoom level pixels per day
+ * @returns {string} HTML string for month headers
+ */
 function renderMonthHeaders(pixelsPerDay) {
   let html = '';
   let current = new Date(state.dateRange.from);
@@ -1663,7 +1671,11 @@ function getWeekNumber(date) {
   return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
-// Render week numbers
+/**
+ * Render ISO week numbers along the timeline
+ * @param {number} pixelsPerDay - Current zoom level pixels per day
+ * @returns {string} HTML string for week number labels
+ */
 function renderWeekNumbers(pixelsPerDay) {
   let html = '';
   let current = new Date(state.dateRange.from);
@@ -1697,7 +1709,11 @@ function renderWeekNumbers(pixelsPerDay) {
   return html;
 }
 
-// Render day numbers
+/**
+ * Render day numbers (1-31) along the timeline
+ * @param {number} pixelsPerDay - Current zoom level pixels per day
+ * @returns {string} HTML string for day number labels
+ */
 function renderDayNumbers(pixelsPerDay) {
   let html = '';
   let current = new Date(state.dateRange.from);
@@ -1722,7 +1738,13 @@ function renderDayNumbers(pixelsPerDay) {
   return html;
 }
 
-// Render events for a calendar
+/**
+ * Render all events for a specific calendar lane
+ * Handles event positioning, stacking, and styling
+ * @param {string} calendarId - ID of the calendar to render events for
+ * @param {number} pixelsPerDay - Current zoom level pixels per day
+ * @returns {string} HTML string for calendar's events
+ */
 function renderEventsForCalendar(calendarId, pixelsPerDay) {
   const calendar = state.calendars.find(c => c.id === calendarId);
   let events = state.events.filter(e => e.group === calendarId);
