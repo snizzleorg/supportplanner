@@ -10,6 +10,7 @@
 import { API_BASE } from './config.js';
 import {
   getCalendars,
+  getEvents,
   getDateRange,
   getHolidays,
   setCalendars,
