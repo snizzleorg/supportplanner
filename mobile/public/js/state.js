@@ -146,10 +146,10 @@ export function setDateRange(dateRange) {
 
 /**
  * Set zoom level
- * @param {string} zoom - Zoom level (week|month|quarter)
+ * @param {string} zoom - Zoom level (week|month|quarter|custom)
  */
 export function setZoom(zoom) {
-  if (!['week', 'month', 'quarter'].includes(zoom)) {
+  if (!['week', 'month', 'quarter', 'custom'].includes(zoom)) {
     console.warn(`Invalid zoom level: ${zoom}. Using 'month' as default.`);
     state.zoom = 'month';
     return;
