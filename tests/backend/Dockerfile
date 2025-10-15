@@ -13,9 +13,8 @@ RUN npm install --no-save vitest@^1.0.4 @vitest/coverage-v8@^1.0.4 \
     openid-client@^5.6.5 node-cache@^5.1.2 yaml@^2.4.2 tsdav@^2.1.2 \
     ical-expander@^3.1.0 node-fetch@^3.3.2
 
-# Copy source code and test configuration
+# Copy source code and test configuration (config is now in src/config/)
 COPY src ./src
-COPY config ./config
 COPY vitest.config.js ./vitest.config.js
 
 # Set test environment
