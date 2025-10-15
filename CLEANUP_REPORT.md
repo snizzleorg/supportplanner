@@ -177,6 +177,8 @@ The mobile app has been integrated into the main application. This report identi
 - `mobile/server.js` (879 bytes) - Obsolete standalone server
 - `mobile/Dockerfile` (526 bytes) - Obsolete standalone Docker config
 - `mobile/package.json` (801 bytes) - Obsolete standalone dependencies
+- `mobile/public/app.js` (23KB) - Unused alternative version
+- `mobile/public/retry-utils.js` (4.6KB) - Unused utility file
 
 ### Directories Renamed
 - `public/` → `public-legacy/` - Original desktop app (kept for tests only)
