@@ -2088,7 +2088,7 @@ function stopAutoRefresh() {
 
 /**
  * Setup keyboard shortcuts for navigation and zoom
- * - Arrow Up/Down: Control zoom slider (10 increments)
+ * - Plus/Minus OR Arrow Up/Down: Control zoom slider (10 increments)
  * - Arrow Left/Right: Scroll timeline horizontally
  * - Home/End: Jump to start/end
  */
@@ -2107,7 +2107,9 @@ function setupKeyboardShortcuts() {
     const zoomStep = 10; // zoom slider increments (larger steps for keyboard)
     
     switch(e.key) {
-      // Zoom controls with arrow up/down
+      // Zoom in with +/= or arrow up
+      case '+':
+      case '=': // Also handle = key (same key as + without shift)
       case 'ArrowUp':
         e.preventDefault();
         if (zoomSlider) {
@@ -2120,6 +2122,9 @@ function setupKeyboardShortcuts() {
         }
         break;
         
+      // Zoom out with -/_ or arrow down
+      case '-':
+      case '_': // Also handle _ key (same key as - with shift)
       case 'ArrowDown':
         e.preventDefault();
         if (zoomSlider) {
@@ -2156,7 +2161,7 @@ function setupKeyboardShortcuts() {
     }
   });
   
-  console.log('[Keyboard] Shortcuts enabled: ↑/↓ (zoom ±10), ←/→ (scroll), Home/End (navigate)');
+  console.log('[Keyboard] Shortcuts enabled: +/- or ↑/↓ (zoom ±10), ←/→ (scroll), Home/End (navigate)');
 }
 
 // Start
