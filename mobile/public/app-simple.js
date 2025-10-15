@@ -2090,7 +2090,8 @@ function stopAutoRefresh() {
  * Setup keyboard shortcuts for navigation and zoom
  * - Plus/Minus OR Arrow Up/Down: Control zoom slider (10 increments)
  * - Arrow Left/Right: Scroll timeline horizontally
- * - Home/End: Jump to start/end
+ * - Home: Jump to today
+ * - End: Jump to end of timeline
  */
 function setupKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
@@ -2151,7 +2152,13 @@ function setupKeyboardShortcuts() {
       // Home/End for quick navigation
       case 'Home':
         e.preventDefault();
-        container.scrollLeft = 0;
+        // Jump to today
+        const today = new Date();
+        const startDate = state.dateRange.from;
+        const daysFromStart = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+        const pixelsPerDay = ZOOM_SETTINGS[state.zoom] || parseInt(zoomSlider?.value || 10);
+        const todayScrollLeft = 100 + (daysFromStart * pixelsPerDay);
+        container.scrollLeft = Math.max(0, todayScrollLeft);
         break;
         
       case 'End':
@@ -2161,7 +2168,7 @@ function setupKeyboardShortcuts() {
     }
   });
   
-  console.log('[Keyboard] Shortcuts enabled: +/- or ↑/↓ (zoom ±10), ←/→ (scroll), Home/End (navigate)');
+  console.log('[Keyboard] Shortcuts enabled: +/- or ↑/↓ (zoom ±10), ←/→ (scroll), Home (today), End (end)');
 }
 
 // Start
