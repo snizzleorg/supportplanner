@@ -11,10 +11,7 @@ WORKDIR /usr/src/support-planner
 COPY package.json ./
 RUN npm install --production=false
 
-# Copy config files first
-COPY config/ ./config/
-
-# Copy the rest of the app
+# Copy the rest of the app (config is now in src/config/)
 COPY . .
 
 # Expose the port (default 5173)
