@@ -12,12 +12,12 @@ RUN if [ -f package-lock.json ]; then \
       npm install --no-audit --no-fund; \
     fi
 
-# Copy runner script and public tests
+# Copy runner script and public tests (public is now public-legacy)
 COPY tests/frontend/run-tests.mjs ./run-tests.mjs
 COPY tests/frontend/css-audit.mjs ./css-audit.mjs
-COPY public/tests ./public/tests
-COPY public/js ./public/js
-COPY public/styles.css ./public/styles.css
+COPY public-legacy/tests ./public-legacy/tests
+COPY public-legacy/js ./public-legacy/js
+COPY public-legacy/styles.css ./public-legacy/styles.css
 
 # Runtime env
 ENV PUPPETEER_PRODUCT=chrome
