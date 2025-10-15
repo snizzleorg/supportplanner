@@ -56,11 +56,8 @@ app.set('trust proxy', 1);
 initializeAuth(app);
 
 // Serve mobile app for all devices (desktop and mobile)
-// Using horizontal timeline for better lane visibility
+// Mobile app now contains all required assets (favicons, manifest, etc.)
 app.use(express.static(path.join(__dirname, 'mobile', 'public')));
-
-// Serve legacy desktop app folder for shared resources (favicons, etc.)
-app.use(express.static(path.join(__dirname, 'public-legacy')));
 
 // Serve event-types.json from root
 app.get('/event-types.json', (req, res) => {
