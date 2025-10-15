@@ -6,40 +6,20 @@
  * Features: View, create, edit, delete events across multiple calendars.
  */
 
+// Import configuration
+import {
+  LABEL_PALETTE,
+  LANE_OPACITY,
+  UNCONFIRMED_EVENT_OPACITY,
+  API_BASE,
+  LAYOUT,
+  Z_INDEX,
+  ZOOM_SETTINGS,
+  TIMING,
+  AUTO_REFRESH_INTERVAL_MS
+} from './js/config.js';
+
 console.log('📱 Mobile Timeline v1760277100 loaded');
-
-// ============================================
-// UI CONFIGURATION
-// ============================================
-
-/**
- * High-contrast color palette for calendar lane labels and backgrounds
- * @constant {Array<string>}
- */
-const LABEL_PALETTE = [
-  '#FF8A95', // Vibrant coral/pink
-  '#80C7FF', // Vibrant sky blue
-  '#80FF9E', // Vibrant mint green
-  '#FFBC80', // Vibrant peach/orange
-  '#C780FF', // Vibrant purple
-  '#FFFF80', // Vibrant yellow
-  '#80E8FF', // Vibrant cyan
-  '#FF80D5', // Vibrant magenta
-  '#C4C480', // Vibrant olive
-  '#9580FF', // Vibrant periwinkle
-];
-
-/**
- * Lane background opacity (0-1)
- * @constant {number}
- */
-const LANE_OPACITY = 0.30;
-
-/**
- * Unconfirmed event opacity (0-1) - Events with ??? in title are dimmed
- * @constant {number}
- */
-const UNCONFIRMED_EVENT_OPACITY = 0.50;
 
 // ============================================
 // RETRY UTILITIES (Inlined)
@@ -141,63 +121,8 @@ async function withTimeout(promise, timeoutMs, timeoutMessage = 'Operation timed
 }
 
 // ============================================
-// CONFIGURATION & CONSTANTS
+// APPLICATION STATE
 // ============================================
-
-/**
- * API base URL - automatically detects localhost vs production
- * @constant {string}
- */
-const API_BASE = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5175'
-  : window.location.origin.replace(':5174', ':5175');
-
-/**
- * Layout constants for timeline rendering
- * @constant {Object}
- */
-const LAYOUT = {
-  LABEL_WIDTH: 100,           // Width of calendar name labels
-  MONTH_HEADER_HEIGHT: 40,    // Height of month header row
-  WEEK_HEADER_HEIGHT: 20,     // Height of week number row
-  DAY_HEADER_HEIGHT: 25,      // Height of day number row
-  LANE_HEIGHT: 60,            // Height of each calendar lane
-  EVENT_HEIGHT: 24,           // Height of event bars
-  EVENT_GAP: 2                // Gap between stacked events
-};
-
-/**
- * Z-index layers for stacking elements
- * @constant {Object}
- */
-const Z_INDEX = {
-  BACKGROUND: 1,
-  EVENTS: 2,
-  DAY_HEADER: 100,
-  WEEK_HEADER: 101,
-  MONTH_HEADER: 102,
-  MONTH_LINES: 103,
-  TODAY_INDICATOR: 104
-};
-
-/**
- * Zoom settings: pixels per day for each zoom level
- * @constant {Object}
- */
-const ZOOM_SETTINGS = {
-  week: 20,    // 20px per day = 140px per week
-  month: 10,   // 10px per day = 300px per month
-  quarter: 5   // 5px per day = 150px per month
-};
-
-/**
- * Timing constants for async operations
- * @constant {Object}
- */
-const TIMING = {
-  SAVE_DELAY_MS: 2000,    // Wait time before reload after create
-  DELETE_DELAY_MS: 2000   // Wait time before reload after delete
-};
 
 /**
  * Application state object
