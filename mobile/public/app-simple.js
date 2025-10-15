@@ -1313,12 +1313,13 @@ async function showEventModal(event) {
       
       // Now delete it
       console.log('Step 3: Attempting DELETE...');
+      // NOTE: Only 1 retry for DELETE to prevent duplicate delete attempts
       const response = await withTimeout(
         fetchWithRetry(
           `${API_BASE}/api/events/${encodeURIComponent(eventUid)}`,
           { method: 'DELETE' },
           {
-            maxRetries: 2,
+            maxRetries: 1, // Reduced from 2 to prevent duplicate deletes
             onRetry: (error, attempt) => {
               console.log(`Retrying delete (attempt ${attempt})...`);
             }
@@ -1461,6 +1462,7 @@ async function showEventModal(event) {
       }
       
       // Use retry logic with timeout
+      // NOTE: Only 1 retry for UPDATE to prevent duplicates (not idempotent)
       const response = await withTimeout(
         fetchWithRetry(
           `${API_BASE}/api/events/${encodeURIComponent(eventUid)}`,
@@ -1470,11 +1472,11 @@ async function showEventModal(event) {
             body: JSON.stringify(requestBody)
           },
           {
-            maxRetries: 2,
+            maxRetries: 1, // Reduced from 2 to prevent duplicates
             onRetry: (error, attempt) => {
               console.log(`Retrying update (attempt ${attempt})...`);
               const loadingText = document.getElementById('loadingOverlay')?.querySelector('p');
-              if (loadingText) loadingText.textContent = `Retrying update (${attempt}/2)...`;
+              if (loadingText) loadingText.textContent = `Retrying update (${attempt}/1)...`;
             }
           }
         ),
