@@ -30,6 +30,27 @@ import {
   getEventColor
 } from './js/utils.js';
 
+// Import state management
+import {
+  getState,
+  getCalendars,
+  getEvents,
+  getHolidays,
+  getDateRange,
+  getZoom,
+  getSearchQuery,
+  getSelectedCalendars,
+  getEventTypes,
+  setCalendars,
+  setEvents,
+  setHolidays,
+  setZoom,
+  setSearchQuery,
+  setEventTypes,
+  toggleCalendarSelection,
+  clearCalendarSelections
+} from './js/state.js';
+
 console.log('📱 Mobile Timeline v1760277100 loaded');
 
 // ============================================
@@ -135,28 +156,8 @@ async function withTimeout(promise, timeoutMs, timeoutMessage = 'Operation timed
 // APPLICATION STATE
 // ============================================
 
-/**
- * Application state object
- * @type {Object}
- * @property {Array} calendars - List of calendars from API
- * @property {Array} events - List of events from API
- * @property {Array} holidays - Berlin holidays for shading
- * @property {Object} dateRange - Display date range {from, to}
- * @property {string} zoom - Current zoom level (week|month|quarter)
- * @property {string} searchQuery - Current search filter text
- * @property {Set} selectedCalendars - Set of selected calendar IDs
- * @property {Object} eventTypes - Event type configuration with colors
- */
-const state = {
-  calendars: [],
-  events: [],
-  holidays: [],
-  dateRange: getDefaultDateRange(),
-  zoom: 'month',
-  searchQuery: '',
-  selectedCalendars: new Set(),
-  eventTypes: null
-};
+// State management imported from state.js
+// Access state through getter/setter functions
 
 // ============================================
 // CORE APPLICATION FUNCTIONS
@@ -177,11 +178,11 @@ async function init() {
   try {
     const response = await fetch('/event-types.json');
     const data = await response.json();
-    state.eventTypes = data.eventTypes;
-    console.log('Event types loaded:', Object.keys(state.eventTypes).length);
+    setEventTypes(data.eventTypes);
+    console.log('Event types loaded:', Object.keys(getEventTypes()).length);
   } catch (err) {
     console.error('Failed to load event types:', err);
-    state.eventTypes = {};
+    setEventTypes({});
   }
   
   // Hide loading state
@@ -195,18 +196,18 @@ async function init() {
       if (!container) return;
       
       // Calculate which date is currently at the left edge of the viewport
-      const oldPixelsPerDay = ZOOM_SETTINGS[state.zoom];
+      const oldPixelsPerDay = ZOOM_SETTINGS[getZoom()];
       const currentScrollLeft = container.scrollLeft;
       const daysFromStart = Math.floor((currentScrollLeft - 100) / oldPixelsPerDay);
       
       // Change zoom and re-render
-      state.zoom = btn.dataset.zoom;
+      setZoom(btn.dataset.zoom);
       document.querySelectorAll('.zoom-controls .control-btn').forEach(b => 
-        b.classList.toggle('active', b.dataset.zoom === state.zoom)
+        b.classList.toggle('active', b.dataset.zoom === getZoom())
       );
       
       // Update slider to match preset
-      const newPixelsPerDay = ZOOM_SETTINGS[state.zoom];
+      const newPixelsPerDay = ZOOM_SETTINGS[getZoom()];
       const zoomSlider = document.getElementById('zoomSlider');
       if (zoomSlider) {
         zoomSlider.value = newPixelsPerDay;
@@ -227,14 +228,14 @@ async function init() {
     if (!container) return;
     
     // Calculate which date is currently at the left edge of the viewport
-    const oldPixelsPerDay = ZOOM_SETTINGS[state.zoom];
+    const oldPixelsPerDay = ZOOM_SETTINGS[getZoom()];
     const currentScrollLeft = container.scrollLeft;
     const daysFromStart = Math.floor((currentScrollLeft - 100) / oldPixelsPerDay);
     
     // Update zoom settings with slider value (pixels per day)
     const newPixelsPerDay = parseInt(e.target.value);
     ZOOM_SETTINGS.custom = newPixelsPerDay;
-    state.zoom = 'custom';
+    setZoom('custom');
     
     // Deactivate preset buttons when using custom zoom
     document.querySelectorAll('.zoom-controls .control-btn').forEach(b => 
@@ -259,13 +260,13 @@ async function init() {
     } else {
       searchInput.style.display = 'none';
       searchInput.value = '';
-      state.searchQuery = '';
+      setSearchQuery('');
       render();
     }
   });
   
   searchInput?.addEventListener('input', (e) => {
-    state.searchQuery = e.target.value.toLowerCase();
+    setSearchQuery(e.target.value.toLowerCase());
     render();
   });
   
@@ -322,10 +323,10 @@ function scrollToToday() {
     
     // Calculate days from start of date range to one week ago
     const msPerDay = 1000 * 60 * 60 * 24;
-    const daysFromStart = Math.floor((oneWeekAgo - state.dateRange.from) / msPerDay);
+    const daysFromStart = Math.floor((oneWeekAgo - getDateRange().from) / msPerDay);
     
     // Calculate pixel position (100px label width + days * pixels per day)
-    const pixelsPerDay = ZOOM_SETTINGS[state.zoom];
+    const pixelsPerDay = ZOOM_SETTINGS[getZoom()];
     const scrollPosition = 100 + (daysFromStart * pixelsPerDay);
     
     console.log('Scrolling to one week before today:', {
@@ -358,11 +359,11 @@ async function loadData() {
     if (!calRes.ok) throw new Error(`Calendar fetch failed: ${calRes.status}`);
     
     const calData = await calRes.json();
-    state.calendars = calData.calendars || [];
-    console.log(`Got ${state.calendars.length} calendars`);
+    setCalendars(calData.calendars || []);
+    console.log(`Got ${getCalendars().length} calendars`);
     
     // Fetch events
-    const calendarUrls = state.calendars.map(c => c.url);
+    const calendarUrls = getCalendars().map(c => c.url);
     // Format dates as local YYYY-MM-DD to avoid timezone issues
     const formatLocalDate = (date) => {
       const year = date.getFullYear();
@@ -370,8 +371,8 @@ async function loadData() {
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
-    const fromStr = formatLocalDate(state.dateRange.from);
-    const toStr = formatLocalDate(state.dateRange.to);
+    const fromStr = formatLocalDate(getDateRange().from);
+    const toStr = formatLocalDate(getDateRange().to);
     
     console.log('Loading events...');
     console.log('Date range:', fromStr, 'to', toStr);
@@ -386,25 +387,25 @@ async function loadData() {
     
     const evtData = await evtRes.json();
     // Process events to extract UID from the id field
-    state.events = (evtData.items || []).map(event => ({
+    setEvents((evtData.items || []).map(event => ({
       ...event,
       // Extract UID: if id is a URL, get last segment and remove leading hyphen
       uid: event.id.includes('/') 
         ? event.id.split('/').pop().replace(/^-/, '') 
         : event.id.split('-').slice(1).join('-')
-    }));
+    })));
     
     // Use groups for calendar display names
     if (evtData.groups) {
-      state.calendars = evtData.groups;
+      setCalendars(evtData.groups);
     }
     
-    console.log(`Loaded: ${state.calendars.length} calendars, ${state.events.length} events`);
+    console.log(`Loaded: ${getCalendars().length} calendars, ${getEvents().length} events`);
     
     // Fetch holidays for Berlin (optional, don't fail if it errors)
     try {
-      const startYear = state.dateRange.from.getFullYear();
-      const endYear = state.dateRange.to.getFullYear();
+      const startYear = getDateRange().from.getFullYear();
+      const endYear = getDateRange().to.getFullYear();
       const allHolidays = [];
       
       // Fetch holidays for all years in range
@@ -418,8 +419,8 @@ async function loadData() {
         }
       }
       
-      state.holidays = allHolidays;
-      console.log(`Loaded ${state.holidays.length} Berlin holidays for ${startYear}-${endYear}`);
+      setHolidays(allHolidays);
+      console.log(`Loaded ${getHolidays().length} Berlin holidays for ${startYear}-${endYear}`);
     } catch (err) {
       console.warn('Could not load holidays:', err);
     }
@@ -454,10 +455,10 @@ async function loadData() {
  */
 function render() {
   const container = document.getElementById('timelineContainer');
-  const pixelsPerDay = ZOOM_SETTINGS[state.zoom];
+  const pixelsPerDay = ZOOM_SETTINGS[getZoom()];
   
   // Calculate total days and width
-  const totalDays = Math.ceil((state.dateRange.to - state.dateRange.from) / (1000 * 60 * 60 * 24));
+  const totalDays = Math.ceil((getDateRange().to - getDateRange().from) / (1000 * 60 * 60 * 24));
   const totalWidth = totalDays * pixelsPerDay;
   
   console.log(`Rendering: ${totalDays} days, ${totalWidth}px wide, ${pixelsPerDay}px/day`);
@@ -473,9 +474,9 @@ function render() {
   // Today indicator line
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  if (today >= state.dateRange.from && today < state.dateRange.to) {
+  if (today >= getDateRange().from && today < getDateRange().to) {
     const msPerDay = 1000 * 60 * 60 * 24;
-    const daysFromStart = Math.round((today - state.dateRange.from) / msPerDay);
+    const daysFromStart = Math.round((today - getDateRange().from) / msPerDay);
     const todayLeft = 100 + (daysFromStart * pixelsPerDay);
     html += `<div style="position: absolute; top: 0; bottom: 0; left: ${todayLeft}px; width: 2px; background: #ff3b30; pointer-events: none; z-index: 104;"></div>`;
     html += `<div style="position: absolute; top: 0; left: ${todayLeft - 20}px; width: 40px; height: 20px; background: #ff3b30; color: white; font-size: 9px; font-weight: 600; display: flex; align-items: center; justify-content: center; border-radius: 0 0 4px 4px; pointer-events: none; z-index: 104;">TODAY</div>`;
@@ -516,8 +517,8 @@ function render() {
   html += '</div>';
   
   // Calendar lanes (in normal flow)
-  state.calendars.forEach((calendar, index) => {
-    const isSelected = state.selectedCalendars.size === 0 || state.selectedCalendars.has(calendar.id);
+  getCalendars().forEach((calendar, index) => {
+    const isSelected = getSelectedCalendars().size === 0 || getSelectedCalendars().has(calendar.id);
     const opacity = isSelected ? '1' : '0.3';
     
     html += `<div style="display: flex; height: 50px; border-bottom: 1px solid #eee; opacity: ${opacity};">`;
@@ -563,13 +564,13 @@ function render() {
     label.addEventListener('click', (e) => {
       const calendarId = e.target.dataset.calendarId;
       
-      if (state.selectedCalendars.has(calendarId)) {
+      if (getSelectedCalendars().has(calendarId)) {
         // If already selected, deselect it (show all)
-        state.selectedCalendars.clear();
+        clearCalendarSelections();
       } else {
         // If not selected, select only this one
-        state.selectedCalendars.clear();
-        state.selectedCalendars.add(calendarId);
+        clearCalendarSelections();
+        toggleCalendarSelection(calendarId);
       }
       
       render();
@@ -581,7 +582,7 @@ function render() {
     eventEl.addEventListener('click', (e) => {
       e.stopPropagation();
       const eventId = e.target.dataset.eventId;
-      const event = state.events.find(ev => ev.id === eventId);
+      const event = getEvents().find(ev => ev.id === eventId);
       if (event) {
         showEventModal(event);
       }
@@ -594,15 +595,15 @@ function render() {
       if (e.target.classList.contains('timeline-event')) return;
       
       const calendarId = laneEl.dataset.calendarId;
-      const calendar = state.calendars.find(c => c.id === calendarId);
+      const calendar = getCalendars().find(c => c.id === calendarId);
       if (!calendar) return;
       
       // Calculate which date was clicked
       const rect = laneEl.getBoundingClientRect();
       const clickX = e.clientX - rect.left + laneEl.scrollLeft;
-      const pixelsPerDay = ZOOM_SETTINGS[state.zoom];
+      const pixelsPerDay = ZOOM_SETTINGS[getZoom()];
       const daysFromStart = Math.floor(clickX / pixelsPerDay);
-      const clickedDate = new Date(state.dateRange.from);
+      const clickedDate = new Date(getDateRange().from);
       clickedDate.setDate(clickedDate.getDate() + daysFromStart);
       
       showCreateEventModal(calendar, clickedDate);
@@ -697,7 +698,7 @@ async function showCreateEventModal(calendar, clickedDate) {
           <div style="margin-bottom: 12px;">
             <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Calendar</label>
             <select id="eventCalendar" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
-              ${state.calendars.map(cal => 
+              ${getCalendars().map(cal => 
                 `<option value="${cal.url}" ${cal.id === calendar.id ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
               ).join('')}
             </select>
@@ -769,7 +770,7 @@ async function showCreateEventModal(calendar, clickedDate) {
       <div style="margin-bottom: 15px;">
         <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
         <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-          ${state.calendars.map(cal => 
+          ${getCalendars().map(cal => 
             `<option value="${cal.url}" ${cal.id === calendar.id ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
           ).join('')}
         </select>
@@ -1045,7 +1046,7 @@ async function showEventModal(event) {
   
   if (!modal || !modalTitle || !modalBody) return;
   
-  const calendar = state.calendars.find(c => c.id === event.group);
+  const calendar = getCalendars().find(c => c.id === event.group);
   const calendarName = calendar?.content || calendar?.displayName || 'Unknown';
   
   // Check if event is unconfirmed
@@ -1118,7 +1119,7 @@ async function showEventModal(event) {
           <div style="margin-bottom: 12px;">
             <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Calendar</label>
             <select id="eventCalendar" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
-              ${state.calendars.map(cal => 
+              ${getCalendars().map(cal => 
                 `<option value="${cal.id}" ${cal.id === event.group ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
               ).join('')}
             </select>
@@ -1209,7 +1210,7 @@ async function showEventModal(event) {
       <div style="margin-bottom: 15px;">
         <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
         <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-          ${state.calendars.map(cal => 
+          ${getCalendars().map(cal => 
             `<option value="${cal.id}" ${cal.id === event.group ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
           ).join('')}
         </select>
@@ -1392,7 +1393,7 @@ async function showEventModal(event) {
     // Find the target calendar URL if calendar changed
     let targetCalendarUrl = null;
     if (calendarChanged) {
-      const targetCalendar = state.calendars.find(cal => cal.id === calendarId);
+      const targetCalendar = getCalendars().find(cal => cal.id === calendarId);
       if (targetCalendar) {
         targetCalendarUrl = targetCalendar.url;
         console.log(`Calendar changed from ${originalCalendarId} to ${calendarId}, will move to ${targetCalendarUrl}`);
@@ -1526,14 +1527,14 @@ async function showEventModal(event) {
  */
 function renderWeekendAndHolidayBackgrounds(pixelsPerDay) {
   let html = '';
-  const holidayDates = new Set(state.holidays.map(h => h.date));
+  const holidayDates = new Set(getHolidays().map(h => h.date));
   
   // Iterate through each day in the range using local dates
-  let current = new Date(state.dateRange.from);
+  let current = new Date(getDateRange().from);
   current.setHours(0, 0, 0, 0); // Normalize to local midnight
   let dayIndex = 0;
   
-  while (current < state.dateRange.to) {
+  while (current < getDateRange().to) {
     const dayOfWeek = current.getDay(); // 0 = Sunday, 6 = Saturday
     // Format as YYYY-MM-DD in local timezone
     const year = current.getFullYear();
@@ -1569,11 +1570,11 @@ function renderWeekendAndHolidayBackgrounds(pixelsPerDay) {
  */
 function renderMonthLines(pixelsPerDay) {
   let html = '';
-  let current = new Date(state.dateRange.from);
+  let current = new Date(getDateRange().from);
   current.setDate(1);
   let position = 0;
   
-  while (current < state.dateRange.to) {
+  while (current < getDateRange().to) {
     const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
     const width = daysInMonth * pixelsPerDay;
     
@@ -1582,7 +1583,7 @@ function renderMonthLines(pixelsPerDay) {
     nextMonth.setMonth(nextMonth.getMonth() + 1);
     
     // Add vertical line at the end of each month (but not at the very end)
-    if (nextMonth < state.dateRange.to) {
+    if (nextMonth < getDateRange().to) {
       html += `<div style="position: absolute; left: ${position}px; top: 0; bottom: 0; width: 2px; background: #999;"></div>`;
     }
     
@@ -1599,10 +1600,10 @@ function renderMonthLines(pixelsPerDay) {
  */
 function renderMonthHeaders(pixelsPerDay) {
   let html = '';
-  let current = new Date(state.dateRange.from);
+  let current = new Date(getDateRange().from);
   current.setDate(1);
   
-  while (current < state.dateRange.to) {
+  while (current < getDateRange().to) {
     const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
     const width = daysInMonth * pixelsPerDay;
     const monthName = current.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -1624,13 +1625,13 @@ function renderMonthHeaders(pixelsPerDay) {
  */
 function renderWeekNumbers(pixelsPerDay) {
   let html = '';
-  let current = new Date(state.dateRange.from);
+  let current = new Date(getDateRange().from);
   current.setHours(0, 0, 0, 0);
   
   let dayIndex = 0;
   let lastWeekNum = -1;
   
-  while (current < state.dateRange.to) {
+  while (current < getDateRange().to) {
     const weekNum = getWeekNumber(current);
     const dayOfWeek = current.getDay();
     
@@ -1662,11 +1663,11 @@ function renderWeekNumbers(pixelsPerDay) {
  */
 function renderDayNumbers(pixelsPerDay) {
   let html = '';
-  let current = new Date(state.dateRange.from);
+  let current = new Date(getDateRange().from);
   current.setHours(0, 0, 0, 0); // Normalize to local midnight
   
   let dayIndex = 0;
-  while (current < state.dateRange.to) {
+  while (current < getDateRange().to) {
     const dayNum = current.getDate();
     const dayOfWeek = current.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -1692,24 +1693,24 @@ function renderDayNumbers(pixelsPerDay) {
  * @returns {string} HTML string for calendar's events
  */
 function renderEventsForCalendar(calendarId, pixelsPerDay) {
-  const calendar = state.calendars.find(c => c.id === calendarId);
-  let events = state.events.filter(e => e.group === calendarId);
+  const calendar = getCalendars().find(c => c.id === calendarId);
+  let events = getEvents().filter(e => e.group === calendarId);
   
   // Apply calendar selection filter
-  if (state.selectedCalendars.size > 0 && !state.selectedCalendars.has(calendarId)) {
+  if (getSelectedCalendars().size > 0 && !getSelectedCalendars().has(calendarId)) {
     // If calendars are selected and this one isn't selected, show no events
     return '';
   }
   
   // Apply search filter (search in event content OR calendar name)
-  if (state.searchQuery) {
+  if (getSearchQuery()) {
     const calendarName = (calendar?.content || calendar?.displayName || '').toLowerCase();
-    const matchesCalendar = calendarName.includes(state.searchQuery);
+    const matchesCalendar = calendarName.includes(getSearchQuery());
     
     if (!matchesCalendar) {
       // If calendar doesn't match, filter events by content
       events = events.filter(e => 
-        e.content.toLowerCase().includes(state.searchQuery)
+        e.content.toLowerCase().includes(getSearchQuery())
       );
     }
     // If calendar matches, show all events from that calendar
@@ -1720,8 +1721,8 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
   // Calculate positions
   const eventData = events.map(event => ({
     event,
-    pos: calculateEventPosition(event, state.dateRange, pixelsPerDay),
-    color: getEventColor(event, calendar, state.eventTypes),
+    pos: calculateEventPosition(event, getDateRange(), pixelsPerDay),
+    color: getEventColor(event, calendar, getEventTypes()),
     lane: 0,
     maxLanesInGroup: 1
   }));
@@ -1985,9 +1986,9 @@ function setupKeyboardShortcuts() {
         e.preventDefault();
         // Jump to today
         const today = new Date();
-        const startDate = state.dateRange.from;
+        const startDate = getDateRange().from;
         const daysFromStart = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
-        const pixelsPerDay = ZOOM_SETTINGS[state.zoom] || parseInt(zoomSlider?.value || 10);
+        const pixelsPerDay = ZOOM_SETTINGS[getZoom()] || parseInt(zoomSlider?.value || 10);
         const todayScrollLeft = 100 + (daysFromStart * pixelsPerDay);
         container.scrollLeft = Math.max(0, todayScrollLeft);
         break;
