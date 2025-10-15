@@ -59,8 +59,8 @@ initializeAuth(app);
 // Using horizontal timeline for better lane visibility
 app.use(express.static(path.join(__dirname, 'mobile', 'public')));
 
-// Serve desktop public folder for shared resources (ui-config.js, etc.)
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve legacy desktop app folder for shared resources (favicons, etc.)
+app.use(express.static(path.join(__dirname, 'public-legacy')));
 
 // Serve event-types.json from root
 app.get('/event-types.json', (req, res) => {

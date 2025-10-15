@@ -172,6 +172,11 @@ The mobile app has been integrated into the main application. This report identi
 - `iOS-native` (0 bytes)
 - `mobile/public/test-ionic-pure.html` (4,204 bytes)
 - `mobile/REFACTORING_PLAN.md` (8,545 bytes)
+- `public/mobile-mockup.html` (13,946 bytes)
+- `public/mobile-timeline-mockup.html` (17,546 bytes)
+
+### Directories Renamed
+- `public/` → `public-legacy/` - Original desktop app (kept for tests and shared resources)
 
 ### Files Updated
 - `README.md` - Added mobile integration features and testing info

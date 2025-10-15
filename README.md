@@ -49,11 +49,20 @@ src/
 
 ### Frontend (Vanilla JS)
 
+**Active Mobile App:**
 ```
-public/
-├── index.html          # Main HTML structure
+mobile/public/
+├── index.html          # Mobile-optimized HTML
+├── app-simple.js       # Horizontal timeline (88KB)
+└── styles.css          # Mobile-first responsive design
+```
+
+**Legacy Desktop App (kept for tests & shared resources):**
+```
+public-legacy/
+├── index.html          # Desktop HTML structure
 ├── app.js              # Application initialization (1,159 lines)
-├── styles.css          # Global styles & responsive design
+├── styles.css          # Desktop styles
 └── js/
     ├── dom.js          # DOM element references
     ├── state.js        # Application state management
