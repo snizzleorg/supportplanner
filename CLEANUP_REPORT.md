@@ -174,6 +174,9 @@ The mobile app has been integrated into the main application. This report identi
 - `mobile/REFACTORING_PLAN.md` (8,545 bytes)
 - `public/mobile-mockup.html` (13,946 bytes)
 - `public/mobile-timeline-mockup.html` (17,546 bytes)
+- `mobile/server.js` (879 bytes) - Obsolete standalone server
+- `mobile/Dockerfile` (526 bytes) - Obsolete standalone Docker config
+- `mobile/package.json` (801 bytes) - Obsolete standalone dependencies
 
 ### Directories Renamed
 - `public/` → `public-legacy/` - Original desktop app (kept for tests only)
