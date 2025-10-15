@@ -2080,8 +2080,155 @@ function stopAutoRefresh() {
   }
 }
 
+// ============================================
+// KEYBOARD SHORTCUTS
+// ============================================
+
+/**
+ * Setup keyboard shortcuts for navigation and zoom
+ * - Plus/Minus: Zoom in/out
+ * - Arrow keys: Scroll timeline
+ */
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    // Don't trigger shortcuts when typing in input fields
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      return;
+    }
+    
+    const container = document.querySelector('.timeline-container');
+    if (!container) return;
+    
+    const scrollAmount = 200; // pixels to scroll
+    
+    switch(e.key) {
+      // Zoom controls
+      case '+':
+      case '=': // Also handle = key (same key as + without shift)
+        e.preventDefault();
+        zoomIn();
+        break;
+        
+      case '-':
+      case '_': // Also handle _ key (same key as - with shift)
+        e.preventDefault();
+        zoomOut();
+        break;
+      
+      // Scroll controls
+      case 'ArrowLeft':
+        e.preventDefault();
+        container.scrollLeft -= scrollAmount;
+        break;
+        
+      case 'ArrowRight':
+        e.preventDefault();
+        container.scrollLeft += scrollAmount;
+        break;
+        
+      case 'ArrowUp':
+        e.preventDefault();
+        container.scrollTop -= scrollAmount;
+        break;
+        
+      case 'ArrowDown':
+        e.preventDefault();
+        container.scrollTop += scrollAmount;
+        break;
+        
+      // Home/End for quick navigation
+      case 'Home':
+        e.preventDefault();
+        container.scrollLeft = 0;
+        break;
+        
+      case 'End':
+        e.preventDefault();
+        container.scrollLeft = container.scrollWidth;
+        break;
+    }
+  });
+  
+  console.log('[Keyboard] Shortcuts enabled: +/- (zoom), arrows (scroll), Home/End (navigate)');
+}
+
+/**
+ * Zoom in to the next zoom level
+ */
+function zoomIn() {
+  const zoomLevels = ['month', 'week', 'day'];
+  const currentIndex = zoomLevels.indexOf(state.zoom);
+  
+  if (currentIndex < zoomLevels.length - 1) {
+    const container = document.querySelector('.timeline-container');
+    if (!container) return;
+    
+    // Calculate which date is currently at the left edge of the viewport
+    const oldPixelsPerDay = ZOOM_SETTINGS[state.zoom];
+    const currentScrollLeft = container.scrollLeft;
+    const daysFromStart = Math.floor((currentScrollLeft - 100) / oldPixelsPerDay);
+    
+    // Change zoom
+    state.zoom = zoomLevels[currentIndex + 1];
+    
+    // Update UI
+    document.querySelectorAll('.zoom-controls .control-btn').forEach(btn => 
+      btn.classList.toggle('active', btn.dataset.zoom === state.zoom)
+    );
+    
+    // Re-render
+    render();
+    
+    // Restore scroll position
+    const newPixelsPerDay = ZOOM_SETTINGS[state.zoom];
+    const newScrollLeft = 100 + (daysFromStart * newPixelsPerDay);
+    container.scrollLeft = newScrollLeft;
+    
+    console.log(`[Keyboard] Zoomed in to: ${state.zoom}`);
+  }
+}
+
+/**
+ * Zoom out to the previous zoom level
+ */
+function zoomOut() {
+  const zoomLevels = ['month', 'week', 'day'];
+  const currentIndex = zoomLevels.indexOf(state.zoom);
+  
+  if (currentIndex > 0) {
+    const container = document.querySelector('.timeline-container');
+    if (!container) return;
+    
+    // Calculate which date is currently at the left edge of the viewport
+    const oldPixelsPerDay = ZOOM_SETTINGS[state.zoom];
+    const currentScrollLeft = container.scrollLeft;
+    const daysFromStart = Math.floor((currentScrollLeft - 100) / oldPixelsPerDay);
+    
+    // Change zoom
+    state.zoom = zoomLevels[currentIndex - 1];
+    
+    // Update UI
+    document.querySelectorAll('.zoom-controls .control-btn').forEach(btn => 
+      btn.classList.toggle('active', btn.dataset.zoom === state.zoom)
+    );
+    
+    // Re-render
+    render();
+    
+    // Restore scroll position
+    const newPixelsPerDay = ZOOM_SETTINGS[state.zoom];
+    const newScrollLeft = 100 + (daysFromStart * newPixelsPerDay);
+    container.scrollLeft = newScrollLeft;
+    
+    console.log(`[Keyboard] Zoomed out to: ${state.zoom}`);
+  }
+}
+
 // Start
 init().then(() => {
   // Start auto-refresh after initial load
   startAutoRefresh();
+  
+  // Setup keyboard shortcuts
+  setupKeyboardShortcuts();
 });
