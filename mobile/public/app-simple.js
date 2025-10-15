@@ -190,15 +190,17 @@ async function init() {
   if (loadingState) loadingState.style.display = 'none';
   
   // Setup zoom buttons
+  const zoomSlider = document.getElementById('zoomSlider');
+  let lastPixelsPerDay = ZOOM_SETTINGS[getZoom()]; // Track last zoom level
+  
   document.querySelectorAll('.zoom-controls .control-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const container = document.querySelector('.timeline-container');
       if (!container) return;
       
       // Calculate which date is currently at the left edge of the viewport
-      const oldPixelsPerDay = ZOOM_SETTINGS[getZoom()];
       const currentScrollLeft = container.scrollLeft;
-      const daysFromStart = Math.floor((currentScrollLeft - 100) / oldPixelsPerDay);
+      const daysFromStart = Math.floor((currentScrollLeft - 100) / lastPixelsPerDay);
       
       // Change zoom and re-render
       setZoom(btn.dataset.zoom);
@@ -208,7 +210,6 @@ async function init() {
       
       // Update slider to match preset
       const newPixelsPerDay = ZOOM_SETTINGS[getZoom()];
-      const zoomSlider = document.getElementById('zoomSlider');
       if (zoomSlider) {
         zoomSlider.value = newPixelsPerDay;
       }
@@ -218,20 +219,20 @@ async function init() {
       // Scroll to maintain the same date position
       const newScrollLeft = 100 + (daysFromStart * newPixelsPerDay);
       container.scrollLeft = Math.max(0, newScrollLeft);
+      
+      // Update last pixels per day for next zoom change
+      lastPixelsPerDay = newPixelsPerDay;
     });
   });
   
   // Setup zoom slider for continuous zoom control
-  const zoomSlider = document.getElementById('zoomSlider');
   zoomSlider?.addEventListener('input', (e) => {
     const container = document.querySelector('.timeline-container');
     if (!container) return;
     
     // Calculate which date is currently at the left edge of the viewport
-    const currentZoom = getZoom();
-    const oldPixelsPerDay = ZOOM_SETTINGS[currentZoom] || parseInt(zoomSlider.value);
     const currentScrollLeft = container.scrollLeft;
-    const daysFromStart = Math.floor((currentScrollLeft - 100) / oldPixelsPerDay);
+    const daysFromStart = Math.floor((currentScrollLeft - 100) / lastPixelsPerDay);
     
     // Update zoom to custom (slider value is used directly)
     const newPixelsPerDay = parseInt(e.target.value);
@@ -247,6 +248,9 @@ async function init() {
     // Scroll to maintain the same date position
     const newScrollLeft = 100 + (daysFromStart * newPixelsPerDay);
     container.scrollLeft = Math.max(0, newScrollLeft);
+    
+    // Update last pixels per day for next zoom change
+    lastPixelsPerDay = newPixelsPerDay;
   });
   
   // Setup search - toggle inline search input
