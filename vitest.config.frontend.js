@@ -5,16 +5,16 @@ export default defineConfig({
     name: 'frontend',
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./public/js/__tests__/setup.js'],
-    include: ['public/js/__tests__/**/*.test.js'],
+    setupFiles: ['./public-legacy/js/__tests__/setup.js'],
+    include: ['public-legacy/js/__tests__/**/*.test.js'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['public/js/**/*.js'],
+      include: ['public-legacy/js/**/*.js'],
       exclude: [
-        'public/js/__tests__/**',
-        'public/app.js', // Integration file, tested separately
-        'public/custom-tooltip.js', // Legacy file
+        'public-legacy/js/__tests__/**',
+        'public-legacy/app.js', // Integration file, tested separately
+        'public-legacy/custom-tooltip.js', // Legacy file
       ],
       thresholds: {
         lines: 80,
