@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.5.2] - 2025-10-17 🚨 CRITICAL HOTFIX
+
+### Fixed
+- **CRITICAL: Timeline Rendering**: Fixed missing utility function imports that broke timeline in v0.5.1
+  - Added `calculateEventPosition` import - required for event positioning
+  - Added `getEventColor` import - required for event color determination
+  - Regression introduced during XSS protection refactoring in v0.5.1
+  - Timeline now loads and renders correctly
+
+### Impact
+- **v0.5.1 users**: Timeline completely broken (ReferenceError)
+- **v0.5.2 users**: Timeline works correctly
+- **Recommendation**: All v0.5.1 users must upgrade immediately
+
 ## [0.5.1] - 2025-10-17 🔒 SECURITY PATCH
 
 ### Security Fixes
