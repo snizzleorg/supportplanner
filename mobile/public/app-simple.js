@@ -10,7 +10,7 @@
 import {
   LABEL_PALETTE,
   LANE_OPACITY,
-  UNCONFIRMED_EVENT_OPACITY,
+  EVENT_STATES,
   API_BASE,
   LAYOUT,
   Z_INDEX,
@@ -965,17 +965,22 @@ async function showEventModal(event) {
   const calendar = getCalendars().find(c => c.id === event.group);
   const calendarName = calendar?.content || calendar?.displayName || 'Unknown';
   
-  // Check if event is unconfirmed
-  const isUnconfirmed = event.content.includes('???');
+  // Detect event planning state
+  const isUnconfirmed = event.content.includes(EVENT_STATES.UNCONFIRMED.marker);
+  const isBooked = event.content.includes(EVENT_STATES.BOOKED.marker);
   const systemType = (event.meta || {}).systemType || '';
   
-  // Strip ??? from title for display
-  const displayTitle = event.content.replace(/\s*\?\?\?\s*/g, '').trim();
+  // Strip state markers from title for display
+  let displayTitle = event.content
+    .replace(/\s*\?\?\?\s*/g, '')  // Remove ???
+    .replace(/\s*!\s*/g, '')        // Remove !
+    .trim();
   
   // Build modal title with pills
   const pillsHtml = `
     ${systemType ? `<span style="display: inline-flex; align-items: center; padding: 2px 8px; background: #e5e7eb; color: #374151; border-radius: 12px; font-size: 11px; font-weight: 500; margin-left: 8px;">${systemType}</span>` : ''}
-    ${isUnconfirmed ? `<span style="display: inline-flex; align-items: center; padding: 2px 8px; background: #fef3c7; color: #92400e; border-radius: 12px; font-size: 11px; font-weight: 500; margin-left: 8px;">⚠️ Unconfirmed</span>` : ''}
+    ${isUnconfirmed ? `<span style="display: inline-flex; align-items: center; padding: 2px 8px; background: #fef3c7; color: #92400e; border-radius: 12px; font-size: 11px; font-weight: 500; margin-left: 8px;">? Unconfirmed</span>` : ''}
+    ${isBooked ? `<span style="display: inline-flex; align-items: center; padding: 2px 8px; background: #dcfce7; color: #166534; border-radius: 12px; font-size: 11px; font-weight: 500; margin-left: 8px;">✓ Booked</span>` : ''}
   `;
   modalTitle.innerHTML = `${displayTitle}${pillsHtml}`;
   
@@ -1689,11 +1694,45 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
     const fontSize = eventHeight < 25 ? 9 : 10;
     const lineClamp = eventHeight < 25 ? 1 : 2;
     
-    // Check if event is unconfirmed (contains ???)
-    const isUnconfirmed = (event.content || event.summary || '').includes('???');
-    const opacity = isUnconfirmed ? UNCONFIRMED_EVENT_OPACITY : 1;
+    // Detect event planning state
+    const eventTitle = event.content || event.summary || '';
+    const isUnconfirmed = eventTitle.includes(EVENT_STATES.UNCONFIRMED.marker);
+    const isBooked = eventTitle.includes(EVENT_STATES.BOOKED.marker);
     
-    html += `<div class="timeline-event" data-event-id="${event.id}" style="position: absolute; left: ${pos.left}px; width: ${pos.width}px; top: ${top}px; height: ${eventHeight}px; background: ${color}; color: white; border-radius: 3px; padding: 2px 4px; font-size: ${fontSize}px; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: ${lineClamp}; -webkit-box-orient: vertical; box-shadow: 0 1px 2px rgba(0,0,0,0.2); cursor: pointer; opacity: ${opacity};">${event.content}</div>`;
+    // Prepare display title (strip markers)
+    let displayTitle = eventTitle
+      .replace(/\s*\?\?\?\s*/g, '')
+      .replace(/\s*!\s*/g, '')
+      .trim();
+    
+    // Build styling based on state
+    let backgroundColor, textColor, border, boxShadow, iconPrefix;
+    
+    if (isUnconfirmed) {
+      // Unconfirmed: white background, colored border, draft icon, gray text
+      backgroundColor = 'white';
+      textColor = '#6b7280';
+      border = `2px solid ${color}`;
+      boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+      iconPrefix = `<span style="margin-right: 4px;">${EVENT_STATES.UNCONFIRMED.icon}</span>`;
+      displayTitle = iconPrefix + displayTitle;
+    } else if (isBooked) {
+      // Booked: event type color, black border, checkmark icon
+      backgroundColor = color;
+      textColor = 'white';
+      border = `${EVENT_STATES.BOOKED.borderWidth} solid ${EVENT_STATES.BOOKED.borderColor}`;
+      boxShadow = EVENT_STATES.BOOKED.shadow;
+      iconPrefix = `<span style="margin-right: 4px; font-weight: bold;">${EVENT_STATES.BOOKED.icon}</span>`;
+      displayTitle = iconPrefix + displayTitle;
+    } else {
+      // Confirmed (default): event type color, standard appearance
+      backgroundColor = color;
+      textColor = 'white';
+      border = '1px solid rgba(0,0,0,0.2)';
+      boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
+    }
+    
+    html += `<div class="timeline-event" data-event-id="${event.id}" style="position: absolute; left: ${pos.left}px; width: ${pos.width}px; top: ${top}px; height: ${eventHeight}px; background: ${backgroundColor}; color: ${textColor}; border: ${border}; border-radius: 3px; padding: 2px 4px; font-size: ${fontSize}px; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: ${lineClamp}; -webkit-box-orient: vertical; box-shadow: ${boxShadow}; cursor: pointer;">${displayTitle}</div>`;
   });
   
   return html;
