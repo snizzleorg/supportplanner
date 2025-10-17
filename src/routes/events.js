@@ -18,7 +18,7 @@ import { body, param, validationResult } from 'express-validator';
 import { calendarCache } from '../services/calendar.js';
 import { getEventType } from '../services/event-type.js';
 import { geocodeLocations } from '../services/geocoding.js';
-import { escapeHtml } from '../utils/html.js';
+import { escapeHtml, formatErrorResponse } from '../utils/index.js';
 import { requireRole, validate, eventValidation, uidValidation } from '../middleware/index.js';
 import { loadEventTypesConfig, getEventTypes } from '../config/index.js';
 
@@ -61,7 +61,8 @@ router.post('/all-day', requireEditor, [
     res.json({ success: true, event: result });
   } catch (error) {
     console.error('Error creating all-day event:', error);
-    res.status(500).json({ success: false, error: error.message || 'Failed to create event' });
+    const { status, body } = formatErrorResponse(error, 500);
+    res.status(status).json(body);
   }
 });
 
@@ -87,7 +88,7 @@ router.delete('/:uid', requireRole('editor'), uidValidation, validate, async (re
 });
 
 // Search for events by summary
-router.get('/search', async (req, res) => {
+router.get('/search', requireRole('reader'), async (req, res) => {
   try {
     const { summary, from, to } = req.query;
     
@@ -375,7 +376,16 @@ router.post('/', async (req, res) => {
 router.put('/:uid', requireRole('editor'), uidValidation, eventValidation, validate, async (req, res) => {
   try {
     const { uid } = req.params;
-    const updateData = req.body;
+    
+    // Whitelist allowed fields to prevent mass assignment
+    const allowedFields = ['summary', 'description', 'location', 'start', 'end', 'meta', 'targetCalendarUrl'];
+    const updateData = {};
+    
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    }
     
     console.log(`[updateEvent] Updating event ${uid} with data:`, updateData);
     

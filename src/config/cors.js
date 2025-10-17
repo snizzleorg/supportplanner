@@ -43,9 +43,10 @@ export const corsMiddleware = cors({
   origin: (origin, callback) => {
     console.log('[CORS] Request from origin:', origin);
     
-    // Allow requests with no origin (e.g., mobile apps, Postman)
+    // Allow requests with no origin (mobile apps, Postman, same-origin requests)
+    // These are legitimate requests from native apps or server-to-server calls
     if (!origin) {
-      console.log('[CORS] ✓ Allowed (no origin)');
+      console.log('[CORS] ✓ Allowed (no origin - mobile app or same-origin)');
       return callback(null, true);
     }
     
@@ -55,15 +56,26 @@ export const corsMiddleware = cors({
       return callback(null, true);
     }
     
-    // Check pattern match for development (any hostname on ports 5173-5175)
-    if (allowOriginPattern.test(origin)) {
-      console.log('[CORS] ✓ Allowed (pattern match)');
-      return callback(null, true);
+    // Check pattern match for development (specific hostnames on ports 5173-5175)
+    // Whitelist specific development hostnames for security
+    const allowedDevHosts = ['localhost', '127.0.0.1', 'm4.local'];
+    
+    try {
+      const url = new URL(origin);
+      const hostname = url.hostname;
+      const isAllowedHost = allowedDevHosts.includes(hostname);
+      const isAllowedPort = ['5173', '5174', '5175'].includes(url.port);
+      
+      if (isAllowedHost && isAllowedPort) {
+        console.log('[CORS] ✓ Allowed (whitelisted dev host + port)');
+        return callback(null, true);
+      }
+    } catch (err) {
+      console.log('[CORS] ✗ BLOCKED - Invalid origin URL');
+      return callback(new Error('Invalid origin'));
     }
     
-    console.log('[CORS] ✗ BLOCKED - Origin not in allowed list or pattern');
-    console.log('[CORS] Pattern:', allowOriginPattern);
-    console.log('[CORS] Test result:', allowOriginPattern.test(origin));
+    console.log('[CORS] ✗ BLOCKED - Origin not in allowed list');
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true
