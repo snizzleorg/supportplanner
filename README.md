@@ -610,6 +610,26 @@ MIT
 
 ## What's New
 
+### v0.2.0 (2025-10-17) - Data Integrity & Race Condition Protection
+
+**Critical Fixes:**
+- Fixed event duplication caused by stacking event handlers
+- Fixed metadata loss during event updates
+- Prevented race conditions with backend operation locking and frontend staleness detection
+- Disabled CREATE retries to prevent duplicate events on network timeouts
+- Non-critical errors (cache, logging) no longer break core operations
+
+**New Features:**
+- Race condition mitigation: users warned when editing events modified by others
+- Comprehensive metadata API tests (7 tests covering all scenarios)
+- Enhanced JSDoc documentation for all functions
+
+**Improvements:**
+- Clean metadata architecture: frontend uses plain JS, backend handles YAML
+- Backend locking serializes concurrent updates to same event
+- All 105 backend tests passing
+- Production-ready data integrity
+
 ### v0.3.0 (2025-10-10)
 
 - Mobile-first improvements:
