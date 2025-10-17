@@ -35,10 +35,27 @@ export const LABEL_PALETTE = [
 export const LANE_OPACITY = 0.30;
 
 /**
- * Unconfirmed event opacity (0-1) - Events with ??? in title are dimmed
- * @constant {number}
+ * Event state configuration
+ * Three-tier planning state system:
+ * - Unconfirmed (???): White background, colored border, question mark icon
+ * - Confirmed (default): Event type color, standard appearance
+ * - Booked (!): Event type color, dark gray border, checkmark icon
+ * @constant {Object}
  */
-export const UNCONFIRMED_EVENT_OPACITY = 0.50;
+export const EVENT_STATES = {
+  UNCONFIRMED: {
+    marker: '???',
+    icon: '?',  // Question mark to complement the checkmark
+    opacity: 1.0  // Full opacity, white background provides visual distinction
+  },
+  BOOKED: {
+    marker: '!',
+    icon: '✓',
+    borderColor: '#374151',  // Dark gray instead of pure black
+    borderWidth: '1px',       // Reduced from 3px to 2px
+    shadow: '0 2px 4px rgba(0,0,0,0.15)'  // Slightly softer shadow
+  }
+};
 
 // ============================================
 // API CONFIGURATION
