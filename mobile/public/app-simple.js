@@ -948,8 +948,20 @@ async function handleConflict(eventUid, localChanges) {
 
 /**
  * Show modal to edit an existing event
- * Loads event data into form fields for editing
+ * 
+ * Loads event data into form fields for editing.
+ * Implements staleness detection to warn users if the event
+ * was modified by someone else before saving.
+ * 
  * @param {Object} event - Event object to edit
+ * @param {string} event.uid - Event UID
+ * @param {string} event.content - Event title/summary
+ * @param {string} event.start - Start date (YYYY-MM-DD)
+ * @param {string} event.end - End date (YYYY-MM-DD)
+ * @param {string} [event.description] - Event description
+ * @param {string} [event.location] - Event location
+ * @param {Object} [event.meta] - Event metadata (orderNumber, ticketLink, systemType)
+ * @param {string} [event.updatedAt] - Last update timestamp for staleness detection
  * @returns {Promise<void>}
  */
 async function showEventModal(event) {
