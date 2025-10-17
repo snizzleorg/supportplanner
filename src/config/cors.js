@@ -43,18 +43,11 @@ export const corsMiddleware = cors({
   origin: (origin, callback) => {
     console.log('[CORS] Request from origin:', origin);
     
-    // In production, require origin header (tighter security)
-    // In development, allow no-origin for mobile apps and Postman
-    const isDevelopment = process.env.NODE_ENV !== 'production';
-    
+    // Allow requests with no origin (mobile apps, Postman, same-origin requests)
+    // These are legitimate requests from native apps or server-to-server calls
     if (!origin) {
-      if (isDevelopment) {
-        console.log('[CORS] ✓ Allowed (no origin - development mode)');
-        return callback(null, true);
-      } else {
-        console.log('[CORS] ✗ BLOCKED - No origin header (production requires origin)');
-        return callback(new Error('Origin header required'));
-      }
+      console.log('[CORS] ✓ Allowed (no origin - mobile app or same-origin)');
+      return callback(null, true);
     }
     
     // Check exact match in allowed origins
