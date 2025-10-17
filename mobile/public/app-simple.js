@@ -25,7 +25,9 @@ import {
   getWeekNumber,
   parseLocalDate,
   getContrastColor,
-  hexToRgba
+  hexToRgba,
+  calculateEventPosition,
+  getEventColor
 } from './js/utils.js';
 
 // Import security functions
