@@ -80,23 +80,50 @@ Tests the complete application flow in a real browser:
 docker compose run --rm frontend-tests
 ```
 
-### 4. Run All Tests
+### 4. Mobile App Tests (Planned)
+Location: `mobile/public/__tests__/`, `tests/mobile/`
+
+Tests for the mobile timeline application:
+- **Unit Tests**: Timeline rendering, event positioning, touch handlers (planned)
+- **Integration Tests**: Mobile UI components, device detection (planned)
+- **E2E Tests**: Complete mobile user flows (planned)
+- **Total**: 0 tests (infrastructure needed)
+
+**Status**: ⚠️ **Mobile app currently has no automated tests**
+
+See [docs/MOBILE_TESTING.md](docs/MOBILE_TESTING.md) for the complete mobile testing strategy.
+
+**Run mobile tests (once implemented):**
+```bash
+# Mobile unit tests
+npm run test:mobile
+
+# Mobile integration tests
+docker compose run --rm mobile-tests
+```
+
+### 5. Run All Tests
 ```bash
 # Run all test types in sequence
 docker compose run --rm backend-tests
 docker compose run --rm frontend-unit-tests
 docker compose run --rm frontend-tests
+
+# Mobile tests (once implemented)
+# npm run test:mobile
 ```
 
 ## Test Coverage Goals
 
 | Module Type | Target Coverage | Current Status |
 |-------------|----------------|----------------|
-| Utilities   | 100%           | ✅ Complete    |
-| Services    | 80%+           | 🚧 In Progress |
-| Config      | 90%+           | ✅ Complete    |
-| Middleware  | 80%+           | 🚧 In Progress |
-| Routes      | 70%+           | 🚧 In Progress |
+| Backend Utilities   | 100%           | ✅ Complete    |
+| Backend Services    | 80%+           | 🚧 In Progress |
+| Backend Config      | 90%+           | ✅ Complete    |
+| Backend Middleware  | 80%+           | 🚧 In Progress |
+| Backend Routes      | 70%+           | 🚧 In Progress |
+| Frontend Desktop    | 80%+           | ✅ Complete    |
+| **Mobile App**      | **70%+**       | ❌ **Not Started** |
 
 ## Writing Tests
 
@@ -306,6 +333,17 @@ Coverage is tracked for:
 4. 🚧 Add integration tests for routes
 5. ⏳ Add tests for calendar service
 6. ⏳ Increase overall coverage to 80%+
+7. ❌ **Add mobile app tests (high priority)**
+
+### Mobile App Testing Priorities
+
+1. ⏳ Set up mobile test infrastructure
+2. ⏳ Add unit tests for mobile timeline logic
+3. ⏳ Add integration tests for mobile UI
+4. ⏳ Add E2E tests for mobile user flows
+5. ⏳ Add device-specific tests (iOS/Android)
+
+See [docs/MOBILE_TESTING.md](docs/MOBILE_TESTING.md) for detailed mobile testing plan.
 
 ### Future Enhancements
 
@@ -315,6 +353,8 @@ Coverage is tracked for:
 - [ ] Add load tests
 - [ ] Set up mutation testing
 - [ ] Add visual regression tests
+- [ ] Add mobile performance profiling
+- [ ] Add network condition tests (offline, slow 3G)
 
 ## Resources
 

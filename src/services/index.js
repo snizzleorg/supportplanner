@@ -2,9 +2,13 @@
  * Service module exports
  * 
  * Central export point for all service modules.
- * Import from this file to access business logic services.
+ * Services Index
+ * 
+ * Central export point for all service modules.
  * 
  * @module services
  */
-export { getEventType } from './event-type.js';
+export * from './calendar.js';
+export * from './event-type.js';
+export * from './geocoding.js';
 export { calendarCache } from './calendar.js';

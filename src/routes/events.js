@@ -14,17 +14,20 @@
  */
 
 import { Router } from 'express';
-import { body } from 'express-validator';
+import { body, param, validationResult } from 'express-validator';
+import { calendarCache } from '../services/calendar.js';
+import { getEventType } from '../services/event-type.js';
+import { geocodeLocations } from '../services/geocoding.js';
+import { escapeHtml } from '../utils/html.js';
 import { requireRole, validate, eventValidation, uidValidation } from '../middleware/index.js';
-import { calendarCache } from '../services/index.js';
-import { getEventType } from '../services/index.js';
-import { escapeHtml } from '../utils/index.js';
 import { loadEventTypesConfig, getEventTypes } from '../config/index.js';
+
+const requireEditor = requireRole('editor');
 
 const router = Router();
 
 // Create a new all-day event (inclusive start/end dates)
-router.post('/all-day', requireRole('editor'), [
+router.post('/all-day', requireEditor, [
   body('calendarUrl').trim().isURL().withMessage('Valid calendar URL required'),
   body('summary').trim().isLength({ min: 1, max: 500 }).withMessage('Summary required (1-500 chars)'),
   body('start').isISO8601().withMessage('Valid start date required'),
@@ -131,12 +134,9 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'calendarUrls must be a non-empty array' });
     }
 
-    // Validate date range (max ~15 months total: -3 to +12)
+    // Validate date range (max ~24 months total: -12 to +12 for mobile support)
     const fromDate = new Date(from);
     const toDate = new Date(to);
-    // Note: not used below, but keep for potential sanity checks/logging if needed
-    const twelveMonthsFromNow = new Date();
-    twelveMonthsFromNow.setMonth(twelveMonthsFromNow.getMonth() + 12);
     
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
       return res.status(400).json({ 
@@ -146,7 +146,7 @@ router.post('/', async (req, res) => {
     }
     
     // Ensure the date range is not too large
-    const maxDays = 460; // ~15 months (~30.67 days/month * 15)
+    const maxDays = 750; // ~24 months (~30.42 days/month * 24) for 2-year view
     const diffTime = Math.abs(toDate - fromDate);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
@@ -176,6 +176,11 @@ router.post('/', async (req, res) => {
         }
       });
     }
+
+    // Geocode all unique locations in batch
+    const uniqueLocations = [...new Set(cachedEvents.map(e => e.location).filter(Boolean))];
+    const geocodedLocations = await geocodeLocations(uniqueLocations);
+    console.log(`[Events] Geocoded ${geocodedLocations.size} locations`);
 
     // Format events for the frontend
     const items = [];
@@ -265,6 +270,9 @@ router.post('/', async (req, res) => {
         const eventDetails = tooltipContent.join('');
 
         // Create the item in vis-timeline format
+        // Get geocoded coordinates if location exists
+        const geocoded = event.location ? geocodedLocations.get(event.location) : null;
+
         const item = {
           id: eventId,
           group: groupId,
@@ -277,6 +285,7 @@ router.post('/', async (req, res) => {
           descriptionRaw: event.descriptionRaw || event.description || '', // Full description as stored in CalDAV
           meta: event.meta || null,
           location: event.location || '', // Store location separately
+          geocoded: geocoded || null, // Add geocoded coordinates {lat, lon}
           // Store all the data we need for the custom tooltip
           dataAttributes: {
             'data-summary': event.summary || 'No title',
@@ -322,28 +331,16 @@ router.post('/', async (req, res) => {
     const eventCount = items.filter(i => i.type === 'event').length;
     const occurrenceCount = items.filter(i => i.type === 'occurrence').length;
 
-    // Deterministic palette for calendar group backgrounds (fallback only)
-    const CAL_GROUP_COLORS = ['#3b82f6','#f97316','#22c55e','#ef4444','#a855f7','#14b8a6','#eab308','#fb7185','#06b6d4','#84cc16'];
-    const pickGroupColor = (g, idx) => {
-      // Prefer the per-calendar color computed in calendarCache (e.g., based on displayName)
-      if (g && g.color) return g.color;
-      return CAL_GROUP_COLORS[idx % CAL_GROUP_COLORS.length];
-    };
-
     // Format groups for vis-timeline
+    // Colors are now managed client-side in timeline-ui.js LABEL_PALETTE
     const formattedGroups = groups.map((g, i) => {
       const groupId = `cal-${i + 1}`;
-      const bg = pickGroupColor(g, i);
       return {
         id: groupId,
         content: g.content,
         title: g.content,
-        // Inline style so vis applies it directly to the label element
-        style: `background-color: ${bg};`,
         // Unique class for targeting from the client
         className: `calendar-group-cal-${i + 1}`,
-        // Expose background color for client features (e.g., map pin colors)
-        bg,
         // Add any additional group properties here
         url: g.url
       };
@@ -418,7 +415,18 @@ router.put('/:uid', requireRole('editor'), uidValidation, eventValidation, valid
     
   } catch (error) {
     console.error('Error updating event:', error);
-    res.json({
+    
+    // Determine appropriate status code based on error
+    let statusCode = 500;
+    if (error.message.includes('not found')) {
+      statusCode = 404;
+    } else if (error.message.includes('412') || error.message.includes('Precondition Failed')) {
+      statusCode = 409; // Conflict - someone else modified the event
+    } else if (error.message.includes('No client found') || error.message.includes('No calendar')) {
+      statusCode = 400; // Bad request - invalid calendar reference
+    }
+    
+    res.status(statusCode).json({
       success: false,
       error: error.message || 'Failed to update event',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined

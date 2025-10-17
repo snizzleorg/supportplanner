@@ -29,6 +29,7 @@ logs/
 
 # Local data
 public/dynamic-styles.css
+data/geocode-cache.json
 
 # Misc
 *.local.*

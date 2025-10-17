@@ -16,17 +16,20 @@
  */
 
 import { DAVClient } from 'tsdav';
-import IcalExpander from 'ical-expander';
+import NodeCache from 'node-cache';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore.js';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter.js';
-import NodeCache from 'node-cache';
 import { randomUUID } from 'crypto';
+import { logOperation } from '../utils/operation-log.js';
+import IcalExpander from 'ical-expander';
 import YAML from 'yaml';
-import { calendarOrder, calendarExclude } from '../../config/calendar-order.js';
-import { calendarColorOverrides } from '../../config/calendar-colors.js';
+import { calendarOrder, calendarExclude } from '../config/calendar-order.js';
+import { calendarColorOverrides } from '../config/calendar-colors.js';
 
 // Enable required Dayjs plugins for comparison helpers used below
+dayjs.extend(utc);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
@@ -35,15 +38,17 @@ dayjs.extend(isSameOrAfter);
  * 
  * Provides caching layer for CalDAV calendar data with automatic refresh.
  * Handles event CRUD operations and recurring event expansion.
+ * Includes race condition protection via operation locking.
  * 
  * @class CalendarCache
  */
 export class CalendarCache {
   constructor() {
-    // Cache with 30 minute TTL and check for expired items every 5 minutes
+    // Cache with 5 minute TTL and check for expired items every minute
+    // Shorter TTL for multi-user environments to reduce stale data
     this.cache = new NodeCache({
-      stdTTL: 1800, // 30 minutes
-      checkperiod: 300, // 5 minutes
+      stdTTL: 300, // 5 minutes (reduced from 30 for multi-user sync)
+      checkperiod: 60, // 1 minute (check more frequently)
       useClones: false // Better performance with direct references
     });
     
@@ -53,6 +58,9 @@ export class CalendarCache {
     this.isInitialized = false;
     this.refreshInterval = null;
     this.refreshInProgress = false;
+    
+    // Track ongoing update operations to prevent race conditions
+    this.updateLocks = new Map(); // Map<eventUid, Promise>
   }
 
   /**
@@ -130,12 +138,15 @@ export class CalendarCache {
    * Expects start and end as inclusive DATE strings (YYYY-MM-DD).
    * In iCal, DTEND for all-day is exclusive, so we will send end + 1 day.
    * @param {Object} payload
-   * @param {string} payload.calendarUrl
-   * @param {string} payload.summary
-   * @param {string} [payload.description]
-   * @param {string} [payload.location]
-   * @param {string} payload.start - YYYY-MM-DD inclusive
-   * @param {string} payload.end - YYYY-MM-DD inclusive
+   * @param {string} payload.calendarUrl - CalDAV calendar URL
+   * @param {string} payload.summary - Event title/summary
+   * @param {string} [payload.description] - Event description (plain text)
+   * @param {string} [payload.location] - Event location
+   * @param {string} payload.start - YYYY-MM-DD inclusive start date
+   * @param {string} payload.end - YYYY-MM-DD inclusive end date
+   * @param {Object} [payload.meta] - Metadata object (orderNumber, ticketLink, systemType)
+   * @returns {Promise<Object>} Created event object
+   * @throws {Error} If CalDAV creation fails or validation fails
    */
   async createAllDayEvent({ calendarUrl, summary, description = '', location = '', start, end, meta }) {
     if (!calendarUrl || !summary || !start || !end) {
@@ -148,13 +159,21 @@ export class CalendarCache {
       throw new Error('start and end must be in YYYY-MM-DD format for all-day events');
     }
 
+    // Validate date range
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    if (endDate < startDate) {
+      throw new Error('End date cannot be before start date');
+    }
+
     const calendarInfo = this.calendarClients[calendarUrl];
     if (!calendarInfo || !calendarInfo.client) {
       throw new Error(`No client found for calendar: ${calendarUrl}`);
     }
 
     // Compute exclusive DTEND (end + 1 day UTC date)
-    const inclusiveEnd = dayjs(start > end ? start : end, 'YYYY-MM-DD');
+    // We've already validated that end >= start, so just use end
+    const inclusiveEnd = dayjs(end, 'YYYY-MM-DD');
     const exclusiveEnd = inclusiveEnd.add(1, 'day');
 
     const formatDate = (dateStr) => {
@@ -186,28 +205,68 @@ export class CalendarCache {
     ].join('\n');
 
     const client = calendarInfo.client;
-    const result = await client.createCalendarObject({
-      calendar: calendarInfo.calendar || { url: calendarUrl },
-      iCalString: icalLines,
-      filename: `${uid}.ics`
-    });
+    
+    // CRITICAL: Wrap in try-catch to prevent retries on partial failures
+    try {
+      const result = await client.createCalendarObject({
+        calendar: calendarInfo.calendar || { url: calendarUrl },
+        iCalString: icalLines,
+        filename: `${uid}.ics`
+      });
 
-    // Invalidate cache for that calendar so subsequent fetch reflects the new event
-    this.cache.del(`calendar:${calendarUrl}`);
+      // Invalidate cache for that calendar so subsequent fetch reflects the new event
+      // If this fails, we log but don't throw (event was created successfully)
+      try {
+        this.cache.del(`calendar:${calendarUrl}`);
+      } catch (cacheError) {
+        console.error('[createAllDayEvent] Cache invalidation failed (non-critical):', cacheError);
+      }
 
-    return {
-      success: true,
-      uid,
-      summary,
-      description: description,
-      descriptionRaw: combinedDescription,
-      meta,
-      location,
-      start,
-      end,
-      allDay: true,
-      calendar: calendarUrl,
-    };
+      // Log the operation (non-critical, don't throw if it fails)
+      try {
+        await logOperation('CREATE', {
+          uid,
+          summary,
+          calendarUrl,
+          status: 'SUCCESS',
+          metadata: { start, end, location, allDay: true }
+        });
+      } catch (logError) {
+        console.error('[createAllDayEvent] Operation logging failed (non-critical):', logError);
+      }
+
+      return {
+        success: true,
+        uid,
+        summary,
+        description: description,
+        descriptionRaw: combinedDescription,
+        meta,
+        location,
+        start,
+        end,
+        allDay: true,
+        calendar: calendarUrl,
+      };
+    } catch (error) {
+      // CalDAV creation failed - log and rethrow
+      console.error(`[createAllDayEvent] Failed to create event in CalDAV:`, error);
+      
+      // Try to log the failure (best effort)
+      try {
+        await logOperation('CREATE', {
+          uid,
+          summary,
+          calendarUrl,
+          status: 'FAILED',
+          error: error.message
+        });
+      } catch (logError) {
+        console.error('[createAllDayEvent] Failed to log error (non-critical):', logError);
+      }
+      
+      throw new Error(`Failed to create event: ${error.message}`);
+    }
   }
 
   /**
@@ -239,10 +298,11 @@ export class CalendarCache {
       // Initial data load
       await this.refreshAllCalendars();
       
-      // Set up periodic refresh (every 15 minutes)
+      // Set up periodic refresh (every 3 minutes)
+      // More frequent refresh for multi-user environments
       this.refreshInterval = setInterval(
         () => this.refreshAllCalendars(),
-        15 * 60 * 1000
+        3 * 60 * 1000 // 3 minutes
       );
       
       console.log('Calendar cache initialized');
@@ -808,32 +868,106 @@ export class CalendarCache {
     }
 
     // 3) Delete the calendar object
-    await client.deleteCalendarObject({
-      calendarObject: eventObject,
-      etag: eventObject.etag
+    console.log(`[deleteEvent] Attempting to delete calendar object:`, {
+      url: eventObject.url,
+      etag: eventObject.etag,
+      uid: uid
     });
+    
+    try {
+      await client.deleteCalendarObject({
+        calendarObject: eventObject,
+        etag: eventObject.etag
+      });
+      console.log(`[deleteEvent] Successfully deleted calendar object from Nextcloud`);
+    } catch (deleteError) {
+      console.error(`[deleteEvent] Failed to delete from Nextcloud:`, deleteError);
+      throw new Error(`Failed to delete event from Nextcloud: ${deleteError.message}`);
+    }
 
-    // 4) Invalidate cache for that calendar
-    this.cache.del(`calendar:${calendarUrl}`);
+    // 4) Invalidate cache for that calendar (non-critical)
+    try {
+      this.cache.del(`calendar:${calendarUrl}`);
+    } catch (cacheError) {
+      console.error('[deleteEvent] Cache invalidation failed (non-critical):', cacheError);
+    }
+    
+    // Log the operation (non-critical)
+    try {
+      await logOperation('DELETE', {
+        uid,
+        summary: event.summary || event.content,
+        calendarUrl,
+        status: 'SUCCESS'
+      });
+    } catch (logError) {
+      console.error('[deleteEvent] Operation logging failed (non-critical):', logError);
+    }
     
     return true;
   }
   
   /**
-   * Update an existing event
+   * Update an existing event with race condition protection
+   * 
+   * Uses operation locking to serialize concurrent updates to the same event.
+   * If another update is in progress, this call waits for it to complete.
+   * 
    * @param {string} uid - The UID of the event to update
-   * @param {Object} updateData - The data to update
-   * @param {string} [authHeader] - Optional authorization header from the client
-   * @returns {Promise<Object>} The updated event
+   * @param {Object} updateData - The data to update (summary, start, end, description, location, meta, targetCalendarUrl)
+   * @param {string} [authHeader] - Optional authorization header from the client (currently unused)
+   * @returns {Promise<Object>} The updated event object
+   * @throws {Error} If event not found or CalDAV update fails
    */
   async updateEvent(uid, updateData, authHeader) {
     if (!uid) {
       throw new Error('Event UID is required');
     }
 
+    // RACE CONDITION PROTECTION: Wait for any in-flight updates to complete
+    if (this.updateLocks.has(uid)) {
+      console.log(`[updateEvent] Waiting for in-flight update to ${uid} to complete...`);
+      try {
+        await this.updateLocks.get(uid);
+        console.log(`[updateEvent] Previous update completed, proceeding with new update`);
+      } catch (error) {
+        console.log(`[updateEvent] Previous update failed, proceeding with new update`);
+      }
+    }
+
     console.log(`[updateEvent] Starting update for event ${uid}`);
     console.log(`[updateEvent] Update data:`, JSON.stringify(updateData, null, 2));
 
+    // Create a promise for this update operation
+    const updatePromise = this._performUpdate(uid, updateData, authHeader);
+    
+    // Register the lock
+    this.updateLocks.set(uid, updatePromise);
+
+    try {
+      const result = await updatePromise;
+      return result;
+    } finally {
+      // Always clean up the lock
+      this.updateLocks.delete(uid);
+      console.log(`[updateEvent] Released lock for ${uid}`);
+    }
+  }
+
+  /**
+   * Internal method that performs the actual update operation
+   * 
+   * Separated from updateEvent() to enable the locking mechanism.
+   * Handles metadata extraction, preservation, and CalDAV synchronization.
+   * 
+   * @private
+   * @param {string} uid - The UID of the event to update
+   * @param {Object} updateData - The data to update
+   * @param {string} [authHeader] - Optional authorization header (currently unused)
+   * @returns {Promise<Object>} The updated event object
+   * @throws {Error} If event not found or update fails
+   */
+  async _performUpdate(uid, updateData, authHeader) {
     // 1. Get the current event data
     let event = await this.getEvent(uid);
     if (!event) {
@@ -874,14 +1008,44 @@ export class CalendarCache {
       calendar: event.calendarUrl
     });
 
-    // 2. Update the event data
+    // 2. Handle metadata properly
+    // If updateData contains description, check if it has embedded YAML
+    // If it does, extract it to meta field. Otherwise, use provided meta.
+    let cleanDescription = updateData.description;
+    let metaToUse = updateData.meta;
+    
+    if (updateData.description) {
+      const parsed = this.extractYaml(updateData.description);
+      cleanDescription = parsed.text;
+      
+      // If YAML was found in description, use it (unless explicit meta provided)
+      if (parsed.meta && !updateData.meta) {
+        metaToUse = parsed.meta;
+        console.log(`[updateEvent] Extracted metadata from description:`, metaToUse);
+      }
+    }
+    
+    // If no new metadata provided, preserve existing metadata
+    if (!metaToUse && event.meta) {
+      metaToUse = event.meta;
+      console.log(`[updateEvent] Preserving existing metadata:`, metaToUse);
+    }
+
+    // 3. Update the event data
     const updatedEvent = {
       ...event,
       ...updateData,
+      description: cleanDescription !== undefined ? cleanDescription : event.description,
+      meta: metaToUse,
       updatedAt: new Date().toISOString()
     };
 
-    console.log(`[updateEvent] Updated event data:`, updatedEvent);
+    console.log(`[updateEvent] Updated event data:`, {
+      summary: updatedEvent.summary,
+      description: updatedEvent.description,
+      meta: updatedEvent.meta,
+      location: updatedEvent.location
+    });
 
     // 3. Get the calendar client for this event's calendar
     const calendarUrl = event.calendarUrl || event.calendar;
@@ -1058,10 +1222,31 @@ export class CalendarCache {
         console.log(`[updateEvent] Successfully updated event at ${fullEventUrl}`);
         console.log(`[updateEvent] Successfully updated event ${uid} in calendar ${event.calendar}`);
         
-        // 8. Invalidate the cache for this calendar
-        const cacheKey = `calendar:${event.calendar}`;
-        this.cache.del(cacheKey);
-        console.log(`[updateEvent] Invalidated cache for ${cacheKey}`);
+        // 8. Invalidate the cache for this calendar (non-critical)
+        try {
+          const cacheKey = `calendar:${event.calendar}`;
+          this.cache.del(cacheKey);
+          console.log(`[updateEvent] Invalidated cache for ${cacheKey}`);
+        } catch (cacheError) {
+          console.error('[updateEvent] Cache invalidation failed (non-critical):', cacheError);
+        }
+        
+        // Log the operation (non-critical)
+        try {
+          await logOperation('UPDATE', {
+            uid,
+            summary: updatedEvent.summary,
+            calendarUrl: event.calendar,
+            status: 'SUCCESS',
+            metadata: { 
+              start: updatedEvent.start, 
+              end: updatedEvent.end,
+              location: updatedEvent.location
+            }
+          });
+        } catch (logError) {
+          console.error('[updateEvent] Operation logging failed (non-critical):', logError);
+        }
         
         // 9. Return the updated event
         return updatedEvent;
@@ -1069,14 +1254,6 @@ export class CalendarCache {
         console.error(`[updateEvent] Error updating event:`, error);
         throw new Error(`Failed to update event: ${error.message}`);
       }
-      
-      // 8. Invalidate the cache for this calendar
-      const cacheKey = `calendar:${event.calendar}`;
-      this.cache.del(cacheKey);
-      console.log(`[updateEvent] Invalidated cache for ${cacheKey}`);
-
-      // 9. Return the updated event
-      return updatedEvent;
     } catch (error) {
       console.error(`[updateEvent] Error updating event ${uid}:`, error);
       throw new Error(`Failed to update event: ${error.message}`);
@@ -1170,15 +1347,16 @@ export class CalendarCache {
     }
     
     // 4. Create the event in the target calendar
+    let filename;
+    let createdInTarget = false;
+    
     try {
       console.log(`[moveEvent] Creating event in target calendar ${targetCalendarUrl}`);
       
-      // Extract the filename from the original URL if it exists, or generate one
-      let filename = `${uid}.ics`;
-      if (eventObject.url) {
-        const urlParts = eventObject.url.split('/');
-        filename = urlParts[urlParts.length - 1];
-      }
+      // Always use UID for filename to avoid path corruption issues
+      // Using the source filename can cause issues when moving between calendars
+      filename = `${uid}.ics`;
+      console.log(`[moveEvent] Using filename: ${filename}`);
       
       // Add the new event to the target calendar
       await targetClient.createCalendarObject({
@@ -1187,34 +1365,92 @@ export class CalendarCache {
         iCalString: eventObject.data
       });
       
+      createdInTarget = true;
       console.log(`[moveEvent] Successfully created event in target calendar`);
+      
+      // 4.5. Verify the event was created by fetching it
+      console.log(`[moveEvent] Verifying event was created in target...`);
+      const targetObjects = await targetClient.fetchCalendarObjects({
+        calendar: targetCalendarInfo.calendar || { url: targetCalendarUrl },
+        expand: true
+      });
+      
+      const verifyCreated = targetObjects.find(obj => 
+        obj.data && obj.data.includes(`UID:${uid}`)
+      );
+      
+      if (!verifyCreated) {
+        throw new Error('Event creation verification failed - event not found in target calendar');
+      }
+      
+      console.log(`[moveEvent] Verified event exists in target calendar`);
       
       // 5. Delete the event from the source calendar
       try {
+        console.log(`[moveEvent] Deleting event from source calendar...`);
         await sourceClient.deleteCalendarObject({
           calendarObject: eventObject,
           etag: eventObject.etag
         });
         console.log(`[moveEvent] Successfully deleted event from source calendar`);
       } catch (deleteError) {
-        // If deletion fails, we should try to clean up the created event
-        console.error(`[moveEvent] Failed to delete event from source calendar:`, deleteError);
+        // If deletion fails, we have a duplicate - try to clean up
+        console.error(`[moveEvent] CRITICAL: Failed to delete event from source calendar:`, deleteError);
+        console.error(`[moveEvent] Event now exists in both calendars - attempting cleanup...`);
         
+        // Try to delete from target to restore original state
         try {
+          console.log(`[moveEvent] Attempting to rollback - deleting from target...`);
           await targetClient.deleteCalendarObject({
-            calendar: targetCalendarInfo.calendar || { url: targetCalendarUrl },
-            filename: filename
+            calendarObject: verifyCreated,
+            etag: verifyCreated.etag
           });
+          console.log(`[moveEvent] Successfully rolled back - deleted from target`);
+          
+          // Log the failed operation
+          await logOperation('MOVE', {
+            uid,
+            summary: event.summary || event.content,
+            calendarUrl: sourceCalendarUrl,
+            targetCalendarUrl,
+            status: 'FAILED',
+            error: `Could not delete from source: ${deleteError.message}`
+          });
+          
+          throw new Error(`Move failed: Could not delete from source calendar. Operation rolled back.`);
         } catch (cleanupError) {
-          console.error(`[moveEvent] Failed to clean up created event after deletion failed:`, cleanupError);
+          console.error(`[moveEvent] CRITICAL: Rollback failed:`, cleanupError);
+          console.error(`[moveEvent] Event is now duplicated in both calendars!`);
+          
+          // Log the partial failure
+          await logOperation('MOVE', {
+            uid,
+            summary: event.summary || event.content,
+            calendarUrl: sourceCalendarUrl,
+            targetCalendarUrl,
+            status: 'PARTIAL',
+            error: `Event duplicated in both calendars. Delete failed: ${deleteError.message}, Rollback failed: ${cleanupError.message}`
+          });
+          
+          throw new Error(
+            `CRITICAL: Move partially completed. Event exists in both source (${sourceCalendarUrl}) and target (${targetCalendarUrl}). ` +
+            `Manual cleanup required. Original error: ${deleteError.message}`
+          );
         }
-        
-        throw new Error(`Moved event but failed to delete original: ${deleteError.message}`);
       }
       
       // 6. Update the cache (invalidate both involved calendars)
       this.cache.del(`calendar:${sourceCalendarUrl}`);
       this.cache.del(`calendar:${targetCalendarUrl}`);
+
+      // Log the operation
+      await logOperation('MOVE', {
+        uid,
+        summary: event.summary || event.content,
+        calendarUrl: sourceCalendarUrl,
+        targetCalendarUrl,
+        status: 'SUCCESS'
+      });
 
       // 7. Return the moved event without relying on cache fetch
       // We already have the original event data; only the calendar changed.

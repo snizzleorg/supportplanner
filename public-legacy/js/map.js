@@ -1,0 +1,241 @@
+/**
+ * Map Module
+ * 
+ * Handles Leaflet map initialization and marker rendering.
+ * Groups events by location and calendar, displays colored markers.
+ * Uses server-provided geocoded coordinates for fast rendering.
+ * 
+ * @module map
+ */
+
+import { LABEL_PALETTE } from './ui-config.js';
+
+/**
+ * Leaflet map instance
+ * @type {Object|null}
+ */
+let map;
+
+/**
+ * Layer group for map markers
+ * @type {Object|null}
+ */
+let markersLayer;
+
+/**
+ * Escapes HTML special characters
+ * @private
+ * @param {*} unsafe - Value to escape
+ * @returns {string} HTML-escaped string
+ */
+function escapeHtml(unsafe) {
+  if (unsafe === undefined || unsafe === null) return '';
+  return String(unsafe)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Initializes the Leaflet map instance (once)
+ * @private
+ * @returns {void}
+ */
+function initMapOnce() {
+  if (map) return;
+  const mapEl = document.getElementById('map');
+  if (!mapEl) return;
+  // L is provided globally by Leaflet script in index.html
+  map = L.map('map');
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+  markersLayer = L.layerGroup().addTo(map);
+  map.setView([51.1657, 10.4515], 5); // default: Germany
+  try {
+    if (window.__MAP_TESTING) {
+      console.log('[map] initMapOnce called, markersLayer ready');
+    }
+  } catch (_) {}
+}
+
+/**
+ * Parses a hex color string to RGB components
+ * @private
+ * @param {string} color - Hex color string
+ * @returns {{r: number, g: number, b: number}|null} RGB object or null
+ */
+function parseHex(color) {
+  const m = String(color).trim().match(/^#?([a-fA-F0-9]{6})$/);
+  if (!m) return null;
+  const h = m[1];
+  return {
+    r: parseInt(h.slice(0,2), 16),
+    g: parseInt(h.slice(2,4), 16),
+    b: parseInt(h.slice(4,6), 16)
+  };
+}
+/**
+ * Clamps a value between min and max
+ * @private
+ * @param {number} v - Value to clamp
+ * @param {number} [min=0] - Minimum value
+ * @param {number} [max=255] - Maximum value
+ * @returns {number} Clamped value
+ */
+function clamp(v, min=0, max=255) { return Math.max(min, Math.min(max, v)); }
+
+/**
+ * Converts RGB object to hex color string
+ * @private
+ * @param {{r: number, g: number, b: number}} rgb - RGB object
+ * @returns {string} Hex color string
+ */
+function toHex({r,g,b}) {
+  const h = (n)=> clamp(Math.round(n)).toString(16).padStart(2,'0');
+  return `#${h(r)}${h(g)}${h(b)}`;
+}
+/**
+ * Strengthens a color by increasing saturation and darkening
+ * @private
+ * @param {string} color - Hex color string
+ * @returns {string} Strengthened hex color string
+ */
+function strengthenColor(color) {
+  const rgb = parseHex(color);
+  if (!rgb) return color;
+  const boost = (c)=> clamp((c - 128) * 1.6 + 128);
+  const darken = (c)=> clamp(c * 0.85);
+  return toHex({ r: darken(boost(rgb.r)), g: darken(boost(rgb.g)), b: darken(boost(rgb.b)) });
+}
+/**
+ * Creates a custom pin icon SVG for map markers
+ * @private
+ * @param {string} color - Hex color for the pin
+ * @returns {Object} Leaflet divIcon object
+ */
+function makePinIcon(color) {
+  const base = color || '#3b82f6';
+  const stroke = '#1f2937';
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="30" height="44" viewBox="0 0 30 44">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <path d="M15 1 C8 1 2.5 6.6 2.5 13.5 c0 9.6 10.7 18.4 11.5 19.0a1.6 1.6 0 0 0 2.0 0C16.8 31.9 27.5 23.1 27.5 13.5 27.5 6.6 22 1 15 1z" 
+          fill="${base}" 
+          stroke="${stroke}" 
+          stroke-width="1.7" 
+          fill-opacity="0.9"/>
+    <circle cx="15" cy="13.5" r="5.2" 
+            fill="#ffffff" 
+            fill-opacity="0.98" 
+            stroke="${stroke}" 
+            stroke-width="1"/>
+  </g>
+</svg>`;
+  const url = 'data:image/svg+xml;base64,' + btoa(svg);
+  return L.icon({ iconUrl: url, iconSize: [30, 44], iconAnchor: [15, 43], popupAnchor: [0, -34]});
+}
+
+/**
+ * Renders map markers for all events with locations
+ * Geocodes addresses and clusters markers by location
+ * @param {Array} allServerItems - Array of event items from server
+ * @param {Object} groups - vis-timeline groups DataSet
+ * @returns {Promise<void>}
+ */
+export async function renderMapMarkers(allServerItems, groups) {
+  initMapOnce();
+  if (!map || !markersLayer) return;
+  try { if (window.__MAP_TESTING) console.log('[map] renderMapMarkers start', (allServerItems||[]).length); } catch (_) {}
+  markersLayer.clearLayers();
+  const bounds = [];
+
+  const getGroupColor = (groupId) => {
+    // Get all groups to determine the index
+    const allGroups = groups.get();
+    const groupIndex = allGroups.findIndex(g => g.id === groupId);
+    
+    if (groupIndex === -1) {
+      return LABEL_PALETTE[0]; // Fallback to first color
+    }
+    
+    // Use LABEL_PALETTE based on group index (same as labels and lanes)
+    return LABEL_PALETTE[groupIndex % LABEL_PALETTE.length];
+  };
+
+  const byLocThenGroup = new Map();
+  for (const it of allServerItems) {
+    const loc = (it.location || '').trim();
+    if (!loc) continue;
+    if (!byLocThenGroup.has(loc)) byLocThenGroup.set(loc, new Map());
+    const inner = byLocThenGroup.get(loc);
+    const gid = it.group || '__nogroup__';
+    if (!inner.has(gid)) inner.set(gid, []);
+    inner.get(gid).push(it);
+  }
+
+  const addOffset = (lat, lon, index, total) => {
+    if (total <= 1) return { lat, lon };
+    const radiusMeters = 12;
+    const angle = (2 * Math.PI * index) / total;
+    const dLat = (radiusMeters * Math.sin(angle)) / 111111;
+    const dLon = (radiusMeters * Math.cos(angle)) / (111111 * Math.max(0.1, Math.cos(lat * Math.PI / 180)));
+    return { lat: lat + dLat, lon: lon + dLon };
+  };
+
+  for (const [loc, inner] of byLocThenGroup.entries()) {
+    // Get geocoded coordinates from the first event with this location
+    // (server has already geocoded all locations)
+    // Find first event that has geocoded data
+    let latlon = null;
+    let sampleEvent = null;
+    for (const events of inner.values()) {
+      for (const event of events) {
+        if (!sampleEvent) sampleEvent = event;
+        if (event.geocoded) {
+          latlon = event.geocoded;
+          break;
+        }
+      }
+      if (latlon) break;
+    }
+    
+    if (!latlon) {
+      console.log(`[Map] No geocoded coordinates for location: ${loc}`);
+      continue;
+    }
+    
+    const entries = Array.from(inner.entries());
+    const total = entries.length;
+    entries.forEach(([gid, evs], idx) => {
+      const pinColor = getGroupColor(gid);
+      // Use the exact color from LABEL_PALETTE without adjustment
+      const { lat, lon } = addOffset(latlon.lat, latlon.lon, idx, total);
+      const marker = L.marker([lat, lon], { icon: makePinIcon(pinColor) }).addTo(markersLayer);
+      try {
+        if (window.__MAP_TESTING) {
+          window.__mapMarkerAddedCount = (window.__mapMarkerAddedCount||0) + 1;
+          console.log('[map] marker added', loc, gid, lat, lon);
+        }
+      } catch (_) {}
+      bounds.push([lat, lon]);
+      const list = evs.slice(0, 5)
+        .map(e => `<li>${escapeHtml(e.content || e.summary || 'Untitled')} (${escapeHtml(e.start)} → ${escapeHtml(e.end)})</li>`)
+        .join('');
+      const more = evs.length > 5 ? `<div>…and ${evs.length - 5} more</div>` : '';
+      const who = (groups.get(gid)?.content) || '';
+      marker.bindPopup(`<div><strong>${escapeHtml(loc)}</strong><div>${escapeHtml(who)}</div><ul>${list}</ul>${more}</div>`);
+    });
+  }
+
+  if (bounds.length) {
+    map.fitBounds(bounds, { padding: [20, 20] });
+  }
+}

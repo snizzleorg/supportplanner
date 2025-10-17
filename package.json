@@ -8,10 +8,7 @@
     "start": "NODE_ENV=production node server.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:frontend": "vitest run --config vitest.config.frontend.js",
-    "test:frontend:watch": "vitest --config vitest.config.frontend.js",
-    "test:frontend:coverage": "vitest run --coverage --config vitest.config.frontend.js"
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "cors": "^2.8.5",

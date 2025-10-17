@@ -1,0 +1,41 @@
+{
+  "systems": [
+    {
+      "name": "Luminosa",
+      "experts": ["Chenyang", "Denis", "Steffen"]
+    },
+    {
+      "name": "MT200",
+      "experts": ["Jorge", "Olaf", "Steffen", "Volker", "Peter"]
+    },
+    {
+      "name": "MT100",
+      "experts": ["Volker", "Anton", "Subhrokoli"]
+    },
+    {
+      "name": "FT250/FT300",
+      "experts": ["Anton", "Subhrokoli", "Steffen", "Volker", "Peter"]
+    },
+    {
+      "name": "LSM Upgrade Kits",
+      "subsystems": [
+        {
+          "name": "Nikon",
+          "experts": ["Subhabrata", "Chenyang", "Volker", "Steffen", "Denis"]
+        },
+        {
+          "name": "Evident FV3000/FV4000",
+          "experts": ["Volker", "Denis", "Chenyang"]
+        },
+        {
+          "name": "Evident FV1000",
+          "experts": ["Volker", "Steffen"]
+        },
+        {
+          "name": "Zeiss",
+          "experts": ["Volker", "Denis", "Subhabrata", "Steffen"]
+        }
+      ]
+    }
+  ]
+}
