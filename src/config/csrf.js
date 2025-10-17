@@ -29,11 +29,11 @@ export const {
   doubleCsrfProtection, // Middleware to validate CSRF token
 } = doubleCsrf({
   getSecret: () => process.env.CSRF_SECRET || 'default-csrf-secret-change-in-production',
-  cookieName: '__Host-psifi.x-csrf-token',
+  cookieName: process.env.NODE_ENV === 'production' ? '__Host-psifi.x-csrf-token' : 'psifi.x-csrf-token',
   cookieOptions: {
     httpOnly: true,
     sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production', // Only require HTTPS in production
     path: '/',
   },
   size: 64, // Token size in bytes
