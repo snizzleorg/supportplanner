@@ -38,6 +38,7 @@ dayjs.extend(isSameOrAfter);
  * 
  * Provides caching layer for CalDAV calendar data with automatic refresh.
  * Handles event CRUD operations and recurring event expansion.
+ * Includes race condition protection via operation locking.
  * 
  * @class CalendarCache
  */
@@ -137,12 +138,15 @@ export class CalendarCache {
    * Expects start and end as inclusive DATE strings (YYYY-MM-DD).
    * In iCal, DTEND for all-day is exclusive, so we will send end + 1 day.
    * @param {Object} payload
-   * @param {string} payload.calendarUrl
-   * @param {string} payload.summary
-   * @param {string} [payload.description]
-   * @param {string} [payload.location]
-   * @param {string} payload.start - YYYY-MM-DD inclusive
-   * @param {string} payload.end - YYYY-MM-DD inclusive
+   * @param {string} payload.calendarUrl - CalDAV calendar URL
+   * @param {string} payload.summary - Event title/summary
+   * @param {string} [payload.description] - Event description (plain text)
+   * @param {string} [payload.location] - Event location
+   * @param {string} payload.start - YYYY-MM-DD inclusive start date
+   * @param {string} payload.end - YYYY-MM-DD inclusive end date
+   * @param {Object} [payload.meta] - Metadata object (orderNumber, ticketLink, systemType)
+   * @returns {Promise<Object>} Created event object
+   * @throws {Error} If CalDAV creation fails or validation fails
    */
   async createAllDayEvent({ calendarUrl, summary, description = '', location = '', start, end, meta }) {
     if (!calendarUrl || !summary || !start || !end) {
@@ -904,11 +908,16 @@ export class CalendarCache {
   }
   
   /**
-   * Update an existing event
+   * Update an existing event with race condition protection
+   * 
+   * Uses operation locking to serialize concurrent updates to the same event.
+   * If another update is in progress, this call waits for it to complete.
+   * 
    * @param {string} uid - The UID of the event to update
-   * @param {Object} updateData - The data to update
-   * @param {string} [authHeader] - Optional authorization header from the client
-   * @returns {Promise<Object>} The updated event
+   * @param {Object} updateData - The data to update (summary, start, end, description, location, meta, targetCalendarUrl)
+   * @param {string} [authHeader] - Optional authorization header from the client (currently unused)
+   * @returns {Promise<Object>} The updated event object
+   * @throws {Error} If event not found or CalDAV update fails
    */
   async updateEvent(uid, updateData, authHeader) {
     if (!uid) {
@@ -946,9 +955,17 @@ export class CalendarCache {
   }
 
   /**
-   * Internal method that performs the actual update
-   * Separated to enable locking mechanism
+   * Internal method that performs the actual update operation
+   * 
+   * Separated from updateEvent() to enable the locking mechanism.
+   * Handles metadata extraction, preservation, and CalDAV synchronization.
+   * 
    * @private
+   * @param {string} uid - The UID of the event to update
+   * @param {Object} updateData - The data to update
+   * @param {string} [authHeader] - Optional authorization header (currently unused)
+   * @returns {Promise<Object>} The updated event object
+   * @throws {Error} If event not found or update fails
    */
   async _performUpdate(uid, updateData, authHeader) {
     // 1. Get the current event data
