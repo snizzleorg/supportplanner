@@ -87,7 +87,7 @@ router.delete('/:uid', requireRole('editor'), uidValidation, validate, async (re
 });
 
 // Search for events by summary
-router.get('/search', async (req, res) => {
+router.get('/search', requireRole('reader'), async (req, res) => {
   try {
     const { summary, from, to } = req.query;
     
