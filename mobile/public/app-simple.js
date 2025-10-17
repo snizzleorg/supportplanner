@@ -222,17 +222,17 @@ async function init() {
       const response = await fetch('/data/system-skills.json?_=' + Date.now());
       const data = await response.json();
       
-      // Recursive function to render systems and subsystems
+      // Recursive function to render systems and subsystems - Sanitized
       const renderSystem = (system, level = 0) => {
         const hasExperts = system.experts && system.experts.length > 0;
         const hasSubsystems = system.subsystems && system.subsystems.length > 0;
         
         let html = `<div class="system-expert-item expanded" data-level="${level}">`;
-        html += `<div class="system-expert-name" style="padding-left: ${level * 12}px">${system.name}</div>`;
+        html += `<div class="system-expert-name" style="padding-left: ${level * 12}px">${escapeHtml(system.name)}</div>`;
         
         if (hasExperts) {
           html += `<ul class="expert-list" style="padding-left: ${(level * 12) + 28}px">`;
-          html += system.experts.map(expert => `<li>${expert}</li>`).join('');
+          html += system.experts.map(expert => `<li>${escapeHtml(expert)}</li>`).join('');
           html += `</ul>`;
         }
         
@@ -588,23 +588,23 @@ async function showCreateEventModal(calendar, clickedDate) {
   const isDesktop = window.innerWidth >= 768;
   
   if (isDesktop) {
-    // Desktop layout with two columns and map preview
+    // Desktop layout with two columns and map preview - Sanitized values
     modalBody.innerHTML = `
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
         <!-- Left column: Form fields -->
         <div>
           <div style="margin-bottom: 12px;">
             <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Title</label>
-            <input type="text" id="eventTitle" value="${defaultTitle}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+            <input type="text" id="eventTitle" value="${escapeHtml(defaultTitle)}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
             <div>
               <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Start</label>
-              <input type="date" id="eventStart" value="${startDateStr}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+              <input type="date" id="eventStart" value="${escapeHtml(startDateStr)}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
             </div>
             <div>
               <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">End</label>
-              <input type="date" id="eventEnd" value="${endDateStr}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+              <input type="date" id="eventEnd" value="${escapeHtml(endDateStr)}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
             </div>
           </div>
           <div style="margin-bottom: 12px;">
@@ -619,7 +619,7 @@ async function showCreateEventModal(calendar, clickedDate) {
             <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Calendar</label>
             <select id="eventCalendar" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
               ${getCalendars().map(cal => 
-                `<option value="${cal.url}" ${cal.id === calendar.id ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
+                `<option value="${escapeHtml(cal.url)}" ${cal.id === calendar.id ? 'selected' : ''}>${escapeHtml(cal.content || cal.displayName)}</option>`
               ).join('')}
             </select>
           </div>
@@ -651,20 +651,20 @@ async function showCreateEventModal(calendar, clickedDate) {
       </div>
     `;
   } else {
-    // Mobile layout (original)
+    // Mobile layout (original) - Sanitized values
     modalBody.innerHTML = `
       <div style="margin-bottom: 15px;">
         <label style="display: block; font-weight: 600; margin-bottom: 5px;">Title:</label>
-        <input type="text" id="eventTitle" value="${defaultTitle}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        <input type="text" id="eventTitle" value="${escapeHtml(defaultTitle)}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
         <div>
           <label style="display: block; font-weight: 600; margin-bottom: 5px;">Start:</label>
-          <input type="date" id="eventStart" value="${startDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+          <input type="date" id="eventStart" value="${escapeHtml(startDateStr)}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
         </div>
         <div>
           <label style="display: block; font-weight: 600; margin-bottom: 5px;">End:</label>
-          <input type="date" id="eventEnd" value="${endDateStr}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+          <input type="date" id="eventEnd" value="${escapeHtml(endDateStr)}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
         </div>
       </div>
       <div style="margin-bottom: 15px;">
@@ -691,7 +691,7 @@ async function showCreateEventModal(calendar, clickedDate) {
         <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
         <select id="eventCalendar" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
           ${getCalendars().map(cal => 
-            `<option value="${cal.url}" ${cal.id === calendar.id ? 'selected' : ''}>${cal.content || cal.displayName}</option>`
+            `<option value="${escapeHtml(cal.url)}" ${cal.id === calendar.id ? 'selected' : ''}>${escapeHtml(cal.content || cal.displayName)}</option>`
           ).join('')}
         </select>
       </div>
@@ -879,13 +879,13 @@ async function handleConflict(eventUid, localChanges) {
       comparisonHTML += `
         <div style="border: 1px solid ${isDifferent ? '#ff9800' : '#ddd'}; border-radius: 4px; padding: 12px; background: ${isDifferent ? '#fff3e0' : '#f9f9f9'};">
           <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #666;">Your Version</h4>
-          <div style="font-weight: 600; margin-bottom: 4px;">${field.label}</div>
-          <div style="font-size: 13px; word-break: break-word;">${localValue || '<em>empty</em>'}</div>
+          <div style="font-weight: 600; margin-bottom: 4px;">${escapeHtml(field.label)}</div>
+          <div style="font-size: 13px; word-break: break-word;">${localValue ? escapeHtml(localValue) : '<em>empty</em>'}</div>
         </div>
         <div style="border: 1px solid ${isDifferent ? '#ff9800' : '#ddd'}; border-radius: 4px; padding: 12px; background: ${isDifferent ? '#fff3e0' : '#f9f9f9'};">
           <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #666;">Server Version</h4>
-          <div style="font-weight: 600; margin-bottom: 4px;">${field.label}</div>
-          <div style="font-size: 13px; word-break: break-word;">${serverValue || '<em>empty</em>'}</div>
+          <div style="font-weight: 600; margin-bottom: 4px;">${escapeHtml(field.label)}</div>
+          <div style="font-size: 13px; word-break: break-word;">${serverValue ? escapeHtml(serverValue) : '<em>empty</em>'}</div>
         </div>
       `;
     });
