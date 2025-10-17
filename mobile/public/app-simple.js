@@ -990,6 +990,10 @@ async function showEventModal(event) {
   const endDate = parseLocalDate(event.end);
   const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   
+  // Store original updatedAt for staleness detection
+  const originalUpdatedAt = event.updatedAt;
+  const originalEventUid = event.uid || event.id.split('/').pop().replace(/^-/, '');
+  
   // Use clean description (without YAML) and pre-parsed metadata
   const description = event.description || '';
   const metadata = event.meta || {};
@@ -999,6 +1003,7 @@ async function showEventModal(event) {
   console.log('Clean description:', description);
   console.log('Metadata object:', metadata);
   console.log('Event location:', event.location);
+  console.log('Original updatedAt:', originalUpdatedAt);
   
   const location = event.location || '';
   const orderNumber = metadata.orderNumber || '';
@@ -1352,6 +1357,61 @@ async function showEventModal(event) {
     console.log('Updating event with UID:', eventUid, 'meta:', meta);
     
     try {
+      // STALENESS DETECTION: Check if event was modified since modal opened
+      if (originalUpdatedAt) {
+        console.log('[Staleness Check] Fetching current event version...');
+        try {
+          const checkResponse = await withTimeout(
+            fetchWithRetry(
+              `${API_BASE}/api/events/${encodeURIComponent(eventUid)}`,
+              {},
+              { maxRetries: 0 }
+            ),
+            10000,
+            'Staleness check timed out'
+          );
+
+          if (checkResponse.ok) {
+            const checkData = await checkResponse.json();
+            const currentEvent = checkData.event || checkData;
+            
+            if (currentEvent.updatedAt && currentEvent.updatedAt !== originalUpdatedAt) {
+              console.warn('[Staleness Check] Event was modified by someone else!', {
+                original: originalUpdatedAt,
+                current: currentEvent.updatedAt
+              });
+              
+              // Show user a choice
+              const userChoice = confirm(
+                '⚠️ WARNING: This event was modified by someone else since you opened it.\n\n' +
+                'Click OK to reload the latest version and lose your changes.\n' +
+                'Click Cancel to save anyway and overwrite their changes.'
+              );
+              
+              if (userChoice) {
+                // User chose to reload - close modal and reopen with fresh data
+                operationInProgress = false;
+                modal.classList.remove('active');
+                console.log('[Staleness Check] User chose to reload, fetching fresh data...');
+                
+                // Reload the event
+                showEventModal(currentEvent);
+                return;
+              } else {
+                console.log('[Staleness Check] User chose to overwrite, proceeding with save...');
+                // Continue with save (will overwrite)
+              }
+            } else {
+              console.log('[Staleness Check] Event has not been modified, safe to proceed');
+            }
+          }
+        } catch (checkError) {
+          // Non-critical error, log and continue with save
+          console.warn('[Staleness Check] Failed to check for staleness:', checkError);
+          console.log('[Staleness Check] Proceeding with save anyway');
+        }
+      }
+      
       // Build request body - send description and meta separately
       // Backend will combine them properly
       const requestBody = {
