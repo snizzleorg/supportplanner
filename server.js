@@ -1,4 +1,5 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -11,6 +12,8 @@ import {
   apiLimiter,
   authLimiter,
   refreshLimiter,
+  generateToken,
+  doubleCsrfProtection,
   loadEventTypesConfig,
   NEXTCLOUD_URL,
   NEXTCLOUD_USERNAME,
@@ -40,6 +43,7 @@ const app = express();
 // Apply middleware
 app.use(corsMiddleware);
 app.use(express.json({ limit: '2mb' }));
+app.use(cookieParser());
 app.use(helmetMiddleware);
 app.use(sessionMiddleware);
 
@@ -54,6 +58,21 @@ app.set('trust proxy', 1);
 
 // Initialize authentication (OIDC or disabled mode)
 initializeAuth(app);
+
+// CSRF token endpoint - must be after session/auth but before CSRF protection
+app.get('/api/csrf-token', (req, res) => {
+  const csrfToken = generateToken(req, res);
+  res.json({ csrfToken });
+});
+
+// Apply CSRF protection to all state-changing API routes (except in test environment)
+// This protects POST, PUT, DELETE (but not GET, HEAD, OPTIONS)
+if (process.env.NODE_ENV !== 'test') {
+  app.use('/api/', doubleCsrfProtection);
+  console.log('[Security] CSRF protection enabled');
+} else {
+  console.log('[Security] CSRF protection disabled (test environment)');
+}
 
 // Serve mobile app for all devices (desktop and mobile)
 // Mobile app now contains all required assets (favicons, manifest, etc.)
