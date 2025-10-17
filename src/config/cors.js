@@ -21,8 +21,14 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : [
       'http://localhost:5175', 
       'http://localhost:5173',
+      'http://localhost:5174', // Mobile app
       'http://support-planner:5173', // Docker internal hostname for tests
+      'http://mobile-planner:5174', // Mobile app Docker hostname
     ];
+
+// Also allow any origin from the same hostname on different ports (for mobile testing)
+// This allows http://m4.local:5174, http://192.168.x.x:5174, etc.
+const allowOriginPattern = /^https?:\/\/[^:]+:(5173|5174|5175)$/;
 
 /**
  * CORS middleware configured with origin validation
@@ -35,13 +41,30 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
  */
 export const corsMiddleware = cors({
   origin: (origin, callback) => {
+    console.log('[CORS] Request from origin:', origin);
+    
     // Allow requests with no origin (e.g., mobile apps, Postman)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    if (!origin) {
+      console.log('[CORS] ✓ Allowed (no origin)');
+      return callback(null, true);
     }
+    
+    // Check exact match in allowed origins
+    if (allowedOrigins.includes(origin)) {
+      console.log('[CORS] ✓ Allowed (exact match)');
+      return callback(null, true);
+    }
+    
+    // Check pattern match for development (any hostname on ports 5173-5175)
+    if (allowOriginPattern.test(origin)) {
+      console.log('[CORS] ✓ Allowed (pattern match)');
+      return callback(null, true);
+    }
+    
+    console.log('[CORS] ✗ BLOCKED - Origin not in allowed list or pattern');
+    console.log('[CORS] Pattern:', allowOriginPattern);
+    console.log('[CORS] Test result:', allowOriginPattern.test(origin));
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true
 });

@@ -8,6 +8,11 @@ services:
       - SKIP_SESSION_SECRET_CHECK=true
     ports:
       - "5175:5173"
+    volumes:
+      - ./data:/usr/src/support-planner/data
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     restart: unless-stopped
 
   backend-tests:
@@ -19,24 +24,5 @@ services:
     # No ports exposed; this is a one-shot runner
     restart: "no"
 
-  frontend-tests:
-    build:
-      context: .
-      dockerfile: tests/frontend/Dockerfile
-    #platform: linux/arm64  # Use native architecture on Apple Silicon
-    container_name: frontend-tests
-    environment:
-      - APP_URL=http://support-planner:5173
-    depends_on:
-      - support-planner
-    # No ports exposed; this is a one-shot runner
-    restart: "no"
-
-  frontend-unit-tests:
-    build:
-      context: .
-      dockerfile: tests/frontend-unit/Dockerfile
-    #platform: linux/arm64  # Use native architecture on Apple Silicon
-    container_name: frontend-unit-tests
-    # No ports exposed; this is a one-shot runner
-    restart: "no"
+  # Legacy frontend tests removed - mobile app needs new test suite
+  # See docs/MOBILE_TESTING.md for mobile testing strategy

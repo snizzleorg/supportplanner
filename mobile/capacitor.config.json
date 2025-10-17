@@ -1,0 +1,20 @@
+{
+  "appId": "com.supportplanner.mobile",
+  "appName": "SupportPlanner",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#007aff",
+      "showSpinner": true,
+      "spinnerColor": "#ffffff"
+    },
+    "StatusBar": {
+      "style": "light",
+      "backgroundColor": "#007aff"
+    }
+  }
+}
