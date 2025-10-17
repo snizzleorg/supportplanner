@@ -762,7 +762,8 @@ async function showCreateEventModal(calendar, clickedDate) {
             })
           },
           {
-            maxRetries: 2,
+            maxRetries: 0, // CRITICAL: No retries for CREATE to prevent duplicates
+                           // If CalDAV succeeds but response times out, retry would create duplicate
             onRetry: (error, attempt) => {
               console.log(`Retrying create (attempt ${attempt})...`);
             }

@@ -198,37 +198,68 @@ export class CalendarCache {
     ].join('\n');
 
     const client = calendarInfo.client;
-    const result = await client.createCalendarObject({
-      calendar: calendarInfo.calendar || { url: calendarUrl },
-      iCalString: icalLines,
-      filename: `${uid}.ics`
-    });
+    
+    // CRITICAL: Wrap in try-catch to prevent retries on partial failures
+    try {
+      const result = await client.createCalendarObject({
+        calendar: calendarInfo.calendar || { url: calendarUrl },
+        iCalString: icalLines,
+        filename: `${uid}.ics`
+      });
 
-    // Invalidate cache for that calendar so subsequent fetch reflects the new event
-    this.cache.del(`calendar:${calendarUrl}`);
+      // Invalidate cache for that calendar so subsequent fetch reflects the new event
+      // If this fails, we log but don't throw (event was created successfully)
+      try {
+        this.cache.del(`calendar:${calendarUrl}`);
+      } catch (cacheError) {
+        console.error('[createAllDayEvent] Cache invalidation failed (non-critical):', cacheError);
+      }
 
-    // Log the operation
-    await logOperation('CREATE', {
-      uid,
-      summary,
-      calendarUrl,
-      status: 'SUCCESS',
-      metadata: { start, end, location, allDay: true }
-    });
+      // Log the operation (non-critical, don't throw if it fails)
+      try {
+        await logOperation('CREATE', {
+          uid,
+          summary,
+          calendarUrl,
+          status: 'SUCCESS',
+          metadata: { start, end, location, allDay: true }
+        });
+      } catch (logError) {
+        console.error('[createAllDayEvent] Operation logging failed (non-critical):', logError);
+      }
 
-    return {
-      success: true,
-      uid,
-      summary,
-      description: description,
-      descriptionRaw: combinedDescription,
-      meta,
-      location,
-      start,
-      end,
-      allDay: true,
-      calendar: calendarUrl,
-    };
+      return {
+        success: true,
+        uid,
+        summary,
+        description: description,
+        descriptionRaw: combinedDescription,
+        meta,
+        location,
+        start,
+        end,
+        allDay: true,
+        calendar: calendarUrl,
+      };
+    } catch (error) {
+      // CalDAV creation failed - log and rethrow
+      console.error(`[createAllDayEvent] Failed to create event in CalDAV:`, error);
+      
+      // Try to log the failure (best effort)
+      try {
+        await logOperation('CREATE', {
+          uid,
+          summary,
+          calendarUrl,
+          status: 'FAILED',
+          error: error.message
+        });
+      } catch (logError) {
+        console.error('[createAllDayEvent] Failed to log error (non-critical):', logError);
+      }
+      
+      throw new Error(`Failed to create event: ${error.message}`);
+    }
   }
 
   /**
@@ -847,16 +878,24 @@ export class CalendarCache {
       throw new Error(`Failed to delete event from Nextcloud: ${deleteError.message}`);
     }
 
-    // 4) Invalidate cache for that calendar
-    this.cache.del(`calendar:${calendarUrl}`);
+    // 4) Invalidate cache for that calendar (non-critical)
+    try {
+      this.cache.del(`calendar:${calendarUrl}`);
+    } catch (cacheError) {
+      console.error('[deleteEvent] Cache invalidation failed (non-critical):', cacheError);
+    }
     
-    // Log the operation
-    await logOperation('DELETE', {
-      uid,
-      summary: event.summary || event.content,
-      calendarUrl,
-      status: 'SUCCESS'
-    });
+    // Log the operation (non-critical)
+    try {
+      await logOperation('DELETE', {
+        uid,
+        summary: event.summary || event.content,
+        calendarUrl,
+        status: 'SUCCESS'
+      });
+    } catch (logError) {
+      console.error('[deleteEvent] Operation logging failed (non-critical):', logError);
+    }
     
     return true;
   }
@@ -1130,23 +1169,31 @@ export class CalendarCache {
         console.log(`[updateEvent] Successfully updated event at ${fullEventUrl}`);
         console.log(`[updateEvent] Successfully updated event ${uid} in calendar ${event.calendar}`);
         
-        // 8. Invalidate the cache for this calendar
-        const cacheKey = `calendar:${event.calendar}`;
-        this.cache.del(cacheKey);
-        console.log(`[updateEvent] Invalidated cache for ${cacheKey}`);
+        // 8. Invalidate the cache for this calendar (non-critical)
+        try {
+          const cacheKey = `calendar:${event.calendar}`;
+          this.cache.del(cacheKey);
+          console.log(`[updateEvent] Invalidated cache for ${cacheKey}`);
+        } catch (cacheError) {
+          console.error('[updateEvent] Cache invalidation failed (non-critical):', cacheError);
+        }
         
-        // Log the operation
-        await logOperation('UPDATE', {
-          uid,
-          summary: updatedEvent.summary,
-          calendarUrl: event.calendar,
-          status: 'SUCCESS',
-          metadata: { 
-            start: updatedEvent.start, 
-            end: updatedEvent.end,
-            location: updatedEvent.location
-          }
-        });
+        // Log the operation (non-critical)
+        try {
+          await logOperation('UPDATE', {
+            uid,
+            summary: updatedEvent.summary,
+            calendarUrl: event.calendar,
+            status: 'SUCCESS',
+            metadata: { 
+              start: updatedEvent.start, 
+              end: updatedEvent.end,
+              location: updatedEvent.location
+            }
+          });
+        } catch (logError) {
+          console.error('[updateEvent] Operation logging failed (non-critical):', logError);
+        }
         
         // 9. Return the updated event
         return updatedEvent;
