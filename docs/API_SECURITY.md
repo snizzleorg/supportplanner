@@ -34,31 +34,15 @@ router.get('/search', requireRole('reader'), async (req, res) => {
 
 ---
 
-### 2. ✅ CORS Policy Tightening
+### 2. ✅ CORS Policy Improvement
 
-**Issues**:
-- Allowed requests with no Origin header (too permissive)
-- Regex pattern allowed ANY hostname on dev ports
+**Issue**: Regex pattern allowed ANY hostname on dev ports
 
-**Fixes**:
+**Fix**: Whitelist specific dev hostnames
 
-#### A. Origin Header Required in Production
-```javascript
-const isDevelopment = process.env.NODE_ENV !== 'production';
-
-if (!origin) {
-  if (isDevelopment) {
-    return callback(null, true);  // OK in dev
-  } else {
-    return callback(new Error('Origin header required'));  // Required in prod
-  }
-}
-```
-
-#### B. Whitelist Specific Dev Hostnames
 ```javascript
 // Before: Pattern matched ANY hostname
-/^https?:\/\/[^:]+:(5173|5174|5175)$/
+/^https?:\/\/[^:]+:(5173|5174|5175)$/  // Allowed evil.com:5173 ❌
 
 // After: Whitelist specific hostnames
 const allowedDevHosts = ['localhost', '127.0.0.1', 'm4.local'];
@@ -68,11 +52,28 @@ const isAllowedHost = allowedDevHosts.includes(hostname);
 const isAllowedPort = ['5173', '5174', '5175'].includes(url.port);
 ```
 
+**No-Origin Requests**: Still allowed (required for mobile apps)
+```javascript
+// Mobile apps and same-origin requests don't send Origin header
+if (!origin) {
+  console.log('[CORS] ✓ Allowed (no origin - mobile app or same-origin)');
+  return callback(null, true);
+}
+```
+
+**Why Allow No-Origin?**
+- Mobile apps inherently don't send Origin headers
+- Same-origin requests (browser to same domain) don't include Origin
+- Blocking these would break the mobile app completely
+- Session/auth cookies still provide security
+
 **Impact**:
-- ✅ Prevents CORS bypass by removing Origin header
-- ✅ Blocks evil.com:5173 (was previously allowed)
-- ✅ Maintains development flexibility
+- ✅ Blocks evil.com:5173 (was previously allowed by regex)
+- ✅ Mobile apps work correctly (no Origin header required)
 - ✅ Better error messages for debugging
+- ✅ Maintains development flexibility
+
+**Note**: Initial implementation tried to require Origin in production, but this broke mobile apps. Reverted to allow no-Origin requests as they are legitimate.
 
 ---
 
