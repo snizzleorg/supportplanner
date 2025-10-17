@@ -1160,14 +1160,38 @@ async function showEventModal(event) {
     modal.classList.remove('active');
   };
   
+  // Clean up old event listeners by cloning buttons
+  const newCloseModalBtn = closeModalBtn?.cloneNode(true);
+  if (closeModalBtn && newCloseModalBtn) {
+    closeModalBtn.parentNode.replaceChild(newCloseModalBtn, closeModalBtn);
+  }
+  
+  const newSaveEventBtn = saveEventBtn.cloneNode(true);
+  saveEventBtn.parentNode.replaceChild(newSaveEventBtn, saveEventBtn);
+  
+  const newDeleteEventBtn = deleteEventBtn?.cloneNode(true);
+  if (deleteEventBtn && newDeleteEventBtn) {
+    deleteEventBtn.parentNode.replaceChild(newDeleteEventBtn, deleteEventBtn);
+  }
+  
   closeModal?.addEventListener('click', closeHandler);
-  closeModalBtn?.addEventListener('click', closeHandler);
+  newCloseModalBtn?.addEventListener('click', closeHandler);
+  
+  // Track if operation is in progress to prevent double-clicks
+  let operationInProgress = false;
   
   // Delete event handler
-  deleteEventBtn?.addEventListener('click', async () => {
+  newDeleteEventBtn?.addEventListener('click', async () => {
+    if (operationInProgress) {
+      console.log('Delete already in progress, ignoring click');
+      return;
+    }
+    
     if (!confirm('Are you sure you want to delete this event?')) {
       return;
     }
+    
+    operationInProgress = true;
     
     // Use event.uid if available, otherwise extract from id and remove leading hyphen
     const eventUid = event.uid || event.id.split('/').pop().replace(/^-/, '');
@@ -1268,11 +1292,19 @@ async function showEventModal(event) {
       }
       
       alert(userMessage);
+    } finally {
+      operationInProgress = false;
     }
   });
   
   // Save event handler
-  saveEventBtn?.addEventListener('click', async () => {
+  newSaveEventBtn.addEventListener('click', async () => {
+    if (operationInProgress) {
+      console.log('Save already in progress, ignoring click');
+      return;
+    }
+    
+    operationInProgress = true;
     const title = document.getElementById('eventTitle').value;
     const calendarId = document.getElementById('eventCalendar').value;
     const start = document.getElementById('eventStart').value;
@@ -1294,18 +1326,11 @@ async function showEventModal(event) {
       return;
     }
     
-    // Build metadata YAML block (matching desktop format)
+    // Build metadata object (send as separate field, not embedded in description)
     const meta = {};
     if (orderNumber) meta.orderNumber = orderNumber;
     if (ticketLink) meta.ticketLink = ticketLink;
     if (systemType) meta.systemType = systemType;
-    
-    // Build description with YAML fence (if there's metadata)
-    let fullDescription = description || '';
-    if (Object.keys(meta).length > 0) {
-      const yamlLines = Object.entries(meta).map(([key, value]) => `${key}: ${value}`).join('\n');
-      fullDescription = (fullDescription ? fullDescription + '\n\n' : '') + '\n```yaml\n' + yamlLines + '\n```\n';
-    }
     
     // Check if calendar changed - if so, we need to trigger a MOVE operation
     const originalCalendarId = event.group;
@@ -1323,16 +1348,18 @@ async function showEventModal(event) {
     
     // Use event.uid if available, otherwise extract from id and remove leading hyphen
     const eventUid = event.uid || event.id.split('/').pop().replace(/^-/, '');
-    console.log('Updating event with UID:', eventUid, 'description:', fullDescription);
+    console.log('Updating event with UID:', eventUid, 'meta:', meta);
     
     try {
-      // Build request body
+      // Build request body - send description and meta separately
+      // Backend will combine them properly
       const requestBody = {
         summary: title,
         start: start,
         end: end,
-        description: fullDescription,
-        location: location || ''
+        description: description || '', // Plain description without YAML
+        location: location || '',
+        meta: Object.keys(meta).length > 0 ? meta : undefined // Send meta as separate field
       };
       
       // Add targetCalendarUrl if calendar changed (triggers MOVE operation)
@@ -1433,6 +1460,8 @@ async function showEventModal(event) {
       }
       
       alert(userMessage);
+    } finally {
+      operationInProgress = false;
     }
   });
 }

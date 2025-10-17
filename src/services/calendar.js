@@ -916,14 +916,44 @@ export class CalendarCache {
       calendar: event.calendarUrl
     });
 
-    // 2. Update the event data
+    // 2. Handle metadata properly
+    // If updateData contains description, check if it has embedded YAML
+    // If it does, extract it to meta field. Otherwise, use provided meta.
+    let cleanDescription = updateData.description;
+    let metaToUse = updateData.meta;
+    
+    if (updateData.description) {
+      const parsed = this.extractYaml(updateData.description);
+      cleanDescription = parsed.text;
+      
+      // If YAML was found in description, use it (unless explicit meta provided)
+      if (parsed.meta && !updateData.meta) {
+        metaToUse = parsed.meta;
+        console.log(`[updateEvent] Extracted metadata from description:`, metaToUse);
+      }
+    }
+    
+    // If no new metadata provided, preserve existing metadata
+    if (!metaToUse && event.meta) {
+      metaToUse = event.meta;
+      console.log(`[updateEvent] Preserving existing metadata:`, metaToUse);
+    }
+
+    // 3. Update the event data
     const updatedEvent = {
       ...event,
       ...updateData,
+      description: cleanDescription !== undefined ? cleanDescription : event.description,
+      meta: metaToUse,
       updatedAt: new Date().toISOString()
     };
 
-    console.log(`[updateEvent] Updated event data:`, updatedEvent);
+    console.log(`[updateEvent] Updated event data:`, {
+      summary: updatedEvent.summary,
+      description: updatedEvent.description,
+      meta: updatedEvent.meta,
+      location: updatedEvent.location
+    });
 
     // 3. Get the calendar client for this event's calendar
     const calendarUrl = event.calendarUrl || event.calendar;
@@ -1124,14 +1154,6 @@ export class CalendarCache {
         console.error(`[updateEvent] Error updating event:`, error);
         throw new Error(`Failed to update event: ${error.message}`);
       }
-      
-      // 8. Invalidate the cache for this calendar
-      const cacheKey = `calendar:${event.calendar}`;
-      this.cache.del(cacheKey);
-      console.log(`[updateEvent] Invalidated cache for ${cacheKey}`);
-
-      // 9. Return the updated event
-      return updatedEvent;
     } catch (error) {
       console.error(`[updateEvent] Error updating event ${uid}:`, error);
       throw new Error(`Failed to update event: ${error.message}`);
