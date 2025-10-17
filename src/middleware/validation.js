@@ -39,6 +39,7 @@ export const validate = (req, res, next) => {
  * - description: max 5000 characters (optional)
  * - location: max 500 characters (optional)
  * - start/end: ISO8601 date format (optional)
+ * - meta: structured metadata object with whitelisted fields (optional)
  * 
  * @type {import('express-validator').ValidationChain[]}
  */
@@ -48,6 +49,13 @@ export const eventValidation = [
   body('location').optional().trim().isLength({ max: 500 }).withMessage('Location must be max 500 characters'),
   body('start').optional().isISO8601().withMessage('Start must be a valid ISO date'),
   body('end').optional().isISO8601().withMessage('End must be a valid ISO date'),
+  
+  // Metadata validation - whitelisted fields only
+  body('meta').optional().isObject().withMessage('Metadata must be an object'),
+  body('meta.orderNumber').optional().trim().isLength({ max: 100 }).withMessage('Order number must be max 100 characters'),
+  body('meta.ticketLink').optional().trim().isURL().withMessage('Ticket link must be a valid URL'),
+  body('meta.systemType').optional().trim().isLength({ max: 200 }).withMessage('System type must be max 200 characters'),
+  body('meta.notes').optional().trim().isLength({ max: 5000 }).withMessage('Notes must be max 5000 characters'),
 ];
 
 /**

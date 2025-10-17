@@ -8,3 +8,4 @@
  */
 export { isValidDate } from './date.js';
 export { escapeHtml } from './html.js';
+export { formatError, formatErrorResponse, isClientSafeError } from './error.js';
