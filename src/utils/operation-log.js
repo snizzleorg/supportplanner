@@ -1,6 +1,11 @@
 /**
  * Operation logging utility for audit trail
- * Logs all calendar mutations with timestamp, user, and operation details
+ * 
+ * Logs all calendar mutations (CREATE, UPDATE, DELETE, MOVE) with timestamp,
+ * user information, and operation details. Includes automatic log rotation
+ * when file size exceeds 10MB.
+ * 
+ * @module utils/operation-log
  */
 
 import fs from 'fs/promises';
@@ -19,6 +24,13 @@ const MAX_LOG_SIZE = 10 * 1024 * 1024;
 
 /**
  * Ensure log directory exists
+ * 
+ * Creates the logs directory if it doesn't exist.
+ * Non-blocking - logs error but doesn't throw.
+ * 
+ * @private
+ * @async
+ * @returns {Promise<void>}
  */
 async function ensureLogDir() {
   try {
@@ -30,6 +42,13 @@ async function ensureLogDir() {
 
 /**
  * Rotate log file if it exceeds max size
+ * 
+ * Renames current log file with timestamp if it exceeds MAX_LOG_SIZE (10MB).
+ * Non-blocking - logs error but doesn't throw.
+ * 
+ * @private
+ * @async
+ * @returns {Promise<void>}
  */
 async function rotateLogIfNeeded() {
   try {
