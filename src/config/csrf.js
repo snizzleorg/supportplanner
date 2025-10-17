@@ -24,16 +24,25 @@ import { doubleCsrf } from 'csrf-csrf';
  * 
  * @type {Object}
  */
+// For development: Always use non-secure cookies since we're on localhost HTTP
+// In true production with HTTPS, you would want secure: true and __Host- prefix
+const isHttps = process.env.USE_HTTPS === 'true';
+
+console.log('[CSRF Config] NODE_ENV:', process.env.NODE_ENV);
+console.log('[CSRF Config] USE_HTTPS:', process.env.USE_HTTPS);
+console.log('[CSRF Config] Cookie name:', isHttps ? '__Host-psifi.x-csrf-token' : 'psifi.x-csrf-token');
+console.log('[CSRF Config] Secure flag:', isHttps);
+
 export const {
   generateToken,      // Generate new CSRF token
   doubleCsrfProtection, // Middleware to validate CSRF token
 } = doubleCsrf({
   getSecret: () => process.env.CSRF_SECRET || 'default-csrf-secret-change-in-production',
-  cookieName: process.env.NODE_ENV === 'production' ? '__Host-psifi.x-csrf-token' : 'psifi.x-csrf-token',
+  cookieName: isHttps ? '__Host-psifi.x-csrf-token' : 'psifi.x-csrf-token',
   cookieOptions: {
     httpOnly: true,
     sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production', // Only require HTTPS in production
+    secure: isHttps, // Only require HTTPS when USE_HTTPS=true
     path: '/',
   },
   size: 64, // Token size in bytes
