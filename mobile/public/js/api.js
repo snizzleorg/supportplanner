@@ -152,6 +152,9 @@ async function retryWithBackoff(fn, options = {}) {
  * @returns {Promise<Response>} Fetch response
  */
 export async function fetchWithRetry(url, options = {}, retryOptions = {}) {
+  // Always include credentials for cookies (session, CSRF)
+  options.credentials = options.credentials || 'include';
+  
   // Add CSRF token to state-changing requests
   if (requiresCsrfToken(options.method)) {
     const token = await getCsrfToken();
@@ -233,7 +236,9 @@ export async function loadData() {
     console.log('Loading calendars...');
     
     // Fetch calendars
-    const calRes = await fetch(`${API_BASE}/api/calendars`);
+    const calRes = await fetch(`${API_BASE}/api/calendars`, {
+      credentials: 'include' // Required for session cookies
+    });
     if (!calRes.ok) throw new Error(`Calendar fetch failed: ${calRes.status}`);
     
     const calData = await calRes.json();
@@ -258,6 +263,7 @@ export async function loadData() {
     const evtRes = await fetch(`${API_BASE}/api/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // Required for CSRF cookies
       body: JSON.stringify({ calendarUrls, from: fromStr, to: toStr })
     });
     

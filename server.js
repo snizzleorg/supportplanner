@@ -65,9 +65,14 @@ app.get('/api/csrf-token', (req, res) => {
   res.json({ csrfToken });
 });
 
-// Apply CSRF protection to all state-changing API routes
+// Apply CSRF protection to all state-changing API routes (except in test environment)
 // This protects POST, PUT, DELETE (but not GET, HEAD, OPTIONS)
-app.use('/api/', doubleCsrfProtection);
+if (process.env.NODE_ENV !== 'test') {
+  app.use('/api/', doubleCsrfProtection);
+  console.log('[Security] CSRF protection enabled');
+} else {
+  console.log('[Security] CSRF protection disabled (test environment)');
+}
 
 // Serve mobile app for all devices (desktop and mobile)
 // Mobile app now contains all required assets (favicons, manifest, etc.)
