@@ -3,6 +3,7 @@
  * 
  * Handles all API calls with retry logic and error handling.
  * Provides functions for fetching calendars, events, and holidays.
+ * Includes CSRF token management for security.
  * 
  * @module api
  */
@@ -17,6 +18,63 @@ import {
   setEvents,
   setHolidays
 } from './state.js';
+
+// ============================================
+// CSRF TOKEN MANAGEMENT
+// ============================================
+
+/**
+ * Store for CSRF token
+ * @type {string|null}
+ */
+let csrfToken = null;
+
+/**
+ * Fetch CSRF token from server
+ * Called automatically before first state-changing request
+ * @returns {Promise<string>} CSRF token
+ */
+async function fetchCsrfToken() {
+  try {
+    const response = await fetch(`${API_BASE}/csrf-token`, {
+      method: 'GET',
+      credentials: 'include', // Include cookies
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch CSRF token: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    csrfToken = data.csrfToken;
+    console.log('[CSRF] Token fetched successfully');
+    return csrfToken;
+  } catch (error) {
+    console.error('[CSRF] Error fetching token:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get CSRF token, fetching if necessary
+ * @returns {Promise<string>} CSRF token
+ */
+async function getCsrfToken() {
+  if (!csrfToken) {
+    await fetchCsrfToken();
+  }
+  return csrfToken;
+}
+
+/**
+ * Check if request method requires CSRF token
+ * @param {string} method - HTTP method
+ * @returns {boolean} True if CSRF token required
+ */
+function requiresCsrfToken(method) {
+  const stateMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
+  return stateMethods.includes(method?.toUpperCase());
+}
 
 // ============================================
 // RETRY UTILITIES
@@ -87,15 +145,42 @@ async function retryWithBackoff(fn, options = {}) {
 }
 
 /**
- * Create a retry-enabled fetch wrapper
+ * Create a retry-enabled fetch wrapper with CSRF protection
  * @param {string} url - URL to fetch
  * @param {Object} options - Fetch options
  * @param {Object} retryOptions - Retry options
  * @returns {Promise<Response>} Fetch response
  */
 export async function fetchWithRetry(url, options = {}, retryOptions = {}) {
+  // Add CSRF token to state-changing requests
+  if (requiresCsrfToken(options.method)) {
+    const token = await getCsrfToken();
+    options.headers = {
+      ...options.headers,
+      'x-csrf-token': token,
+    };
+  }
+  
   return retryWithBackoff(async () => {
     const response = await fetch(url, options);
+    
+    // If CSRF token is invalid (403), refresh token and retry once
+    if (response.status === 403 && requiresCsrfToken(options.method)) {
+      console.log('[CSRF] Token may be invalid, refreshing...');
+      csrfToken = null; // Clear cached token
+      const newToken = await getCsrfToken();
+      options.headers['x-csrf-token'] = newToken;
+      
+      // Retry with new token
+      const retryResponse = await fetch(url, options);
+      if (!retryResponse.ok) {
+        const error = new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+        error.status = retryResponse.status;
+        throw error;
+      }
+      return retryResponse;
+    }
+    
     if (!response.ok) {
       const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
       error.status = response.status;
