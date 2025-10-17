@@ -57,6 +57,9 @@ export class CalendarCache {
     this.isInitialized = false;
     this.refreshInterval = null;
     this.refreshInProgress = false;
+    
+    // Track ongoing update operations to prevent race conditions
+    this.updateLocks = new Map(); // Map<eventUid, Promise>
   }
 
   /**
@@ -912,9 +915,42 @@ export class CalendarCache {
       throw new Error('Event UID is required');
     }
 
+    // RACE CONDITION PROTECTION: Wait for any in-flight updates to complete
+    if (this.updateLocks.has(uid)) {
+      console.log(`[updateEvent] Waiting for in-flight update to ${uid} to complete...`);
+      try {
+        await this.updateLocks.get(uid);
+        console.log(`[updateEvent] Previous update completed, proceeding with new update`);
+      } catch (error) {
+        console.log(`[updateEvent] Previous update failed, proceeding with new update`);
+      }
+    }
+
     console.log(`[updateEvent] Starting update for event ${uid}`);
     console.log(`[updateEvent] Update data:`, JSON.stringify(updateData, null, 2));
 
+    // Create a promise for this update operation
+    const updatePromise = this._performUpdate(uid, updateData, authHeader);
+    
+    // Register the lock
+    this.updateLocks.set(uid, updatePromise);
+
+    try {
+      const result = await updatePromise;
+      return result;
+    } finally {
+      // Always clean up the lock
+      this.updateLocks.delete(uid);
+      console.log(`[updateEvent] Released lock for ${uid}`);
+    }
+  }
+
+  /**
+   * Internal method that performs the actual update
+   * Separated to enable locking mechanism
+   * @private
+   */
+  async _performUpdate(uid, updateData, authHeader) {
     // 1. Get the current event data
     let event = await this.getEvent(uid);
     if (!event) {
