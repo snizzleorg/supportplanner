@@ -807,3 +807,132 @@ body {
     opacity: 0.8;
 }
 
+/* Help Dropdown Overlay */
+.help-overlay {
+    position: fixed;
+    top: max(56px, calc(var(--safe-area-top) + 56px));
+    left: 12px;
+    width: min(90vw, 320px);
+    max-height: 70vh;
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 150;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.help-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+}
+
+.help-overlay-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: #f9f9f9;
+}
+
+.help-overlay-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.help-overlay-body {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* System Expert List */
+.system-expert-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.system-expert-item {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.system-expert-item:last-child {
+    border-bottom: none;
+}
+
+.system-expert-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-color);
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background 0.2s;
+    display: inline-block;
+}
+
+.system-expert-name:hover {
+    background: #f0f0f0;
+}
+
+.system-expert-name:active {
+    background: #e5e5e5;
+}
+
+.expert-list {
+    list-style: none;
+    padding: 8px 12px 0 28px;
+    margin: 0;
+    display: block; /* Always visible since items expand by default */
+}
+
+.system-expert-item.expanded .expert-list {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+
+.subsystems-container {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.expert-list li {
+    position: relative;
+    padding-left: 16px;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.expert-list li:last-child {
+    margin-bottom: 0;
+}
+
+.expert-list li::before {
+    content: "–";
+    position: absolute;
+    left: 0;
+    color: #8e8e93;
+}
+

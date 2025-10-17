@@ -26,6 +26,7 @@
     <div class="app-bar">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;">
             <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                <button class="icon-btn" id="helpBtn" title="System Experts">❓</button>
                 <button class="icon-btn" id="searchBtn" title="Search">🔍</button>
                 <input type="text" id="searchInput" class="search-input" placeholder="Search..." style="display: none; flex: 1; max-width: 300px;">
             </div>
@@ -87,6 +88,17 @@
                 <button class="btn btn-secondary" id="closeModalBtn">Cancel</button>
                 <button class="btn btn-primary" id="saveEventBtn">Save</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Help Dropdown Overlay -->
+    <div class="help-overlay" id="helpOverlay">
+        <div class="help-overlay-header">
+            <h3>System Experts</h3>
+            <button class="icon-btn" id="closeHelpOverlay">✕</button>
+        </div>
+        <div class="help-overlay-body" id="helpOverlayBody">
+            <!-- System experts will be populated here -->
         </div>
     </div>
 
