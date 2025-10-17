@@ -184,6 +184,105 @@ async function init() {
     render();
   });
   
+  // Setup help overlay dropdown
+  const helpBtn = document.getElementById('helpBtn');
+  const helpOverlay = document.getElementById('helpOverlay');
+  const closeHelpOverlay = document.getElementById('closeHelpOverlay');
+  
+  helpBtn?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    
+    if (!helpOverlay) {
+      console.error('Help overlay element not found');
+      return;
+    }
+    
+    // Toggle overlay
+    const isActive = helpOverlay.classList.contains('active');
+    
+    if (isActive) {
+      helpOverlay.classList.remove('active');
+      return;
+    }
+    
+    try {
+      // Load system-skills data
+      const helpOverlayBody = document.getElementById('helpOverlayBody');
+      
+      if (!helpOverlayBody) {
+        console.error('Help overlay body element not found');
+        return;
+      }
+      
+      // Always reload to pick up any JSON changes
+      const response = await fetch('/data/system-skills.json?_=' + Date.now());
+      const data = await response.json();
+      
+      // Recursive function to render systems and subsystems
+      const renderSystem = (system, level = 0) => {
+        const hasExperts = system.experts && system.experts.length > 0;
+        const hasSubsystems = system.subsystems && system.subsystems.length > 0;
+        
+        let html = `<div class="system-expert-item expanded" data-level="${level}">`;
+        html += `<div class="system-expert-name" style="padding-left: ${level * 12}px">${system.name}</div>`;
+        
+        if (hasExperts) {
+          html += `<ul class="expert-list" style="padding-left: ${(level * 12) + 28}px">`;
+          html += system.experts.map(expert => `<li>${expert}</li>`).join('');
+          html += `</ul>`;
+        }
+        
+        if (hasSubsystems) {
+          html += `<div class="subsystems-container" style="padding-left: ${12}px">`;
+          html += system.subsystems.map(subsystem => renderSystem(subsystem, level + 1)).join('');
+          html += `</div>`;
+        }
+        
+        html += `</div>`;
+        return html;
+      };
+      
+      if (data.systems && data.systems.length > 0) {
+        const html = `
+          <div class="system-expert-list">
+            ${data.systems.map(system => renderSystem(system, 0)).join('')}
+          </div>
+        `;
+        helpOverlayBody.innerHTML = html;
+        
+        // Add click handlers to toggle expert list and subsystems
+        const systemNames = helpOverlayBody.querySelectorAll('.system-expert-name');
+        systemNames.forEach(name => {
+          name.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const item = name.closest('.system-expert-item');
+            item?.classList.toggle('expanded');
+          });
+        });
+      }
+      
+      // Show overlay
+      helpOverlay.classList.add('active');
+    } catch (error) {
+      console.error('Failed to load system experts:', error);
+    }
+  });
+  
+  // Close overlay handler
+  closeHelpOverlay?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    helpOverlay?.classList.remove('active');
+  });
+  
+  // Close overlay when clicking outside
+  document.addEventListener('click', (e) => {
+    if (helpOverlay && helpOverlay.classList.contains('active') && 
+        !helpOverlay.contains(e.target) && 
+        !helpBtn.contains(e.target)) {
+      helpOverlay.classList.remove('active');
+    }
+  });
+  
   // Show loading overlay
   const loadingOverlay = document.getElementById('loadingOverlay');
   if (loadingOverlay) loadingOverlay.classList.remove('hidden');
