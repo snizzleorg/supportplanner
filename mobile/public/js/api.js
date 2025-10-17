@@ -260,14 +260,13 @@ export async function loadData() {
     console.log('Loading events...');
     console.log('Date range:', fromStr, 'to', toStr);
     console.log('Calendar URLs count:', calendarUrls.length);
-    const evtRes = await fetch(`${API_BASE}/api/events`, {
+    
+    // Use fetchWithRetry which automatically adds CSRF token
+    const evtRes = await fetchWithRetry(`${API_BASE}/api/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // Required for CSRF cookies
       body: JSON.stringify({ calendarUrls, from: fromStr, to: toStr })
     });
-    
-    if (!evtRes.ok) throw new Error(`Events fetch failed: ${evtRes.status}`);
     
     const evtData = await evtRes.json();
     // Process events to extract UID from the id field

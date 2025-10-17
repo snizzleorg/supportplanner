@@ -296,9 +296,8 @@ async function init() {
   // Force backend to refresh cache from CalDAV on page load
   try {
     console.log('Refreshing CalDAV cache...');
-    const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, { 
-      method: 'POST',
-      credentials: 'include'
+    const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, { 
+      method: 'POST'
     });
     console.log('Initial refresh response:', refreshResponse.status);
   } catch (e) {
@@ -801,9 +800,8 @@ async function showCreateEventModal(calendar, clickedDate) {
       if (loadingText) loadingText.textContent = 'Updating calendar...';
       console.log('Calling refresh-caldav endpoint...');
       try {
-        const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, {
-          method: 'POST',
-          credentials: 'include'
+        const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
+          method: 'POST'
         });
         console.log('Refresh response:', refreshResponse.status);
       } catch (refreshError) {
@@ -1272,9 +1270,8 @@ async function showEventModal(event) {
         // Trigger CalDAV cache refresh
         if (loadingText) loadingText.textContent = 'Refreshing calendar...';
         try {
-          const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, {
-            method: 'POST',
-            credentials: 'include'
+          const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
+            method: 'POST'
           });
           console.log('Refresh response:', refreshResponse.status);
         } catch (refreshError) {
@@ -1485,9 +1482,8 @@ async function showEventModal(event) {
         // Trigger CalDAV cache refresh
         if (loadingText) loadingText.textContent = 'Refreshing calendar...';
         try {
-          const refreshResponse = await fetch(`${API_BASE}/api/refresh-caldav`, {
-            method: 'POST',
-            credentials: 'include'
+          const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
+            method: 'POST'
           });
           console.log('Refresh response:', refreshResponse.status);
         } catch (refreshError) {
