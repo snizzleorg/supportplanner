@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.5.1] - 2025-10-17 🔒 SECURITY PATCH
+
+### Security Fixes
+- **CRITICAL: XSS Protection**: Implemented comprehensive HTML escaping across mobile frontend
+  - Fixed stored XSS in event titles, descriptions, and locations
+  - Fixed XSS in metadata fields (order numbers, ticket links, system types)
+  - Fixed XSS in calendar names and system experts data
+  - Fixed XSS in conflict resolution modal
+  - All `.innerHTML` usage now properly sanitized (100% coverage)
+
+### Added
+- **Security Module**: Created `mobile/public/js/security.js` with HTML escaping utilities
+  - `escapeHtml()` - Escape HTML special characters
+  - `sanitizeObject()` - Recursively sanitize object properties
+  - `setTextContent()` - Safe text insertion alternative
+- **Security Documentation**: Comprehensive docs in `docs/SECURITY.md`
+  - Complete security architecture documentation
+  - Attack scenarios and mitigations
+  - Testing procedures and code review guidelines
+- **Testing Report**: Complete test results in `SECURITY_TESTING.md`
+  - 7 attack scenarios tested and blocked
+  - All 105 backend tests passing
+  - Zero performance impact verified
+
+### Changed
+- **UX Improvement**: System Experts button icon changed from ❓ to 🧙 for better visual indication
+
+### Security Impact
+- **Before**: HIGH RISK - Multiple XSS attack vectors exposed
+- **After**: PROTECTED - All user-generated content properly escaped
+- **Recommendation**: Deploy immediately to production
+
 ## [0.5.0] - 2025-10-17
 
 ### Fixed
