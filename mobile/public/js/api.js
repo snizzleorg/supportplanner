@@ -36,7 +36,7 @@ let csrfToken = null;
  */
 async function fetchCsrfToken() {
   try {
-    const response = await fetch(`${API_BASE}/csrf-token`, {
+    const response = await fetch(`${API_BASE}/api/csrf-token`, {
       method: 'GET',
       credentials: 'include', // Include cookies
     });
