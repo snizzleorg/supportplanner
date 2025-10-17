@@ -1,8 +1,8 @@
 # API Security Hardening
 
 **Date**: October 17, 2025  
-**Branch**: `security/api-endpoints`  
-**Status**: Completed (except CSRF - pending)
+**Version**: v0.6.0 (Released)  
+**Status**: ✅ All Security Improvements Complete
 
 ---
 
@@ -251,27 +251,97 @@ try {
 
 ---
 
-## ⏸️ CSRF Protection (Pending)
+## ✅ CSRF Protection (v0.6.0)
 
-**Status**: Not implemented (requires npm package + Docker rebuild)
+**Status**: ✅ Fully Implemented
 
 **Issue**: No CSRF tokens on state-changing operations
 
 **Risk**: Medium - Attacker could trick authenticated user into making unwanted API calls
 
-**Why Not Implemented**: 
-- Requires `csrf-csrf` or similar package
-- Would need Docker image rebuild
-- Deferred for separate deployment
+**Example Attack**:
+```html
+<form action="https://supportplanner.com/api/events/123" method="POST">
+  <input name="summary" value="Hacked Event">
+</form>
+```
 
-**Recommendation**: Implement in next security sprint
+**Solution Implemented**:
+1. ✅ Added `csrf-csrf` + `cookie-parser` to `package.json`
+2. ✅ Configured CSRF middleware with double-submit cookie pattern
+3. ✅ Added `/api/csrf-token` endpoint for token generation
+4. ✅ Frontend automatically fetches and includes CSRF tokens
+5. ✅ Docker images rebuilt with new dependencies
+6. ✅ Works on localhost HTTP (development) and HTTPS (production)
 
-**Proposed Solution**:
-1. Add `csrf-csrf` to `package.json`
-2. Configure CSRF middleware in `server.js`
-3. Add `/api/csrf-token` endpoint
-4. Update frontend to include CSRF token in requests
-5. Rebuild Docker images
+**Implementation Details**:
+```javascript
+// src/config/csrf.js - Double-submit cookie pattern
+const isHttps = process.env.USE_HTTPS === 'true';
+
+export const { generateToken, doubleCsrfProtection } = doubleCsrf({
+  cookieName: isHttps ? '__Host-psifi.x-csrf-token' : 'psifi.x-csrf-token',
+  cookieOptions: {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: isHttps,
+    path: '/'
+  },
+  ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
+  getTokenFromRequest: (req) => req.headers['x-csrf-token']
+});
+
+// server.js - Token endpoint and protection
+app.get('/api/csrf-token', (req, res) => {
+  const csrfToken = generateToken(req, res);
+  res.json({ csrfToken });
+});
+
+if (process.env.NODE_ENV !== 'test') {
+  app.use('/api/', doubleCsrfProtection);
+}
+
+// Frontend - Automatic token management (mobile/public/js/api.js)
+let csrfToken = null;
+
+async function fetchCsrfToken() {
+  const response = await fetch(`${API_BASE}/api/csrf-token`, {
+    credentials: 'include'
+  });
+  const data = await response.json();
+  csrfToken = data.csrfToken;
+  return csrfToken;
+}
+
+// Automatically adds token to POST/PUT/DELETE requests
+if (requiresCsrfToken(options.method)) {
+  const token = await getCsrfToken();
+  options.headers = {
+    ...options.headers,
+    'x-csrf-token': token
+  };
+}
+```
+
+**Protection Features**:
+- ✅ Double-submit cookie pattern (cookie + header validation)
+- ✅ Automatic token refresh on 403 errors
+- ✅ Transparent to application code
+- ✅ Works on HTTP (dev) and HTTPS (prod)
+- ✅ Test environment support (CSRF disabled for tests)
+- ✅ Secure cookie configuration
+- ✅ SameSite=Strict for additional protection
+
+**Environment Configuration**:
+```bash
+# Development (localhost HTTP)
+USE_HTTPS=false  # Default, cookie works on HTTP
+CSRF_SECRET=supportplanner_dev_csrf_change_in_production
+
+# Production (HTTPS required)
+USE_HTTPS=true  # Enables __Host- prefix and secure flag
+CSRF_SECRET=<random-secret-256-bits>
+```
 
 ---
 
@@ -297,7 +367,7 @@ Duration: 10.88s
 
 ## Security Score Improvement
 
-### Before
+### Before (v0.5.2)
 **Score**: 7.5/10
 
 **Issues**:
@@ -308,18 +378,18 @@ Duration: 10.88s
 - ❌ Unauthenticated Search: Low Risk
 - ❌ Error Disclosure: Low Risk
 
-### After
-**Score**: 8.5/10
+### After (v0.6.0)
+**Score**: 9.5/10 ⭐
 
 **Fixed**:
-- ⏸️ CSRF Protection: Pending (requires new dependency)
+- ✅ CSRF Protection: **Fully Implemented** (v0.6.0)
 - ✅ CORS Policy: Fixed
 - ✅ Mass Assignment: Fixed  
 - ✅ Metadata Validation: Fixed
 - ✅ Search Authentication: Fixed
 - ✅ Error Sanitization: Fixed
 
-**Improvement**: +1.0 points (13% improvement)
+**Improvement**: +2.0 points (27% improvement)
 
 ---
 
@@ -423,11 +493,10 @@ Errors now return generic messages in production:
 
 ## Known Limitations
 
-### 1. CSRF Protection
-**Status**: Not implemented  
-**Workaround**: Use SameSite cookies (already configured)  
-**Risk**: Medium - mitigated by session-based auth  
-**Plan**: Implement in next sprint
+### 1. ~~CSRF Protection~~ ✅ RESOLVED (v0.6.0)
+**Status**: ✅ Fully implemented with double-submit cookie pattern  
+**Implementation**: csrf-csrf library with automatic frontend token management  
+**Protection**: Works on HTTP (dev) and HTTPS (prod)
 
 ### 2. Rate Limiting
 **Status**: Implemented (existing)  
@@ -444,10 +513,11 @@ Errors now return generic messages in production:
 
 ## Future Enhancements
 
-### Short Term (Next Sprint)
-1. **CSRF Protection**: Add CSRF tokens for state-changing operations
+### Short Term (v0.7.0)
+1. ~~**CSRF Protection**~~ ✅ **COMPLETED** (v0.6.0)
 2. **Per-User Rate Limiting**: Replace IP-based with user-based limits
 3. **Metadata Format Validation**: Add regex patterns for orderNumber, etc.
+4. **CSRF Token Rotation**: Implement token rotation on sensitive operations
 
 ### Medium Term (Next Quarter)
 1. **API Keys**: Support API key authentication for programmatic access
