@@ -64,6 +64,9 @@ import {
   withTimeout
 } from './js/api.js';
 
+// Import audit history functions
+import { initAuditModal } from './js/audit.js';
+
 console.log('📱 Mobile Timeline v1760277100 loaded');
 
 // Retry utilities and API functions imported from api.js
@@ -288,6 +291,12 @@ async function init() {
       helpOverlay.classList.remove('active');
     }
   });
+  
+  // Setup audit history modal
+  initAuditModal();
+  
+  // Update history badge with recent changes count
+  updateHistoryBadge();
   
   // Show loading overlay
   const loadingOverlay = document.getElementById('loadingOverlay');
@@ -2062,7 +2071,50 @@ function setupKeyboardShortcuts() {
   console.log('[Keyboard] Shortcuts enabled: +/- or ↑/↓ (zoom ±10), ←/→ (scroll), Home (today), End (end)');
 }
 
-// Start
+/**
+ * Update the history badge with count of recent changes
+ * Shows changes from the last 24 hours
+ * @async
+ */
+async function updateHistoryBadge() {
+  try {
+    // Calculate timestamp for 24 hours ago
+    const oneDayAgo = new Date();
+    oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+    const since = oneDayAgo.toISOString();
+    
+    // Fetch recent audit history
+    const response = await fetch(`${API_BASE}/api/audit/recent?since=${since}&limit=100`);
+    if (!response.ok) {
+      console.warn('[History Badge] Failed to fetch audit history:', response.status);
+      return;
+    }
+    
+    const data = await response.json();
+    const count = data.count || 0;
+    
+    // Update badge
+    const badge = document.getElementById('historyBadge');
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count.toString();
+        badge.style.display = 'block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+    
+    console.log(`[History Badge] Updated: ${count} changes in last 24h`);
+  } catch (error) {
+    console.error('[History Badge] Error updating badge:', error);
+  }
+}
+
+// Expose functions globally for audit module
+window.loadData = loadData;
+window.updateHistoryBadge = updateHistoryBadge;
+
+// Start the application
 init().then(() => {
   // Start auto-refresh after initial load
   startAutoRefresh();

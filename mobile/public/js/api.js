@@ -56,10 +56,10 @@ async function fetchCsrfToken() {
 }
 
 /**
- * Get CSRF token, fetching if necessary
+ * Get CSRF token (fetch if not cached)
  * @returns {Promise<string>} CSRF token
  */
-async function getCsrfToken() {
+export async function getCsrfToken() {
   if (!csrfToken) {
     await fetchCsrfToken();
   }
