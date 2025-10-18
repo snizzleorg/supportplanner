@@ -123,9 +123,20 @@ router.post('/undo/:uid', requireRole('editor'), uidValidation, validate, async 
       case 'DELETE':
         // Restore deleted event by recreating it
         console.log(`[audit] Restoring deleted event ${uid}`);
+        console.log(`[audit] Event state:`, JSON.stringify(state, null, 2));
+        
+        // Validate required fields
+        const calUrl = state.calendar || state.calendarUrl;
+        if (!calUrl) {
+          throw new Error('Calendar URL missing in audit state');
+        }
+        if (!state.start || !state.end) {
+          throw new Error(`Event dates missing in audit state. State: ${JSON.stringify(state)}`);
+        }
+        
         result = await calendarCache.createAllDayEvent({
-          calendarUrl: state.calendar || state.calendarUrl,
-          summary: state.summary,
+          calendarUrl: calUrl,
+          summary: state.summary || 'Restored Event',
           description: state.description || '',
           location: state.location || '',
           start: state.start,

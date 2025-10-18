@@ -943,13 +943,29 @@ export class CalendarCache {
     
     // Log to audit history (non-critical)
     try {
+      // Ensure event state has all required fields for restoration
+      const eventState = {
+        uid: event.uid || uid,
+        summary: event.summary || event.content || event.title,
+        description: event.description || event.descriptionRaw || '',
+        location: event.location || '',
+        start: event.start,
+        end: event.end,
+        allDay: event.allDay,
+        calendar: calendarUrl,
+        calendarUrl: calendarUrl,
+        meta: event.meta
+      };
+      
+      console.log('[deleteEvent] Captured event state for audit:', eventState);
+      
       await auditHistory.logOperation({
         eventUid: uid,
         operation: 'DELETE',
         userEmail: user?.email,
         userName: user?.name,
         calendarUrl,
-        beforeState: event, // Capture state before deletion
+        beforeState: eventState, // Capture complete state before deletion
         afterState: null, // No state after deletion
         status: 'SUCCESS'
       });
@@ -1092,10 +1108,13 @@ export class CalendarCache {
       }
     }
     
-    // If no new metadata provided, preserve existing metadata
-    if (!metaToUse && event.meta) {
+    // If no new metadata provided (and meta wasn't explicitly set to null), preserve existing metadata
+    if (metaToUse === undefined && event.meta) {
       metaToUse = event.meta;
       console.log(`[updateEvent] Preserving existing metadata:`, metaToUse);
+    } else if (updateData.meta !== undefined) {
+      // Meta was explicitly provided (even if null), so use it
+      console.log(`[updateEvent] Using provided metadata:`, metaToUse);
     }
 
     // 3. Update the event data
