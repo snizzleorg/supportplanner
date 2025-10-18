@@ -6,6 +6,8 @@ services:
       - .env
     environment:
       - SKIP_SESSION_SECRET_CHECK=true
+      # Uncomment for E2E tests:
+      # - AUTH_ENABLED=false
     ports:
       - "5175:5173"
     volumes:
@@ -21,6 +23,14 @@ services:
       dockerfile: tests/backend/Dockerfile
     #platform: linux/arm64  # Use native architecture on Apple Silicon
     container_name: backend-tests
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=test
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - support-planner
     # No ports exposed; this is a one-shot runner
     restart: "no"
 
