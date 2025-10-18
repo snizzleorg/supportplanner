@@ -30,6 +30,10 @@ logs/
 # Local data
 public/dynamic-styles.css
 data/geocode-cache.json
+data/audit-history.db
+data/audit-history.db-journal
+data/audit-history.db-shm
+data/audit-history.db-wal
 
 # Misc
 *.local.*

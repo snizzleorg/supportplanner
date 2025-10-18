@@ -26,6 +26,7 @@ import { initializeAuth, deviceBasedStaticMiddleware } from './src/middleware/in
 
 // Import services
 import { calendarCache } from './src/services/index.js';
+import { auditHistory } from './src/services/audit-history.js';
 
 // Import routes
 import { registerRoutes } from './src/routes/index.js';
@@ -86,15 +87,25 @@ app.get('/event-types.json', (req, res) => {
 // Register all application routes
 registerRoutes(app);
 
-// Initialize the calendar cache
-calendarCache.initialize(NEXTCLOUD_URL, NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD)
-  .then(() => console.log('Calendar cache initialized successfully'))
-  .catch(err => console.error('Failed to initialize calendar cache:', err));
+// Initialize the calendar cache and audit history
+Promise.all([
+  calendarCache.initialize(NEXTCLOUD_URL, NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),
+  auditHistory.initialize()
+])
+  .then(() => {
+    console.log('Calendar cache initialized successfully');
+    console.log('Audit history database initialized successfully');
+  })
+  .catch(err => console.error('Failed to initialize services:', err));
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('Shutting down...');
-  calendarCache.stop();
+  await Promise.all([
+    calendarCache.stop(),
+    auditHistory.close()
+  ]);
+  console.log('Services closed successfully');
   process.exit(0);
 });
 

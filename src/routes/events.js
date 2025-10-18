@@ -43,6 +43,12 @@ router.post('/all-day', requireEditor, [
       });
     }
 
+    // Extract user info from session for audit logging
+    const user = req.session?.user ? {
+      email: req.session.user.email,
+      name: req.session.user.name
+    } : undefined;
+
     const result = await calendarCache.createAllDayEvent({
       calendarUrl,
       summary,
@@ -50,7 +56,8 @@ router.post('/all-day', requireEditor, [
       location: location || '',
       start,
       end,
-      meta
+      meta,
+      user
     });
 
     // Kick off a background refresh so subsequent reads include the new event
@@ -74,10 +81,21 @@ router.delete('/:uid', requireRole('editor'), uidValidation, validate, async (re
       return res.status(400).json({ success: false, error: 'Event UID is required' });
     }
 
-    const deleted = await calendarCache.deleteEvent(uid);
+    // Extract user info from session for audit logging
+    const user = req.session?.user ? {
+      email: req.session.user.email,
+      name: req.session.user.name
+    } : undefined;
+
+    const deleted = await calendarCache.deleteEvent(uid, user);
     if (!deleted) {
       return res.status(404).json({ success: false, error: 'Event not found or could not be deleted' });
     }
+
+    // Kick off a background refresh so subsequent reads reflect the deletion
+    calendarCache.refreshAllCalendars().catch(err => {
+      console.error('Background refresh after delete failed:', err);
+    });
 
     // Success
     res.json({ success: true });
@@ -396,14 +414,25 @@ router.put('/:uid', requireRole('editor'), uidValidation, eventValidation, valid
     // Get the authorization header for the calendar cache
     const authHeader = req.headers.authorization || '';
     
+    // Extract user info from session for audit logging
+    const user = req.session?.user ? {
+      email: req.session.user.email,
+      name: req.session.user.name
+    } : undefined;
+    
     // Update the event in the calendar cache
-    const updatedEvent = await calendarCache.updateEvent(uid, updateData, authHeader);
+    const updatedEvent = await calendarCache.updateEvent(uid, updateData, authHeader, user);
     
     if (!updatedEvent) {
       return res.status(404).json({ success: false, error: 'Event not found or update failed' });
     }
     
     console.log(`[updateEvent] Successfully updated event ${uid}`);
+    
+    // Kick off a background refresh so subsequent reads include the updated event
+    calendarCache.refreshAllCalendars().catch(err => {
+      console.error('Background refresh after update failed:', err);
+    });
     
     // Get the complete updated event data
     const completeEvent = await calendarCache.getEvent(uid);
@@ -492,6 +521,11 @@ router.post('/:uid/move', requireRole('editor'), async (req, res) => {
 
     // Move the event
     const movedEvent = await calendarCache.moveEvent(uid, targetCalendarUrl);
+    
+    // Kick off a background refresh so subsequent reads reflect the moved event
+    calendarCache.refreshAllCalendars().catch(err => {
+      console.error('Background refresh after move failed:', err);
+    });
     
     // In a real implementation, we would handle the actual move operation here
     // For now, we'll just return the simulated result
