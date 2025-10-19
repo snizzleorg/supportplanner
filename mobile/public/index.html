@@ -13,6 +13,9 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    
+    <!-- Material Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="manifest" href="/manifest.json">
     
     <!-- Leaflet CSS for maps -->
@@ -26,12 +29,16 @@
     <div class="app-bar">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;">
             <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-                <button class="icon-btn" id="helpBtn" title="System Experts">🧙</button>
+                <button class="icon-btn" id="helpBtn" title="System Experts">
+                    <span class="material-icons">groups</span>
+                </button>
                 <button class="icon-btn" id="historyBtn" title="Audit History" style="position: relative;">
-                    📜
+                    <span class="material-icons">restore</span>
                     <span id="historyBadge" class="history-badge" style="display: none;">0</span>
                 </button>
-                <button class="icon-btn" id="searchBtn" title="Search">🔍</button>
+                <button class="icon-btn" id="searchBtn" title="Search">
+                    <span class="material-icons">search</span>
+                </button>
                 <input type="text" id="searchInput" class="search-input" placeholder="Search..." style="display: none; flex: 1; max-width: 300px;">
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -131,7 +138,7 @@
     <div class="modal" id="auditModal">
         <div class="modal-content audit-modal-content">
             <div class="modal-header">
-                <h2>📜 Audit History</h2>
+                <h2><span class="material-icons" style="vertical-align: middle; margin-right: 8px;">restore</span>Audit History</h2>
                 <button class="icon-btn" id="closeAuditModal">✕</button>
             </div>
             <div class="modal-body" id="auditModalBody">

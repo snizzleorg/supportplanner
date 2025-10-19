@@ -57,6 +57,22 @@ body {
     background: rgba(0,0,0,0.05);
 }
 
+/* Material Icons Styling */
+.material-icons {
+    font-family: 'Material Icons';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 32px;
+    display: inline-block;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+    vertical-align: middle;
+}
+
 /* History Badge */
 .history-badge {
     position: absolute;

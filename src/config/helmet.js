@@ -16,10 +16,10 @@ import helmet from 'helmet';
  * 
  * CSP allows:
  * - Scripts: self, inline, CDNs (jsdelivr, unpkg)
- * - Styles: self, inline, unpkg
+ * - Styles: self, inline, unpkg, Google Fonts
  * - Images: self, data URLs, HTTPS, blobs
  * - Connections: self, OSM (maps/geocoding), CDNs, holidays API
- * - Fonts: self, data URLs
+ * - Fonts: self, data URLs, Google Fonts
  * 
  * @type {import('express').RequestHandler}
  */
@@ -29,7 +29,7 @@ export const helmetMiddleware = helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
       connectSrc: [
         "'self'",
@@ -39,7 +39,7 @@ export const helmetMiddleware = helmet({
         "https://unpkg.com",                    // CDN for libraries and source maps
         "https://date.nager.at",                // Holidays API
       ],
-      fontSrc: ["'self'", "data:"],
+      fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'none'"],
