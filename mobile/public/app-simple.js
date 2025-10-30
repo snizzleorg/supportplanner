@@ -1742,10 +1742,35 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
     const matchesCalendar = calendarName.includes(getSearchQuery());
     
     if (!matchesCalendar) {
-      // If calendar doesn't match, filter events by content
-      events = events.filter(e => 
-        e.content.toLowerCase().includes(getSearchQuery())
-      );
+      // If calendar doesn't match, filter events by content and metadata
+      events = events.filter(e => {
+        const query = getSearchQuery();
+        
+        // Search in basic event fields
+        const basicFields = [
+          e.content,
+          e.title,
+          e.description,
+          e.location
+        ].filter(Boolean);
+        
+        // Search in metadata fields
+        const meta = e.meta || {};
+        const metaFields = [
+          meta.orderNumber,
+          meta.systemType,
+          meta.ticketLink,
+          meta.notes
+        ].filter(Boolean);
+        
+        // Combine all searchable fields
+        const allFields = [...basicFields, ...metaFields];
+        
+        // Check if any field contains the search query
+        return allFields.some(field => 
+          String(field).toLowerCase().includes(query)
+        );
+      });
     }
     // If calendar matches, show all events from that calendar
   }
