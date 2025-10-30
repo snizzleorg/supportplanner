@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit History UI Mockup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        /* App Bar Mockup */
+        .app-bar {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .icon-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+            position: relative;
+        }
+        
+        .icon-btn:hover {
+            background: rgba(0,0,0,0.05);
+        }
+        
+        .badge {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            padding: 2px 5px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 800px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .modal-header h2 {
+            font-size: 20px;
+            color: #333;
+        }
+        
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        /* Filters */
+        .filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        /* Audit Entries */
+        .audit-entry {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .audit-entry:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-color: #3b82f6;
+        }
+        
+        .audit-entry.expanded {
+            border-color: #3b82f6;
+        }
+        
+        .entry-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .entry-operation {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .op-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .op-badge.create { background: #d1fae5; color: #065f46; }
+        .op-badge.update { background: #dbeafe; color: #1e40af; }
+        .op-badge.delete { background: #fee2e2; color: #991b1b; }
+        .op-badge.move { background: #fef3c7; color: #92400e; }
+        
+        .entry-time {
+            color: #666;
+            font-size: 13px;
+        }
+        
+        .undo-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        
+        .undo-btn:hover {
+            background: #2563eb;
+        }
+        
+        .entry-summary {
+            font-size: 15px;
+            margin-bottom: 4px;
+            color: #333;
+        }
+        
+        .entry-user {
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .change-arrow {
+            color: #3b82f6;
+            font-weight: bold;
+        }
+        
+        /* Expanded Details */
+        .entry-details {
+            display: none;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e5e5;
+        }
+        
+        .entry-details.visible {
+            display: block;
+        }
+        
+        .changes-list {
+            list-style: none;
+            margin-bottom: 16px;
+        }
+        
+        .changes-list li {
+            padding: 8px 0;
+            font-size: 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        
+        .change-icon {
+            font-size: 16px;
+        }
+        
+        .change-content {
+            flex: 1;
+        }
+        
+        .change-label {
+            font-weight: 600;
+            color: #555;
+            display: block;
+            margin-bottom: 2px;
+        }
+        
+        .change-values {
+            color: #666;
+        }
+        
+        .detail-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        /* Confirmation Modal */
+        .confirm-modal .modal-content {
+            max-width: 500px;
+        }
+        
+        .confirm-body {
+            padding: 20px;
+        }
+        
+        .confirm-warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 12px;
+            margin: 16px 0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .confirm-details {
+            background: #f9fafb;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        
+        .confirm-details h4 {
+            margin-bottom: 12px;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .confirm-details ul {
+            list-style: none;
+        }
+        
+        .confirm-details li {
+            padding: 6px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 2000;
+        }
+        
+        .toast.show {
+            display: flex;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+        
+        .demo-note {
+            background: #fffbeb;
+            border: 1px solid #fbbf24;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #92400e;
+        }
+        
+        @media (max-width: 768px) {
+            .filters {
+                flex-direction: column;
+            }
+            
+            .filter-select {
+                width: 100%;
+            }
+            
+            .entry-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .undo-btn {
+                margin-top: 8px;
+                align-self: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📜 Audit History UI Mockup</h1>
+        
+        <div class="demo-note">
+            <strong>🎨 Interactive Mockup:</strong> Click the History button to see the audit log. Click entries to expand details. Try the undo button!
+        </div>
+        
+        <!-- App Bar -->
+        <div class="app-bar">
+            <button class="icon-btn" title="System Experts">🧙</button>
+            <button class="icon-btn" title="Search">🔍</button>
+            <button class="icon-btn" id="historyBtn" title="Audit History">
+                📜
+                <span class="badge">5</span>
+            </button>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 12px; color: #666;">Oct 18, 2025</span>
+        </div>
+        
+        <!-- Audit History Modal -->
+        <div class="modal" id="auditModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>📜 Audit History</h2>
+                    <button class="icon-btn" id="closeAuditModal">✕</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Filters -->
+                    <div class="filters">
+                        <select class="filter-select">
+                            <option>All Operations</option>
+                            <option>CREATE</option>
+                            <option>UPDATE</option>
+                            <option>MOVE</option>
+                            <option>DELETE</option>
+                        </select>
+                        <select class="filter-select">
+                            <option>All Users</option>
+                            <option>john@example.com</option>
+                            <option>jane@example.com</option>
+                            <option>admin@example.com</option>
+                        </select>
+                        <select class="filter-select">
+                            <option>Last 24 Hours</option>
+                            <option>Last Hour</option>
+                            <option>Today</option>
+                            <option>This Week</option>
+                            <option>Custom Range</option>
+                        </select>
+                        <select class="filter-select">
+                            <option>All Calendars</option>
+                            <option>Team Calendar</option>
+                            <option>Personal Calendar</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Audit Entries -->
+                    <div id="auditEntries">
+                        <!-- Entry 1: UPDATE -->
+                        <div class="audit-entry" data-entry="1">
+                            <div class="entry-header">
+                                <div class="entry-operation">
+                                    <span class="op-badge update">UPDATE</span>
+                                    <span class="entry-time">2 minutes ago</span>
+                                </div>
+                                <button class="undo-btn" onclick="showUndoConfirm('update')">↩️ Undo</button>
+                            </div>
+                            <div class="entry-summary">
+                                "Support Request #12345" <span class="change-arrow">→</span> "Support #12345"
+                            </div>
+                            <div class="entry-user">
+                                By: john@example.com • Team Calendar
+                            </div>
+                            
+                            <div class="entry-details">
+                                <ul class="changes-list">
+                                    <li>
+                                        <span class="change-icon">✏️</span>
+                                        <div class="change-content">
+                                            <span class="change-label">Summary</span>
+                                            <div class="change-values">
+                                                "Support Request #12345" <span class="change-arrow">→</span> "Support #12345"
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="change-icon">📍</span>
+                                        <div class="change-content">
+                                            <span class="change-label">Location</span>
+                                            <div class="change-values">
+                                                "Room 101" <span class="change-arrow">→</span> "Room 202"
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="change-icon">🕐</span>
+                                        <div class="change-content">
+                                            <span class="change-label">Start Time</span>
+                                            <div class="change-values">
+                                                Oct 18, 14:00 <span class="change-arrow">→</span> Oct 18, 15:00
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="change-icon">🕐</span>
+                                        <div class="change-content">
+                                            <span class="change-label">End Time</span>
+                                            <div class="change-values">
+                                                Oct 18, 15:00 <span class="change-arrow">→</span> Oct 18, 16:00
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                                <div class="detail-actions">
+                                    <button class="btn btn-secondary">Show Full Details</button>
+                                    <button class="btn btn-primary" onclick="showUndoConfirm('update')">↩️ Undo This Change</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Entry 2: CREATE -->
+                        <div class="audit-entry" data-entry="2">
+                            <div class="entry-header">
+                                <div class="entry-operation">
+                                    <span class="op-badge create">CREATE</span>
+                                    <span class="entry-time">1 hour ago</span>
+                                </div>
+                                <button class="undo-btn" onclick="showUndoConfirm('create')">↩️ Undo</button>
+                            </div>
+                            <div class="entry-summary">
+                                "Team Meeting"
+                            </div>
+                            <div class="entry-user">
+                                By: jane@example.com • Team Calendar
+                            </div>
+                            
+                            <div class="entry-details">
+                                <ul class="changes-list">
+                                    <li>
+                                        <span class="change-icon">📅</span>
+                                        <div class="change-content">
+                                            <span class="change-label">Event Created</span>
+                                            <div class="change-values">
+                                                Oct 20, 2025 10:00 - 11:00
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="change-icon">📍</span>
+                                        <div class="change-content">
+                                            <span class="change-label">Location</span>
+                                            <div class="change-values">
+                                                Conference Room A
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="change-icon">📝</span>
+                                        <div class="change-content">
+                                            <span class="change-label">Description</span>
+                                            <div class="change-values">
+                                                Weekly team sync meeting
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                                <div class="detail-actions">
+                                    <button class="btn btn-secondary">Show Full Details</button>
+                                    <button class="btn btn-primary" onclick="showUndoConfirm('create')">↩️ Undo (Delete Event)</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Entry 3: MOVE -->
+                        <div class="audit-entry" data-entry="3">
+                            <div class="entry-header">
+                                <div class="entry-operation">
+                                    <span class="op-badge move">MOVE</span>
+                                    <span class="entry-time">2 hours ago</span>
+                                </div>
+                                <button class="undo-btn" onclick="showUndoConfirm('move')">↩️ Undo</button>
+                            </div>
+                            <div class="entry-summary">
+                                "Client Call" moved to different calendar
+                            </div>
+                            <div class="entry-user">
+                                By: john@example.com • Personal Calendar <span class="change-arrow">→</span> Team Calendar
+                            </div>
+                            
+                            <div class="entry-details">
+                                <ul class="changes-list">
+                                    <li>
+                                        <span class="change-icon">🔄</span>
+                                        <div class="change-content">
+                                            <span class="change-label">Calendar</span>
+                                            <div class="change-values">
+                                                Personal Calendar <span class="change-arrow">→</span> Team Calendar
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                                <div class="detail-actions">
+                                    <button class="btn btn-secondary">Show Full Details</button>
+                                    <button class="btn btn-primary" onclick="showUndoConfirm('move')">↩️ Move Back</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Entry 4: DELETE -->
+                        <div class="audit-entry" data-entry="4">
+                            <div class="entry-header">
+                                <div class="entry-operation">
+                                    <span class="op-badge delete">DELETE</span>
+                                    <span class="entry-time">3 hours ago</span>
+                                </div>
+                                <button class="undo-btn" onclick="showUndoConfirm('delete')">↩️ Undo</button>
+                            </div>
+                            <div class="entry-summary">
+                                "Old Event" (deleted)
+                            </div>
+                            <div class="entry-user">
+                                By: admin@example.com • Personal Calendar
+                            </div>
+                            
+                            <div class="entry-details">
+                                <ul class="changes-list">
+                                    <li>
+                                        <span class="change-icon">🗑️</span>
+                                        <div class="change-content">
+                                            <span class="change-label">Event Deleted</span>
+                                            <div class="change-values">
+                                                Oct 18, 2025 14:00 - 15:00 in Room 101
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                                <div class="detail-actions">
+                                    <button class="btn btn-secondary">Show Full Details</button>
+                                    <button class="btn btn-primary" onclick="showUndoConfirm('delete')">↩️ Restore Event</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Entry 5: UPDATE -->
+                        <div class="audit-entry" data-entry="5">
+                            <div class="entry-header">
+                                <div class="entry-operation">
+                                    <span class="op-badge update">UPDATE</span>
+                                    <span class="entry-time">5 hours ago</span>
+                                </div>
+                                <button class="undo-btn" onclick="showUndoConfirm('update')">↩️ Undo</button>
+                            </div>
+                            <div class="entry-summary">
+                                "Planning Session" time changed
+                            </div>
+                            <div class="entry-user">
+                                By: jane@example.com • Team Calendar
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Undo Confirmation Modal -->
+        <div class="modal confirm-modal" id="confirmModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="confirmTitle">⚠️ Confirm Undo</h2>
+                    <button class="icon-btn" id="closeConfirmModal">✕</button>
+                </div>
+                <div class="confirm-body" id="confirmBody">
+                    <!-- Dynamic content -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="cancelConfirm">Cancel</button>
+                    <button class="btn btn-primary" id="confirmUndo">↩️ Confirm Undo</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Success Toast -->
+        <div class="toast" id="toast">
+            <span>✅</span>
+            <span id="toastMessage">Change undone successfully</span>
+        </div>
+    </div>
+    
+    <script>
+        // Toggle audit modal
+        document.getElementById('historyBtn').addEventListener('click', () => {
+            document.getElementById('auditModal').classList.add('active');
+        });
+        
+        document.getElementById('closeAuditModal').addEventListener('click', () => {
+            document.getElementById('auditModal').classList.remove('active');
+        });
+        
+        // Toggle entry expansion
+        document.querySelectorAll('.audit-entry').forEach(entry => {
+            entry.addEventListener('click', (e) => {
+                // Don't expand if clicking undo button
+                if (e.target.classList.contains('undo-btn') || e.target.closest('.undo-btn')) {
+                    return;
+                }
+                
+                const details = entry.querySelector('.entry-details');
+                if (details) {
+                    entry.classList.toggle('expanded');
+                    details.classList.toggle('visible');
+                }
+            });
+        });
+        
+        // Show undo confirmation
+        function showUndoConfirm(type) {
+            const modal = document.getElementById('confirmModal');
+            const title = document.getElementById('confirmTitle');
+            const body = document.getElementById('confirmBody');
+            
+            let content = '';
+            
+            switch(type) {
+                case 'update':
+                    title.textContent = '↩️ Undo Changes';
+                    content = `
+                        <p style="margin-bottom: 16px;">You are about to undo this change:</p>
+                        <div class="confirm-details">
+                            <h4>Operation: UPDATE</h4>
+                            <ul>
+                                <li>Made by: john@example.com</li>
+                                <li>Time: 2 minutes ago</li>
+                            </ul>
+                        </div>
+                        <div class="confirm-details">
+                            <h4>This will restore:</h4>
+                            <ul>
+                                <li>• Summary: "Support #12345" → "Support Request #12345"</li>
+                                <li>• Location: "Room 202" → "Room 101"</li>
+                                <li>• Start: Oct 18, 15:00 → Oct 18, 14:00</li>
+                            </ul>
+                        </div>
+                        <div class="confirm-warning">
+                            ⚠️ This action cannot be undone.
+                        </div>
+                    `;
+                    break;
+                    
+                case 'create':
+                    title.textContent = '⚠️ Undo Create Operation';
+                    content = `
+                        <p style="margin-bottom: 16px;">This will DELETE the event:</p>
+                        <div class="confirm-details">
+                            <h4>"Team Meeting"</h4>
+                            <ul>
+                                <li>Created: 1 hour ago by jane@example.com</li>
+                                <li>Calendar: Team Calendar</li>
+                                <li>Time: Oct 20, 2025 10:00 - 11:00</li>
+                            </ul>
+                        </div>
+                        <div class="confirm-warning">
+                            ⚠️ The event will be permanently deleted.
+                        </div>
+                    `;
+                    break;
+                    
+                case 'move':
+                    title.textContent = '↩️ Undo Move';
+                    content = `
+                        <p style="margin-bottom: 16px;">This will move the event back:</p>
+                        <div class="confirm-details">
+                            <h4>"Client Call"</h4>
+                            <ul>
+                                <li>Moved: 2 hours ago by john@example.com</li>
+                                <li>From: Personal Calendar</li>
+                                <li>To: Team Calendar</li>
+                            </ul>
+                        </div>
+                        <div class="confirm-details">
+                            <h4>Event will be moved to:</h4>
+                            <ul>
+                                <li>Personal Calendar</li>
+                            </ul>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'delete':
+                    title.textContent = '↩️ Restore Deleted Event';
+                    content = `
+                        <p style="margin-bottom: 16px;">This will RESTORE the deleted event:</p>
+                        <div class="confirm-details">
+                            <h4>"Old Event"</h4>
+                            <ul>
+                                <li>Deleted: 3 hours ago by admin@example.com</li>
+                                <li>Original calendar: Personal Calendar</li>
+                            </ul>
+                        </div>
+                        <div class="confirm-details">
+                            <h4>Event details:</h4>
+                            <ul>
+                                <li>Date: Oct 18, 2025 14:00 - 15:00</li>
+                                <li>Location: Room 101</li>
+                            </ul>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            body.innerHTML = content;
+            modal.classList.add('active');
+        }
+        
+        // Close confirmation modal
+        document.getElementById('closeConfirmModal').addEventListener('click', () => {
+            document.getElementById('confirmModal').classList.remove('active');
+        });
+        
+        document.getElementById('cancelConfirm').addEventListener('click', () => {
+            document.getElementById('confirmModal').classList.remove('active');
+        });
+        
+        // Confirm undo
+        document.getElementById('confirmUndo').addEventListener('click', () => {
+            document.getElementById('confirmModal').classList.remove('active');
+            document.getElementById('auditModal').classList.remove('active');
+            
+            // Show success toast
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        });
+        
+        // Close modals on background click
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

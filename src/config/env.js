@@ -58,11 +58,14 @@ export const EDITOR_EMAILS = (process.env.EDITOR_EMAILS || '').split(',').map(s 
 /**
  * Whether authentication is enabled
  * 
- * Auth is enabled if all required OIDC variables are present.
+ * Can be explicitly disabled via AUTH_ENABLED=false env variable.
+ * Otherwise, auth is enabled if all required OIDC variables are present.
  * 
  * @type {boolean}
  */
-export const authEnabled = Boolean(OIDC_ISSUER_URL && OIDC_CLIENT_ID && OIDC_CLIENT_SECRET && OIDC_REDIRECT_URI);
+export const authEnabled = process.env.AUTH_ENABLED === 'false' 
+  ? false 
+  : Boolean(OIDC_ISSUER_URL && OIDC_CLIENT_ID && OIDC_CLIENT_SECRET && OIDC_REDIRECT_URI);
 
 /**
  * Default role when authentication is disabled

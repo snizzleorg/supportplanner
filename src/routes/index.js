@@ -11,6 +11,7 @@ import eventsRouter from './events.js';
 import calendarsRouter from './calendars.js';
 import healthRouter from './health.js';
 import clientRouter from './client.js';
+import auditRouter from './audit.js';
 
 /**
  * Register all application routes
@@ -18,6 +19,7 @@ import clientRouter from './client.js';
  * Mounts route modules at their respective paths:
  * - /api/events - Event CRUD operations
  * - /api/calendars - Calendar operations
+ * - /api/audit - Audit history and undo operations
  * - /health - Health check endpoints
  * - / - Client utilities (logging, logged-out page)
  * 
@@ -28,6 +30,7 @@ export function registerRoutes(app) {
   // API routes
   app.use('/api/events', eventsRouter);
   app.use('/api/calendars', calendarsRouter);
+  app.use('/api/audit', auditRouter);
   app.use('/api', calendarsRouter); // For /api/refresh-caldav
   app.use('/api', clientRouter);
   
