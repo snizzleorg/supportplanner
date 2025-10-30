@@ -11,10 +11,11 @@ RUN npm install --no-save vitest@^1.0.4 @vitest/coverage-v8@^1.0.4 \
     express@^4.19.2 express-validator@^7.2.0 supertest@^6.3.3 dayjs@^1.11.13 \
     cors@^2.8.5 helmet@^8.0.0 express-rate-limit@^7.4.1 express-session@^1.17.3 \
     openid-client@^5.6.5 node-cache@^5.1.2 yaml@^2.4.2 tsdav@^2.1.2 \
-    ical-expander@^3.1.0 node-fetch@^3.3.2
+    ical-expander@^3.1.0 node-fetch@^3.3.2 sqlite@^5.1.1 sqlite3@^5.1.7
 
 # Copy source code and test configuration (config is now in src/config/)
 COPY src ./src
+COPY scripts ./scripts
 COPY vitest.config.js ./vitest.config.js
 
 # Set test environment

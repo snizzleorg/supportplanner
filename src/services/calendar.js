@@ -23,6 +23,7 @@ import isSameOrBefore from 'dayjs/plugin/isSameOrBefore.js';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter.js';
 import { randomUUID } from 'crypto';
 import { logOperation } from '../utils/operation-log.js';
+import { auditHistory } from './audit-history.js';
 import IcalExpander from 'ical-expander';
 import YAML from 'yaml';
 import { calendarOrder, calendarExclude } from '../config/calendar-order.js';
@@ -145,10 +146,11 @@ export class CalendarCache {
    * @param {string} payload.start - YYYY-MM-DD inclusive start date
    * @param {string} payload.end - YYYY-MM-DD inclusive end date
    * @param {Object} [payload.meta] - Metadata object (orderNumber, ticketLink, systemType)
+   * @param {Object} [payload.user] - User info from session (email, name)
    * @returns {Promise<Object>} Created event object
    * @throws {Error} If CalDAV creation fails or validation fails
    */
-  async createAllDayEvent({ calendarUrl, summary, description = '', location = '', start, end, meta }) {
+  async createAllDayEvent({ calendarUrl, summary, description = '', location = '', start, end, meta, user }) {
     if (!calendarUrl || !summary || !start || !end) {
       throw new Error('calendarUrl, summary, start, and end are required');
     }
@@ -222,7 +224,36 @@ export class CalendarCache {
         console.error('[createAllDayEvent] Cache invalidation failed (non-critical):', cacheError);
       }
 
-      // Log the operation (non-critical, don't throw if it fails)
+      // Build the event state for audit log
+      const eventState = {
+        uid,
+        summary,
+        description,
+        location,
+        start,
+        end,
+        allDay: true,
+        meta,
+        calendar: calendarUrl
+      };
+
+      // Log to audit history (non-critical)
+      try {
+        await auditHistory.logOperation({
+          eventUid: uid,
+          operation: 'CREATE',
+          userEmail: user?.email,
+          userName: user?.name,
+          calendarUrl,
+          beforeState: null, // No previous state for CREATE
+          afterState: eventState,
+          status: 'SUCCESS'
+        });
+      } catch (auditError) {
+        console.error('[createAllDayEvent] Audit logging failed (non-critical):', auditError);
+      }
+
+      // Log the operation to file (legacy, non-critical)
       try {
         await logOperation('CREATE', {
           uid,
@@ -252,7 +283,24 @@ export class CalendarCache {
       // CalDAV creation failed - log and rethrow
       console.error(`[createAllDayEvent] Failed to create event in CalDAV:`, error);
       
-      // Try to log the failure (best effort)
+      // Log failure to audit history (best effort)
+      try {
+        await auditHistory.logOperation({
+          eventUid: uid,
+          operation: 'CREATE',
+          userEmail: user?.email,
+          userName: user?.name,
+          calendarUrl,
+          beforeState: null,
+          afterState: null,
+          status: 'FAILED',
+          errorMessage: error.message
+        });
+      } catch (auditError) {
+        console.error('[createAllDayEvent] Audit logging failed (non-critical):', auditError);
+      }
+
+      // Try to log the failure to file (legacy, best effort)
       try {
         await logOperation('CREATE', {
           uid,
@@ -831,9 +879,10 @@ export class CalendarCache {
   /**
    * Delete an event by UID
    * @param {string} uid - The UID of the event to delete
+   * @param {Object} [user] - User info from session (email, name)
    * @returns {Promise<boolean>} True if the event was deleted, false otherwise
    */
-  async deleteEvent(uid) {
+  async deleteEvent(uid, user) {
     if (!uid) {
       throw new Error('Event UID is required');
     }
@@ -892,7 +941,39 @@ export class CalendarCache {
       console.error('[deleteEvent] Cache invalidation failed (non-critical):', cacheError);
     }
     
-    // Log the operation (non-critical)
+    // Log to audit history (non-critical)
+    try {
+      // Ensure event state has all required fields for restoration
+      const eventState = {
+        uid: event.uid || uid,
+        summary: event.summary || event.content || event.title,
+        description: event.description || event.descriptionRaw || '',
+        location: event.location || '',
+        start: event.start,
+        end: event.end,
+        allDay: event.allDay,
+        calendar: calendarUrl,
+        calendarUrl: calendarUrl,
+        meta: event.meta
+      };
+      
+      console.log('[deleteEvent] Captured event state for audit:', eventState);
+      
+      await auditHistory.logOperation({
+        eventUid: uid,
+        operation: 'DELETE',
+        userEmail: user?.email,
+        userName: user?.name,
+        calendarUrl,
+        beforeState: eventState, // Capture complete state before deletion
+        afterState: null, // No state after deletion
+        status: 'SUCCESS'
+      });
+    } catch (auditError) {
+      console.error('[deleteEvent] Audit logging failed (non-critical):', auditError);
+    }
+
+    // Log the operation to file (legacy, non-critical)
     try {
       await logOperation('DELETE', {
         uid,
@@ -916,10 +997,11 @@ export class CalendarCache {
    * @param {string} uid - The UID of the event to update
    * @param {Object} updateData - The data to update (summary, start, end, description, location, meta, targetCalendarUrl)
    * @param {string} [authHeader] - Optional authorization header from the client (currently unused)
+   * @param {Object} [user] - User info from session (email, name)
    * @returns {Promise<Object>} The updated event object
    * @throws {Error} If event not found or CalDAV update fails
    */
-  async updateEvent(uid, updateData, authHeader) {
+  async updateEvent(uid, updateData, authHeader, user) {
     if (!uid) {
       throw new Error('Event UID is required');
     }
@@ -939,7 +1021,7 @@ export class CalendarCache {
     console.log(`[updateEvent] Update data:`, JSON.stringify(updateData, null, 2));
 
     // Create a promise for this update operation
-    const updatePromise = this._performUpdate(uid, updateData, authHeader);
+    const updatePromise = this._performUpdate(uid, updateData, authHeader, user);
     
     // Register the lock
     this.updateLocks.set(uid, updatePromise);
@@ -964,10 +1046,11 @@ export class CalendarCache {
    * @param {string} uid - The UID of the event to update
    * @param {Object} updateData - The data to update
    * @param {string} [authHeader] - Optional authorization header (currently unused)
+   * @param {Object} [user] - User info from session (email, name)
    * @returns {Promise<Object>} The updated event object
    * @throws {Error} If event not found or update fails
    */
-  async _performUpdate(uid, updateData, authHeader) {
+  async _performUpdate(uid, updateData, authHeader, user) {
     // 1. Get the current event data
     let event = await this.getEvent(uid);
     if (!event) {
@@ -987,7 +1070,7 @@ export class CalendarCache {
     // Handle moving to a different calendar if requested (single-pass, no recursion)
     if (updateData.targetCalendarUrl && updateData.targetCalendarUrl !== (event.calendarUrl || event.calendar)) {
       console.log(`[updateEvent] Moving event ${uid} to calendar ${updateData.targetCalendarUrl}`);
-      const movedEvent = await this.moveEvent(uid, updateData.targetCalendarUrl);
+      const movedEvent = await this.moveEvent(uid, updateData.targetCalendarUrl, user);
 
       // Adopt moved event as the current base event and strip targetCalendarUrl from updates
       const { targetCalendarUrl, ...remainingUpdates } = updateData;
@@ -1025,10 +1108,13 @@ export class CalendarCache {
       }
     }
     
-    // If no new metadata provided, preserve existing metadata
-    if (!metaToUse && event.meta) {
+    // If no new metadata provided (and meta wasn't explicitly set to null), preserve existing metadata
+    if (metaToUse === undefined && event.meta) {
       metaToUse = event.meta;
       console.log(`[updateEvent] Preserving existing metadata:`, metaToUse);
+    } else if (updateData.meta !== undefined) {
+      // Meta was explicitly provided (even if null), so use it
+      console.log(`[updateEvent] Using provided metadata:`, metaToUse);
     }
 
     // 3. Update the event data
@@ -1231,7 +1317,23 @@ export class CalendarCache {
           console.error('[updateEvent] Cache invalidation failed (non-critical):', cacheError);
         }
         
-        // Log the operation (non-critical)
+        // Log to audit history (non-critical)
+        try {
+          await auditHistory.logOperation({
+            eventUid: uid,
+            operation: 'UPDATE',
+            userEmail: user?.email,
+            userName: user?.name,
+            calendarUrl: event.calendar,
+            beforeState: event, // Original state before update
+            afterState: updatedEvent, // New state after update
+            status: 'SUCCESS'
+          });
+        } catch (auditError) {
+          console.error('[updateEvent] Audit logging failed (non-critical):', auditError);
+        }
+
+        // Log the operation to file (legacy, non-critical)
         try {
           await logOperation('UPDATE', {
             uid,
@@ -1276,9 +1378,10 @@ export class CalendarCache {
    * Move an event to a different calendar
    * @param {string} uid - The UID of the event to move
    * @param {string} targetCalendarUrl - The URL of the target calendar
+   * @param {Object} [user] - User info from session (email, name)
    * @returns {Promise<Object>} The moved event
    */
-  async moveEvent(uid, targetCalendarUrl) {
+  async moveEvent(uid, targetCalendarUrl, user) {
     console.log(`[moveEvent] Starting to move event ${uid} to ${targetCalendarUrl}`);
 
     if (!uid || !targetCalendarUrl) {
@@ -1408,6 +1511,19 @@ export class CalendarCache {
           console.log(`[moveEvent] Successfully rolled back - deleted from target`);
           
           // Log the failed operation
+          await auditHistory.logOperation({
+            eventUid: uid,
+            operation: 'MOVE',
+            userEmail: user?.email,
+            userName: user?.name,
+            calendarUrl: sourceCalendarUrl,
+            targetCalendarUrl,
+            beforeState: event,
+            afterState: null,
+            status: 'FAILED',
+            errorMessage: `Could not delete from source: ${deleteError.message}`
+          });
+
           await logOperation('MOVE', {
             uid,
             summary: event.summary || event.content,
@@ -1423,6 +1539,19 @@ export class CalendarCache {
           console.error(`[moveEvent] Event is now duplicated in both calendars!`);
           
           // Log the partial failure
+          await auditHistory.logOperation({
+            eventUid: uid,
+            operation: 'MOVE',
+            userEmail: user?.email,
+            userName: user?.name,
+            calendarUrl: sourceCalendarUrl,
+            targetCalendarUrl,
+            beforeState: event,
+            afterState: event,
+            status: 'PARTIAL',
+            errorMessage: `Event duplicated in both calendars. Delete failed: ${deleteError.message}, Rollback failed: ${cleanupError.message}`
+          });
+
           await logOperation('MOVE', {
             uid,
             summary: event.summary || event.content,
@@ -1443,7 +1572,24 @@ export class CalendarCache {
       this.cache.del(`calendar:${sourceCalendarUrl}`);
       this.cache.del(`calendar:${targetCalendarUrl}`);
 
-      // Log the operation
+      // Build before and after states for audit log
+      const beforeState = { ...event, calendar: sourceCalendarUrl };
+      const afterState = { ...event, calendar: targetCalendarUrl };
+
+      // Log to audit history
+      await auditHistory.logOperation({
+        eventUid: uid,
+        operation: 'MOVE',
+        userEmail: user?.email,
+        userName: user?.name,
+        calendarUrl: sourceCalendarUrl,
+        targetCalendarUrl,
+        beforeState,
+        afterState,
+        status: 'SUCCESS'
+      });
+
+      // Log the operation to file (legacy)
       await logOperation('MOVE', {
         uid,
         summary: event.summary || event.content,
