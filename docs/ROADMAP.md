@@ -2,7 +2,15 @@
 
 ## Recent Releases
 
-### [2025-10-31] v0.7.0 🔍 SEARCH ENHANCEMENT - **CURRENT**
+### [2025-10-31] v0.7.1 🔗 DEEP LINKING - **CURRENT**
+**Event Deep Linking & Sharing**
+- **URL Hash Handling**: Open events directly via `#event=<uid>` URLs
+- **Copy Event Link**: New button in modal to copy shareable event links
+- **Auto-open**: Events open automatically from URL on page load
+- **Integration**: Works seamlessly with search-events endpoint results
+- **User Experience**: Enable bookmarking and sharing specific events
+
+### [2025-10-31] v0.7.0 🔍 SEARCH ENHANCEMENT
 **Enhanced Event Search Capabilities**
 - **Search Events Endpoint**: New `/api/events/search-events` with comprehensive search
   - Search across event titles, descriptions, and all metadata fields
