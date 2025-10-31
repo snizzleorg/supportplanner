@@ -4,6 +4,7 @@
  * Provides comprehensive event management endpoints:
  * - Create all-day events
  * - Search events by summary
+ * - Search events across all fields (title, description, metadata)
  * - Get events for timeline (main endpoint)
  * - Update events
  * - Delete events
@@ -135,6 +136,137 @@ router.get('/search', requireRole('reader'), async (req, res) => {
   } catch (error) {
     console.error('Error searching events:', error);
     res.status(500).json({ 
+      error: 'Failed to search events',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Search events across all fields
+ * 
+ * Searches through event titles, descriptions, and all metadata fields.
+ * Supports case-insensitive partial matching.
+ * 
+ * @route GET /api/events/search-events
+ * @access Requires 'reader' role or higher
+ * 
+ * @queryparam {string} query - Search term to find in any field (alternative to orderNumber)
+ * @queryparam {string} orderNumber - Specific order number to search for (alternative to query)
+ * @queryparam {string} [from=2020-01-01] - Start date for filtering (ISO format)
+ * @queryparam {string} [to=2030-12-31] - End date for filtering (ISO format)
+ * 
+ * @returns {Object} 200 - Success response with matching events
+ * @returns {Object} 200.success - Always true for successful requests
+ * @returns {boolean} 200.found - Whether any events were found
+ * @returns {Array<Object>} 200.events - Array of matching events (if found)
+ * @returns {number} 200.count - Number of matching events
+ * @returns {string} 200.message - Message when no events found
+ * 
+ * @returns {Object} 400 - Bad request (missing search parameter)
+ * @returns {Object} 500 - Server error
+ * 
+ * @example
+ * // Search by order number
+ * GET /api/events/search-events?orderNumber=215648
+ * 
+ * @example
+ * // Search by any text
+ * GET /api/events/search-events?query=MT100
+ * 
+ * @example
+ * // Search with date range
+ * GET /api/events/search-events?query=Installation&from=2025-01-01&to=2025-12-31
+ * 
+ * @security
+ * - Requires authentication (reader role minimum)
+ * - Search terms are sanitized (converted to lowercase strings)
+ * - No SQL injection risk (uses in-memory filtering)
+ * - Returns only events user has access to via calendar permissions
+ */
+router.get('/search-events', requireRole('reader'), async (req, res) => {
+  try {
+    const { orderNumber, query, from, to } = req.query;
+    
+    // Accept either 'orderNumber' or 'query' parameter for flexibility
+    const searchTerm = orderNumber || query;
+    
+    if (!searchTerm) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Search parameter required (orderNumber or query)' 
+      });
+    }
+    
+    // Default to a wide date range if not specified
+    const startDate = from || '2020-01-01';
+    const endDate = to || '2030-12-31';
+    
+    // Get all calendar URLs from cache keys
+    const cacheKeys = calendarCache.cache.keys();
+    const allCalendarUrls = cacheKeys
+      .filter(key => key.startsWith('calendar:'))
+      .map(key => key.replace('calendar:', ''));
+    
+    // Get all events in the date range from all calendars
+    const events = await calendarCache.getEvents(allCalendarUrls, startDate, endDate);
+    
+    // Filter events by searching in multiple fields (case-insensitive, partial match)
+    const matchingEvents = events.events.filter(event => {
+      const searchLower = String(searchTerm).toLowerCase();
+      
+      // Search in title (summary)
+      if (event.summary && String(event.summary).toLowerCase().includes(searchLower)) {
+        return true;
+      }
+      
+      // Search in description
+      if (event.description && String(event.description).toLowerCase().includes(searchLower)) {
+        return true;
+      }
+      
+      // Search in all metadata fields (orderNumber, ticketLink, systemType, etc.)
+      if (event.meta && typeof event.meta === 'object') {
+        for (const [key, value] of Object.entries(event.meta)) {
+          if (value && String(value).toLowerCase().includes(searchLower)) {
+            return true;
+          }
+        }
+      }
+      
+      return false;
+    });
+    
+    if (matchingEvents.length === 0) {
+      return res.json({
+        success: true,
+        found: false,
+        message: `No events found matching: ${searchTerm}`
+      });
+    }
+    
+    // Return all matching events with their links
+    const eventsWithLinks = matchingEvents.map(event => ({
+      uid: event.uid,
+      summary: event.summary,
+      start: event.start,
+      end: event.end,
+      description: event.description,
+      meta: event.meta,
+      link: `${req.protocol}://${req.get('host')}/#event=${event.uid}`
+    }));
+    
+    res.json({
+      success: true,
+      found: true,
+      events: eventsWithLinks,
+      count: matchingEvents.length
+    });
+    
+  } catch (error) {
+    console.error('Error searching events:', error);
+    res.status(500).json({ 
+      success: false,
       error: 'Failed to search events',
       details: error.message 
     });

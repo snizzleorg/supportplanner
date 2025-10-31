@@ -69,11 +69,22 @@ See [CHANGELOG.md](../CHANGELOG.md) for complete release notes.
 
 ---
 
-## Next Release (v0.7.0 - Planned)
+## Next Release (v0.7.0 - In Development)
 
-**Focus**: Complete mobile app refactoring & frontend testing
+**Focus**: Enhanced search capabilities & mobile app refactoring
 
-### Planned Features
+### Completed Features
+- [x] **Search Events Endpoint** (`/api/events/search-events`)
+  - Comprehensive search across event titles, descriptions, and all metadata fields
+  - Case-insensitive partial matching
+  - Supports order number and general query search
+  - Date range filtering
+  - Returns direct links to events
+  - 20 comprehensive unit tests (all passing)
+  - Full security review and documentation
+  - JSDoc documentation added
+
+### In Progress
 - [ ] Complete mobile app modularization (Steps 5-8)
   - Extract render.js (~400 lines)
   - Extract events.js (~600 lines)
@@ -130,6 +141,7 @@ See [CHANGELOG.md](../CHANGELOG.md) for complete release notes.
 - [x] Reader UI gating: disable edit/create (modal no-op on click)
 - [x] Role mapping via environment (emails, optional groups)
 - [x] Event search functionality (with authentication as of v0.6.0)
+- [x] Enhanced search endpoint with metadata search (v0.7.0)
 - [x] Exclude calendars from UI via configuration
 - [x] Leaflet map with grouped markers by location and colored pins per calendar
 - [ ] Admin configuration UI (future; uses admin role)
@@ -147,10 +159,12 @@ See [CHANGELOG.md](../CHANGELOG.md) for complete release notes.
  - [x] Prevent native pinch/double-tap from conflicting with timeline pinch-zoom
 
 ## Phase 5: Testing & Quality ✅ BACKEND COMPLETE
-- [x] **Backend unit tests** - 105 tests covering all modules (100% passing)
+- [x] **Backend unit tests** - 138 tests covering all modules (100% passing)
   - Includes security tests (metadata validation, CSRF, error handling)
   - 7 metadata API tests added in v0.5.0
+  - 20 search-events tests added in v0.7.0
   - All tests pass in test environment with CSRF disabled
+  - Tests run successfully in Docker environment
 - [x] **Docker-based testing** - Backend tests run in isolated container
 - [x] **Security test suite** - Comprehensive API security validation
 - [ ] **Frontend unit tests** - Mobile app modules need test coverage
