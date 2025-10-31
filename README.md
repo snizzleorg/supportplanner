@@ -320,6 +320,72 @@ GET /api/events/:uid
 }
 ```
 
+### Search Events
+
+Searches for events across all accessible calendars by matching text in event titles, descriptions, and metadata fields.
+
+```http
+GET /api/events/search-events
+```
+
+**Query Parameters:**
+- `query` (string, required*): Search term to find in any field
+- `orderNumber` (string, required*): Order number to search for (alternative to query)
+- `from` (string, optional): Start date for filtering (ISO format, default: 2020-01-01)
+- `to` (string, optional): End date for filtering (ISO format, default: 2030-12-31)
+
+*Either `query` or `orderNumber` must be provided
+
+**Examples:**
+```http
+# Search by order number
+GET /api/events/search-events?orderNumber=215648
+
+# Search by any text
+GET /api/events/search-events?query=MT100
+
+# Search with date range
+GET /api/events/search-events?query=Installation&from=2025-01-01&to=2025-12-31
+```
+
+**Response (events found):**
+```json
+{
+  "success": true,
+  "found": true,
+  "events": [
+    {
+      "uid": "c0933f9d-d324-4c3d-bf16-20f7383b6514",
+      "summary": "FT300 Installation Sao Carlos !",
+      "start": "2025-11-27",
+      "end": "2025-12-05",
+      "description": "4d install FT300 NIR Sao Carlos",
+      "meta": {
+        "orderNumber": "215648"
+      },
+      "link": "http://localhost:5175/#event=c0933f9d-d324-4c3d-bf16-20f7383b6514"
+    }
+  ],
+  "count": 1
+}
+```
+
+**Response (no events found):**
+```json
+{
+  "success": true,
+  "found": false,
+  "message": "No events found matching: search-term"
+}
+```
+
+**Features:**
+- Case-insensitive search
+- Partial text matching
+- Searches in: event title, description, and all metadata fields (orderNumber, ticketLink, systemType, etc.)
+- Returns direct links to events for easy navigation
+- Requires authentication (reader role or higher)
+
 ### Update Event
 
 Updates an existing event.
