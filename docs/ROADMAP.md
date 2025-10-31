@@ -2,7 +2,20 @@
 
 ## Recent Releases
 
-### [2025-10-17] v0.6.0 🔒 SECURITY RELEASE - **CURRENT**
+### [2025-10-31] v0.7.0 🔍 SEARCH ENHANCEMENT - **CURRENT**
+**Enhanced Event Search Capabilities**
+- **Search Events Endpoint**: New `/api/events/search-events` with comprehensive search
+  - Search across event titles, descriptions, and all metadata fields
+  - Case-insensitive partial matching
+  - Support for order number and general query search
+  - Date range filtering with sensible defaults
+  - Returns direct links to events for easy navigation
+- **Security**: Full authentication, input sanitization, access control
+- **Testing**: 20 new comprehensive unit tests (138 total, all passing)
+- **Documentation**: Complete API docs in README, security analysis, JSDoc
+- **Docker**: Tests run successfully in Docker environment
+
+### [2025-10-17] v0.6.0 🔒 SECURITY RELEASE
 **Comprehensive API Security Hardening**
 - **CSRF Protection**: Double-submit cookie pattern with automatic token management
 - **Search Authentication**: Search endpoint now requires reader role
@@ -69,22 +82,11 @@ See [CHANGELOG.md](../CHANGELOG.md) for complete release notes.
 
 ---
 
-## Next Release (v0.7.0 - In Development)
+## Next Release (v0.8.0 - Planned)
 
-**Focus**: Enhanced search capabilities & mobile app refactoring
+**Focus**: Mobile app refactoring & frontend testing
 
-### Completed Features
-- [x] **Search Events Endpoint** (`/api/events/search-events`)
-  - Comprehensive search across event titles, descriptions, and all metadata fields
-  - Case-insensitive partial matching
-  - Supports order number and general query search
-  - Date range filtering
-  - Returns direct links to events
-  - 20 comprehensive unit tests (all passing)
-  - Full security review and documentation
-  - JSDoc documentation added
-
-### In Progress
+### Planned Features
 - [ ] Complete mobile app modularization (Steps 5-8)
   - Extract render.js (~400 lines)
   - Extract events.js (~600 lines)
