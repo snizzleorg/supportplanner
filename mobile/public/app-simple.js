@@ -324,6 +324,60 @@ async function init() {
   
   // Scroll to today's position
   scrollToToday();
+  
+  // Handle URL hash for direct event links
+  handleEventFromHash();
+  
+  // Listen for hash changes
+  window.addEventListener('hashchange', handleEventFromHash);
+}
+
+/**
+ * Handle URL hash to open event modal for direct links
+ * Parses #event=<uid> format and opens the corresponding event
+ * @returns {Promise<void>}
+ */
+async function handleEventFromHash() {
+  const hash = window.location.hash.substring(1);
+  if (!hash) return;
+  
+  const match = hash.match(/^event=(.+)$/);
+  if (!match) return;
+  
+  const eventUid = decodeURIComponent(match[1]);
+  console.log('Opening event from hash:', eventUid);
+  
+  // Find the event in our loaded data
+  const events = getEvents();
+  const event = events.find(e => {
+    const uid = e.uid || e.id.split('/').pop().replace(/^-/, '');
+    return uid === eventUid;
+  });
+  
+  if (event) {
+    console.log('Found event, opening modal:', event);
+    
+    // Ensure modal is fully rendered before opening
+    setTimeout(() => {
+      showEventModal(event);
+    }, 100);
+  } else {
+    console.warn('Event not found for UID:', eventUid);
+    
+    // Show status message that event wasn't found
+    const statusBar = document.getElementById('statusBar');
+    if (statusBar) {
+      statusBar.textContent = `Event not found: ${eventUid}`;
+      statusBar.style.backgroundColor = 'var(--warning-color)';
+      statusBar.style.color = 'white';
+      
+      setTimeout(() => {
+        statusBar.textContent = '';
+        statusBar.style.backgroundColor = '';
+        statusBar.style.color = '';
+      }, 3000);
+    }
+  }
 }
 
 /**
@@ -1180,6 +1234,7 @@ async function showEventModal(event) {
   const closeModalBtn = document.getElementById('closeModalBtn');
   const saveEventBtn = document.getElementById('saveEventBtn');
   const deleteEventBtn = document.getElementById('deleteEventBtn');
+  const copyEventLinkBtn = document.getElementById('copyEventLinkBtn');
   
   // Show delete button in edit mode
   if (deleteEventBtn) deleteEventBtn.style.display = '';
@@ -1205,8 +1260,109 @@ async function showEventModal(event) {
     deleteEventBtn.parentNode.replaceChild(newDeleteEventBtn, deleteEventBtn);
   }
   
+  const newCopyEventLinkBtn = copyEventLinkBtn?.cloneNode(true);
+  if (copyEventLinkBtn && newCopyEventLinkBtn) {
+    copyEventLinkBtn.parentNode.replaceChild(newCopyEventLinkBtn, copyEventLinkBtn);
+  }
+  
   closeModal?.addEventListener('click', closeHandler);
   newCloseModalBtn?.addEventListener('click', closeHandler);
+  
+  // Copy event link handler
+  newCopyEventLinkBtn?.addEventListener('click', async () => {
+    try {
+      const eventUid = event.uid || event.id.split('/').pop().replace(/^-/, '');
+      const eventUrl = `${window.location.origin}${window.location.pathname}#event=${eventUid}`;
+      
+      await navigator.clipboard.writeText(eventUrl);
+      
+      // Show success feedback
+      const originalIcon = newCopyEventLinkBtn.querySelector('.material-icons');
+      if (originalIcon) {
+        originalIcon.textContent = 'check';
+        newCopyEventLinkBtn.style.color = 'var(--success-color)';
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+          originalIcon.textContent = 'link';
+          newCopyEventLinkBtn.style.color = '';
+        }, 2000);
+      }
+      
+      // Show status message
+      const statusBar = document.getElementById('statusBar');
+      if (statusBar) {
+        statusBar.textContent = 'Event link copied to clipboard';
+        statusBar.style.backgroundColor = 'var(--success-color)';
+        statusBar.style.color = 'white';
+        
+        setTimeout(() => {
+          statusBar.textContent = '';
+          statusBar.style.backgroundColor = '';
+          statusBar.style.color = '';
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Failed to copy event link:', error);
+      
+      // Fallback method
+      try {
+        const eventUid = event.uid || event.id.split('/').pop().replace(/^-/, '');
+        const eventUrl = `${window.location.origin}${window.location.pathname}#event=${eventUid}`;
+        
+        const textarea = document.createElement('textarea');
+        textarea.value = eventUrl;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        
+        // Show success feedback
+        const originalIcon = newCopyEventLinkBtn.querySelector('.material-icons');
+        if (originalIcon) {
+          originalIcon.textContent = 'check';
+          newCopyEventLinkBtn.style.color = 'var(--success-color)';
+          
+          setTimeout(() => {
+            originalIcon.textContent = 'link';
+            newCopyEventLinkBtn.style.color = '';
+          }, 2000);
+        }
+        
+        // Show status message
+        const statusBar = document.getElementById('statusBar');
+        if (statusBar) {
+          statusBar.textContent = 'Event link copied to clipboard';
+          statusBar.style.backgroundColor = 'var(--success-color)';
+          statusBar.style.color = 'white';
+          
+          setTimeout(() => {
+            statusBar.textContent = '';
+            statusBar.style.backgroundColor = '';
+            statusBar.style.color = '';
+          }, 2000);
+        }
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+        
+        // Show error message
+        const statusBar = document.getElementById('statusBar');
+        if (statusBar) {
+          statusBar.textContent = 'Failed to copy link';
+          statusBar.style.backgroundColor = 'var(--danger-color)';
+          statusBar.style.color = 'white';
+          
+          setTimeout(() => {
+            statusBar.textContent = '';
+            statusBar.style.backgroundColor = '';
+            statusBar.style.color = '';
+          }, 2000);
+        }
+      }
+    }
+  });
   
   // Track if operation is in progress to prevent double-clicks
   let operationInProgress = false;

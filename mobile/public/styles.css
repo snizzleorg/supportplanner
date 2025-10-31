@@ -765,6 +765,12 @@ body {
     font-weight: 600;
 }
 
+.modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .modal-body {
     flex: 1;
     overflow-y: auto;
