@@ -18,6 +18,31 @@
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
     --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
     --shadow-lg: 0 4px 12px rgba(0,0,0,0.15);
+    --card-bg: #ffffff;
+    --input-bg: #f5f5f7;
+    --modal-bg: #ffffff;
+    --overlay-bg: rgba(0,0,0,0.5);
+    --active-bg: rgba(0,0,0,0.05);
+}
+
+/* Dark theme variables */
+[data-theme="dark"] {
+    --primary-color: #0a84ff;
+    --danger-color: #ff453a;
+    --success-color: #32d74b;
+    --warning-color: #ff9f0a;
+    --purple-color: #bf5af2;
+    --bg-color: #000000;
+    --text-color: #ffffff;
+    --border-color: #38383a;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.4);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.5);
+    --card-bg: #1c1c1e;
+    --input-bg: #1c1c1e;
+    --modal-bg: #1c1c1e;
+    --overlay-bg: rgba(0,0,0,0.7);
+    --active-bg: rgba(255,255,255,0.1);
 }
 
 body {
@@ -28,13 +53,37 @@ body {
     touch-action: pan-y pinch-zoom;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.theme-toggle:active {
+    transform: scale(0.95);
+}
+
+.theme-toggle .material-icons {
+    font-size: 20px;
+    color: var(--text-color);
 }
 
 /* App Bar - Minimal */
 .app-bar {
     position: sticky;
     top: 0;
-    background: #fff;
+    background: var(--card-bg);
     border-bottom: 1px solid var(--border-color);
     padding: max(8px, var(--safe-area-top)) 12px 8px;
     z-index: 100;
@@ -54,7 +103,7 @@ body {
 }
 
 .icon-btn:active {
-    background: rgba(0,0,0,0.05);
+    background: var(--active-bg);
 }
 
 /* Material Icons Styling */
@@ -96,7 +145,7 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    background: white;
+    background: var(--card-bg);
     padding: max(8px, var(--safe-area-top)) 12px 12px;
     z-index: 200;
     transform: translateY(-100%);
@@ -117,10 +166,11 @@ body {
 .search-input {
     flex: 1;
     padding: 10px 16px;
-    border: 1px solid #d1d1d6;
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     font-size: 16px;
-    background: var(--bg-color);
+    background: var(--input-bg);
+    color: var(--text-color);
 }
 
 /* Filter Panel */
@@ -130,7 +180,7 @@ body {
     right: 0;
     bottom: 0;
     width: min(85vw, 360px);
-    background: white;
+    background: var(--card-bg);
     z-index: 200;
     transform: translateX(100%);
     transition: transform 0.3s ease;
@@ -184,8 +234,9 @@ body {
 .filter-chip {
     padding: 6px 14px;
     border-radius: 16px;
-    background: var(--bg-color);
-    border: 1px solid #d1d1d6;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
     font-size: 14px;
     cursor: pointer;
     transition: all 0.2s;
@@ -241,7 +292,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--overlay-bg);
     backdrop-filter: blur(5px);
     display: flex;
     flex-direction: column;
@@ -345,14 +396,14 @@ body {
     min-height: 70px;
     border-bottom: 1px solid var(--border-color);
     position: relative;
-    background: white;
+    background: var(--card-bg);
 }
 
 .lane-header {
     position: sticky;
     left: 0;
     width: 100px;
-    background: white;
+    background: var(--card-bg);
     border-right: 2px solid var(--border-color);
     padding: 8px;
     font-size: 12px;
@@ -442,7 +493,7 @@ body {
 }
 
 .event-modal-content {
-    background: white;
+    background: var(--modal-bg);
     width: 100%;
     max-height: 80vh;
     border-radius: 16px 16px 0 0;
@@ -539,7 +590,7 @@ body {
     bottom: 70px;
     left: 50%;
     transform: translateX(-50%);
-    background: white;
+    background: var(--card-bg);
     border-radius: 12px;
     padding: 8px 12px;
     box-shadow: var(--shadow-lg);
@@ -570,7 +621,7 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(10px);
     border-top: 1px solid var(--border-color);
     padding: 4px 8px max(4px, var(--safe-area-bottom));
@@ -588,8 +639,9 @@ body {
 }
 
 .control-btn {
-    background: var(--bg-color);
-    border: 1px solid #d1d1d6;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
     padding: 4px 10px;
     border-radius: 6px;
     font-size: 11px;
@@ -662,7 +714,7 @@ body {
 }
 
 .modal-content {
-    background: white;
+    background: var(--modal-bg);
     width: 100%;
     max-height: 90vh;
     border-radius: 12px 12px 0 0;
@@ -783,6 +835,9 @@ body {
 .modal-body select {
     box-sizing: border-box;
     max-width: 100%;
+    background: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
 }
 
 .modal-body input[type="date"] {
@@ -805,7 +860,7 @@ body {
     gap: 8px;
     padding: 16px;
     border-top: 1px solid var(--border-color);
-    background: #f8f8f8;
+    background: var(--bg-color);
 }
 
 .btn {
@@ -853,7 +908,7 @@ body {
     left: 12px;
     width: min(90vw, 320px);
     max-height: 70vh;
-    background: white;
+    background: var(--card-bg);
     border-radius: 12px;
     box-shadow: var(--shadow-lg);
     opacity: 0;
@@ -995,7 +1050,8 @@ body {
     padding: 8px 12px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    background: white;
+    background: var(--input-bg);
+    color: var(--text-color);
     font-size: 14px;
     cursor: pointer;
     flex: 1;
@@ -1046,7 +1102,7 @@ body {
 }
 
 .audit-entry {
-    background: white;
+    background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 16px;

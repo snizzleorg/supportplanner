@@ -36,6 +36,9 @@ import {
   setTextContent
 } from './js/security.js';
 
+// Import theme manager
+import './js/theme.js';
+
 // Import state management
 import {
   getState,
