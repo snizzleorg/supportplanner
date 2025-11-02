@@ -399,6 +399,10 @@ body {
     background: var(--card-bg);
 }
 
+.calendar-lane-row {
+    border-bottom: 1px solid #eee;
+}
+
 .lane-header {
     position: sticky;
     left: 0;
@@ -1298,6 +1302,16 @@ body {
     background: #fff;
 }
 
+.timeline-header-row {
+    border-bottom: 1px solid #ddd;
+}
+
+.timeline-header-spacer,
+.timeline-week-spacer,
+.timeline-day-spacer {
+    border-right: 2px solid #ccc;
+}
+
 .timeline-week-row,
 .timeline-week-spacer,
 .timeline-week-content {
@@ -1308,6 +1322,43 @@ body {
 .timeline-day-spacer,
 .timeline-day-content {
     background: #fafafa;
+}
+
+.timeline-week-row {
+    border-bottom: 1px solid #ddd;
+}
+
+.timeline-day-row {
+    border-bottom: 2px solid #ccc;
+}
+
+/* Range input (zoom slider) */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #e5e5e7;
+    border-radius: 8px;
+    height: 6px;
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    border: none;
 }
 
 /* Month header labels */
@@ -1352,6 +1403,36 @@ body {
     background: #1f1f21;
 }
 
+[data-theme="dark"] .timeline-header-row {
+    border-bottom: 1px solid #48484a;
+}
+
+[data-theme="dark"] .timeline-week-row {
+    border-bottom: 1px solid #48484a;
+}
+
+[data-theme="dark"] .timeline-day-row {
+    border-bottom: 2px solid #48484a;
+}
+
+[data-theme="dark"] .timeline-header-spacer,
+[data-theme="dark"] .timeline-week-spacer,
+[data-theme="dark"] .timeline-day-spacer {
+    border-right: 2px solid #48484a;
+}
+
+[data-theme="dark"] input[type="range"] {
+    background: #48484a;
+}
+
+[data-theme="dark"] input[type="range"]::-webkit-slider-thumb {
+    background: var(--primary-color);
+}
+
+[data-theme="dark"] input[type="range"]::-moz-range-thumb {
+    background: var(--primary-color);
+}
+
 [data-theme="dark"] .month-header-label {
     background: #3a3a3c;
     color: #f5f5f7;
@@ -1393,6 +1474,10 @@ body {
 
 [data-theme="dark"] .calendar-lane {
     background: #2c2c2e;
+}
+
+[data-theme="dark"] .calendar-lane-row {
+    border-bottom: 1px solid #48484a;
 }
 
 [data-theme="dark"] .lane-header {

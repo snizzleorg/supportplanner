@@ -508,7 +508,7 @@ function render() {
     const isSelected = getSelectedCalendars().size === 0 || getSelectedCalendars().has(calendar.id);
     const opacity = isSelected ? '1' : '0.3';
     
-    html += `<div style="display: flex; height: 50px; border-bottom: 1px solid #eee; opacity: ${opacity};">`;
+    html += `<div class="calendar-lane-row" style="display: flex; height: 50px; opacity: ${opacity};">`;
     
     // Use LABEL_PALETTE based on calendar index
     const bgColor = LABEL_PALETTE[index % LABEL_PALETTE.length];
