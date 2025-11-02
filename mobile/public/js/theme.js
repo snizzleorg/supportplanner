@@ -136,7 +136,7 @@ class ThemeManager {
         }
         
         // Set appropriate color based on theme
-        metaThemeColor.content = theme === 'dark' ? '#1c1c1e' : '#ffffff';
+        metaThemeColor.content = theme === 'dark' ? '#2c2c2e' : '#ffffff';
     }
 
     /**

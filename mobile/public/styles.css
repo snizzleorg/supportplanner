@@ -32,17 +32,17 @@
     --success-color: #32d74b;
     --warning-color: #ff9f0a;
     --purple-color: #bf5af2;
-    --bg-color: #000000;
-    --text-color: #ffffff;
-    --border-color: #38383a;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-    --shadow-md: 0 2px 8px rgba(0,0,0,0.4);
-    --shadow-lg: 0 4px 12px rgba(0,0,0,0.5);
-    --card-bg: #1c1c1e;
-    --input-bg: #1c1c1e;
-    --modal-bg: #1c1c1e;
-    --overlay-bg: rgba(0,0,0,0.7);
-    --active-bg: rgba(255,255,255,0.1);
+    --bg-color: #1a1a1a;
+    --text-color: #f5f5f7;
+    --border-color: #3a3a3c;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.6);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.7);
+    --card-bg: #2c2c2e;
+    --input-bg: #3a3a3c;
+    --modal-bg: #2c2c2e;
+    --overlay-bg: rgba(0,0,0,0.8);
+    --active-bg: rgba(255,255,255,0.15);
 }
 
 body {
@@ -1289,6 +1289,67 @@ body {
     padding: 6px 0;
     font-size: 14px;
     color: #666;
+}
+
+/* Dark theme specific overrides */
+[data-theme="dark"] .month-header {
+    background: var(--bg-color);
+    color: #8e8e93;
+    border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .week-marker {
+    border-left: 1px solid #48484a;
+}
+
+[data-theme="dark"] .week-label {
+    color: #8e8e93;
+}
+
+[data-theme="dark"] .month-column {
+    border-left: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .calendar-lane {
+    background: #2c2c2e;
+}
+
+[data-theme="dark"] .lane-header {
+    background: #2c2c2e;
+    box-shadow: 2px 0 4px rgba(0,0,0,0.3);
+}
+
+[data-theme="dark"] #dateRangeText {
+    color: #8e8e93 !important;
+}
+
+[data-theme="dark"] .help-overlay-header {
+    background: #1c1c1e;
+}
+
+[data-theme="dark"] .filter-section h3 {
+    color: #8e8e93;
+}
+
+[data-theme="dark"] .btn-secondary {
+    background: #3a3a3c;
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .btn-secondary:active {
+    background: #48484a;
+}
+
+[data-theme="dark"] .loading-overlay {
+    background: rgba(26, 26, 26, 0.95);
+}
+
+[data-theme="dark"] .event-bar {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+[data-theme="dark"] .bottom-controls {
+    background: rgba(44, 44, 46, 0.95);
 }
 
 /* Mobile responsiveness */
