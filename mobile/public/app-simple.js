@@ -9,6 +9,7 @@
 // Import configuration
 import {
   LABEL_PALETTE,
+  getLabelPalette,
   LANE_OPACITY,
   EVENT_STATES,
   API_BASE,
@@ -333,6 +334,12 @@ async function init() {
   
   // Listen for hash changes
   window.addEventListener('hashchange', handleEventFromHash);
+  
+  // Listen for theme changes to re-render with new colors
+  window.addEventListener('themechange', () => {
+    console.log('Theme changed, re-rendering timeline...');
+    render();
+  });
 }
 
 /**
@@ -510,8 +517,9 @@ function render() {
     
     html += `<div class="calendar-lane-row" style="display: flex; height: 50px; opacity: ${opacity};">`;
     
-    // Use LABEL_PALETTE based on calendar index
-    const bgColor = LABEL_PALETTE[index % LABEL_PALETTE.length];
+    // Use getLabelPalette() to get theme-appropriate colors
+    const palette = getLabelPalette();
+    const bgColor = palette[index % palette.length];
     const textColor = getContrastColor(bgColor);
     const name = calendar.content || calendar.displayName;
     const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();

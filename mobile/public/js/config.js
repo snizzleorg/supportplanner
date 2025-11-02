@@ -12,7 +12,7 @@
 // ============================================
 
 /**
- * High-contrast color palette for calendar lane labels and backgrounds
+ * High-contrast color palette for calendar lane labels and backgrounds (Light theme)
  * @constant {Array<string>}
  */
 export const LABEL_PALETTE = [
@@ -27,6 +27,32 @@ export const LABEL_PALETTE = [
   '#C4C480', // Vibrant olive
   '#9580FF', // Vibrant periwinkle
 ];
+
+/**
+ * Dark theme color palette - darker, more muted versions
+ * @constant {Array<string>}
+ */
+export const LABEL_PALETTE_DARK = [
+  '#CC6E78', // Darker coral/pink
+  '#5A9DD9', // Darker sky blue
+  '#5ACC75', // Darker mint green
+  '#CC9660', // Darker peach/orange
+  '#9D60CC', // Darker purple
+  '#CCCC60', // Darker yellow
+  '#60B8CC', // Darker cyan
+  '#CC60A8', // Darker magenta
+  '#9A9A60', // Darker olive
+  '#7560CC', // Darker periwinkle
+];
+
+/**
+ * Get the appropriate label palette based on current theme
+ * @returns {Array<string>} Color palette array
+ */
+export function getLabelPalette() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  return isDark ? LABEL_PALETTE_DARK : LABEL_PALETTE;
+}
 
 /**
  * Lane background opacity (0-1)

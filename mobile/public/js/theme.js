@@ -61,6 +61,9 @@ class ThemeManager {
         
         // Update meta theme-color for mobile browsers
         this.updateMetaThemeColor(theme);
+        
+        // Dispatch custom event so app can re-render with new colors
+        window.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
     }
 
     /**
