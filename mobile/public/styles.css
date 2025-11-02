@@ -1427,6 +1427,33 @@ body {
 
 [data-theme="dark"] .event-bar {
     box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    border: 1px solid rgba(0,0,0,0.3);
+}
+
+/* Dark theme event colors - darker, less saturated versions */
+[data-theme="dark"] .event-bar.type-installation {
+    background: #2d8a4a;
+    color: #f5f5f7;
+}
+
+[data-theme="dark"] .event-bar.type-training {
+    background: #cc7d08;
+    color: #f5f5f7;
+}
+
+[data-theme="dark"] .event-bar.type-maintenance {
+    background: #9847c2;
+    color: #f5f5f7;
+}
+
+[data-theme="dark"] .event-bar.type-vacation {
+    background: #cc362e;
+    color: #f5f5f7;
+}
+
+[data-theme="dark"] .event-bar.type-default {
+    background: #0969cc;
+    color: #f5f5f7;
 }
 
 [data-theme="dark"] .bottom-controls {
