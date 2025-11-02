@@ -506,7 +506,7 @@ function render() {
   html += '<div style="position: relative; flex: 1; display: flex; flex-direction: column; min-height: 0;">';
   
   // Weekend and holiday backgrounds - absolute positioned, offset to align with timeline content
-  html += '<div style="position: absolute; top: 0; bottom: 0; left: 0; pointer-events: none; z-index: 1; margin-left: 100px;">';
+  html += '<div style="position: absolute; top: 0; bottom: 0; left: 0; pointer-events: none; z-index: 0; margin-left: 100px;">';
   html += renderWeekendAndHolidayBackgrounds(pixelsPerDay);
   html += '</div>';
   
@@ -539,7 +539,7 @@ function render() {
     // Lane content (with overflow hidden to prevent events from piercing through)
     // Apply dimmed background color using LANE_OPACITY
     const laneBgColor = hexToRgba(bgColor, LANE_OPACITY);
-    html += `<div class="calendar-lane-area" data-calendar-id="${calendar.id}" style="position: relative; flex: 1; overflow: hidden; background: ${laneBgColor}; padding-left: 0;">`;
+    html += `<div class="calendar-lane-area" data-calendar-id="${calendar.id}" style="position: relative; flex: 1; overflow: hidden; background: ${laneBgColor}; padding-left: 0; z-index: 2;">`;
     html += renderEventsForCalendar(calendar.id, pixelsPerDay);
     html += '</div>';
     
