@@ -471,25 +471,25 @@ function render() {
   
   // === HEADER SECTION (STICKY) ===
   // Header row with months - sticky at top
-  html += '<div style="position: sticky; top: 0; z-index: 102; display: flex; height: 40px; border-bottom: 1px solid #ddd; background: #fff; flex-shrink: 0;">';
-  html += '<div style="width: 100px; flex-shrink: 0; border-right: 2px solid #ccc; background: #fff;"></div>'; // Label spacer
-  html += '<div style="display: flex; flex: 1; min-width: ' + totalWidth + 'px; background: #fff;">';
+  html += '<div class="timeline-header-row" style="position: sticky; top: 0; z-index: 102; display: flex; height: 40px; border-bottom: 1px solid #ddd; flex-shrink: 0;">';
+  html += '<div class="timeline-header-spacer" style="width: 100px; flex-shrink: 0; border-right: 2px solid #ccc;"></div>'; // Label spacer
+  html += '<div class="timeline-header-content" style="display: flex; flex: 1; min-width: ' + totalWidth + 'px;">';
   html += renderMonthHeaders(pixelsPerDay);
   html += '</div>';
   html += '</div>';
   
   // Week numbers row - sticky below months
-  html += '<div style="position: sticky; top: 40px; z-index: 101; display: flex; height: 20px; border-bottom: 1px solid #ddd; background: #f9f9f9; flex-shrink: 0;">';
-  html += '<div style="width: 100px; flex-shrink: 0; border-right: 2px solid #ccc; background: #f9f9f9;"></div>'; // Label spacer
-  html += '<div style="position: relative; flex: 1; min-width: ' + totalWidth + 'px; background: #f9f9f9;">';
+  html += '<div class="timeline-week-row" style="position: sticky; top: 40px; z-index: 101; display: flex; height: 20px; border-bottom: 1px solid #ddd; flex-shrink: 0;">';
+  html += '<div class="timeline-week-spacer" style="width: 100px; flex-shrink: 0; border-right: 2px solid #ccc;"></div>'; // Label spacer
+  html += '<div class="timeline-week-content" style="position: relative; flex: 1; min-width: ' + totalWidth + 'px;">';
   html += renderWeekNumbers(pixelsPerDay);
   html += '</div>';
   html += '</div>';
   
   // Day numbers row - sticky below week numbers
-  html += '<div style="position: sticky; top: 60px; z-index: 100; display: flex; height: 25px; border-bottom: 2px solid #ccc; background: #fafafa; flex-shrink: 0;">';
-  html += '<div style="width: 100px; flex-shrink: 0; border-right: 2px solid #ccc; background: #fafafa;"></div>'; // Label spacer
-  html += '<div style="position: relative; flex: 1; min-width: ' + totalWidth + 'px; background: #fafafa;">';
+  html += '<div class="timeline-day-row" style="position: sticky; top: 60px; z-index: 100; display: flex; height: 25px; border-bottom: 2px solid #ccc; flex-shrink: 0;">';
+  html += '<div class="timeline-day-spacer" style="width: 100px; flex-shrink: 0; border-right: 2px solid #ccc;"></div>'; // Label spacer
+  html += '<div class="timeline-day-content" style="position: relative; flex: 1; min-width: ' + totalWidth + 'px;">';
   html += renderDayNumbers(pixelsPerDay);
   html += '</div>';
   html += '</div>';
@@ -1834,10 +1834,10 @@ function renderWeekNumbers(pixelsPerDay) {
       const weekWidth = pixelsPerDay * 7;
       
       // Week number label (centered)
-      html += `<div style="position: absolute; left: ${left}px; width: ${weekWidth}px; font-size: 8px; color: #888; text-align: center; padding-top: 2px; font-weight: 600;">W${weekNum}</div>`;
+      html += `<div class="week-number-label" style="position: absolute; left: ${left}px; width: ${weekWidth}px; font-size: 8px; text-align: center; padding-top: 2px; font-weight: 600;">W${weekNum}</div>`;
       
       // Vertical line at start of week
-      html += `<div style="position: absolute; left: ${left}px; top: 0; bottom: 0; width: 1px; background: #ddd;"></div>`;
+      html += `<div class="week-divider" style="position: absolute; left: ${left}px; top: 0; bottom: 0; width: 1px;"></div>`;
       
       lastWeekNum = weekNum;
     }
@@ -1864,12 +1864,12 @@ function renderDayNumbers(pixelsPerDay) {
     const dayNum = current.getDate();
     const dayOfWeek = current.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const color = isWeekend ? '#999' : '#666';
+    const weekendClass = isWeekend ? 'day-number-weekend' : 'day-number-weekday';
     const fontWeight = dayNum === 1 ? '600' : '400';
     
     // Use absolute positioning like events and weekend backgrounds
     const left = dayIndex * pixelsPerDay;
-    html += `<div style="position: absolute; left: ${left}px; width: ${pixelsPerDay}px; font-size: 9px; color: ${color}; text-align: center; padding-top: 4px; font-weight: ${fontWeight};">${dayNum}</div>`;
+    html += `<div class="day-number ${weekendClass}" style="position: absolute; left: ${left}px; width: ${pixelsPerDay}px; font-size: 9px; text-align: center; padding-top: 4px; font-weight: ${fontWeight};">${dayNum}</div>`;
     
     current.setDate(current.getDate() + 1);
     dayIndex++;
