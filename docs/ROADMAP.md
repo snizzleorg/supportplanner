@@ -2,7 +2,25 @@
 
 ## Recent Releases
 
-### [2025-10-31] v0.7.1 🔗 DEEP LINKING - **CURRENT**
+### [2025-11-02] v0.8.0 🎨 DARK THEME - **CURRENT**
+**Complete Dark Theme Implementation**
+- **Theme Toggle**: Moon/sun icon button in app bar for easy switching
+- **Smart Detection**: Automatically detects and follows system theme preference
+- **Persistent Storage**: Theme choice saved in localStorage across sessions
+- **Comprehensive Coverage**: All UI components properly themed
+  - Timeline headers (month, week, day rows)
+  - Calendar lanes and labels with darker color palette
+  - Event colors (20% darker, less saturated)
+  - Modals, overlays, and controls
+  - Borders, inputs, and buttons
+  - Zoom slider and range inputs
+- **Color Strategy**: Reduced saturation, darker tones, better contrast
+- **Smooth Transitions**: 0.3s animated theme switching
+- **Mobile Optimized**: Meta theme-color updates for mobile browser chrome
+- **Auto Re-render**: Timeline refreshes when theme changes
+- **Branch**: `feature/dark-theme-mobile` (7 commits)
+
+### [2025-10-31] v0.7.1 🔗 DEEP LINKING
 **Event Deep Linking & Sharing**
 - **URL Hash Handling**: Open events directly via `#event=<uid>` URLs
 - **Copy Event Link**: New button in modal to copy shareable event links
@@ -109,12 +127,11 @@ See [CHANGELOG.md](../CHANGELOG.md) for complete release notes.
   - Event lifecycle tests
   - Responsive behavior tests
 
-### Future Considerations (v0.8.0+)
+### Future Considerations (v0.9.0+)
 - [ ] CI/CD pipeline setup (GitHub Actions)
 - [ ] Structured logging library (winston/pino)
 - [ ] TypeScript migration
 - [ ] Performance optimizations
-- [ ] Dark/light theme support
 
 ---
 
@@ -139,7 +156,7 @@ See [CHANGELOG.md](../CHANGELOG.md) for complete release notes.
 - [x] Header shows signed-in user and role; Logout button
 - [x] Match search by calendar name and URL
 - [x] Generic error messages in production (v0.6.0)
-- [ ] Dark/light theme support (deferred)
+- [x] Dark/light theme support (v0.8.0)
 - [ ] Improve focus order and tab reachability assertions (a11y)
 
 
