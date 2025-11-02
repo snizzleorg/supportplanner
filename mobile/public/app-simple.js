@@ -1801,7 +1801,7 @@ function renderMonthHeaders(pixelsPerDay) {
     const width = daysInMonth * pixelsPerDay;
     const monthName = current.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     
-    html += `<div style="width: ${width}px; padding: 8px; font-size: 11px; font-weight: 600; text-align: center; background: #f5f5f5;">${monthName}</div>`;
+    html += `<div class="month-header-label" style="width: ${width}px; padding: 8px; font-size: 11px; font-weight: 600; text-align: center;">${monthName}</div>`;
     
     current.setMonth(current.getMonth() + 1);
   }
