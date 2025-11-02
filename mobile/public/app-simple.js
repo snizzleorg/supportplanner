@@ -506,7 +506,7 @@ function render() {
   html += '<div style="position: relative; flex: 1; display: flex; flex-direction: column; min-height: 0;">';
   
   // Weekend and holiday backgrounds - absolute positioned, offset to align with timeline content
-  html += '<div style="position: absolute; top: 0; bottom: 0; left: 0; pointer-events: none; z-index: 0; margin-left: 100px;">';
+  html += '<div style="position: absolute; top: 0; bottom: 0; left: 0; pointer-events: none; z-index: 1; margin-left: 100px;">';
   html += renderWeekendAndHolidayBackgrounds(pixelsPerDay);
   html += '</div>';
   
@@ -1760,8 +1760,8 @@ function renderWeekendAndHolidayBackgrounds(pixelsPerDay) {
     
     if (isWeekend || isHoliday) {
       const left = dayIndex * pixelsPerDay;
-      const color = isHoliday ? 'rgba(255, 200, 200, 0.3)' : 'rgba(200, 200, 200, 0.2)';
-      html += `<div style="position: absolute; left: ${left}px; width: ${pixelsPerDay}px; top: 0; bottom: 0; background: ${color};"></div>`;
+      const bgClass = isHoliday ? 'holiday-bg' : 'weekend-bg';
+      html += `<div class="${bgClass}" style="position: absolute; left: ${left}px; width: ${pixelsPerDay}px; top: 0; bottom: 0;"></div>`;
     }
     
     current.setDate(current.getDate() + 1);
