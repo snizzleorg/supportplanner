@@ -1291,7 +1291,77 @@ body {
     color: #666;
 }
 
+/* Timeline header rows */
+.timeline-header-row,
+.timeline-header-spacer,
+.timeline-header-content {
+    background: #fff;
+}
+
+.timeline-week-row,
+.timeline-week-spacer,
+.timeline-week-content {
+    background: #f9f9f9;
+}
+
+.timeline-day-row,
+.timeline-day-spacer,
+.timeline-day-content {
+    background: #fafafa;
+}
+
+/* Week and day number labels */
+.week-number-label {
+    color: #888;
+}
+
+.week-divider {
+    background: #ddd;
+}
+
+.day-number-weekday {
+    color: #666;
+}
+
+.day-number-weekend {
+    color: #999;
+}
+
 /* Dark theme specific overrides */
+[data-theme="dark"] .timeline-header-row,
+[data-theme="dark"] .timeline-header-spacer,
+[data-theme="dark"] .timeline-header-content {
+    background: #2c2c2e;
+}
+
+[data-theme="dark"] .timeline-week-row,
+[data-theme="dark"] .timeline-week-spacer,
+[data-theme="dark"] .timeline-week-content {
+    background: #252527;
+}
+
+[data-theme="dark"] .timeline-day-row,
+[data-theme="dark"] .timeline-day-spacer,
+[data-theme="dark"] .timeline-day-content {
+    background: #1f1f21;
+}
+
+[data-theme="dark"] .week-number-label {
+    color: #8e8e93;
+}
+
+[data-theme="dark"] .week-divider {
+    background: #48484a;
+}
+
+[data-theme="dark"] .day-number-weekday {
+    color: #adadaf;
+}
+
+[data-theme="dark"] .day-number-weekend {
+    color: #8e8e93;
+}
+
 [data-theme="dark"] .month-header {
     background: var(--bg-color);
     color: #8e8e93;
