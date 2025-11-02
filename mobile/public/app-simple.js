@@ -594,10 +594,17 @@ function render() {
       if (!calendar) return;
       
       // Calculate which date was clicked
+      const container = document.querySelector('.timeline-container');
+      if (!container) return;
+      
       const rect = laneEl.getBoundingClientRect();
-      const clickX = e.clientX - rect.left + laneEl.scrollLeft;
+      const containerRect = container.getBoundingClientRect();
+      
+      // Calculate click position relative to the timeline start (accounting for scroll and label width)
+      const clickX = e.clientX - containerRect.left + container.scrollLeft - 100; // 100px for label width
       const pixelsPerDay = ZOOM_SETTINGS[getZoom()];
       const daysFromStart = Math.floor(clickX / pixelsPerDay);
+      
       const clickedDate = new Date(getDateRange().from);
       clickedDate.setDate(clickedDate.getDate() + daysFromStart);
       
