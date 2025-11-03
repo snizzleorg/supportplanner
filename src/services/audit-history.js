@@ -15,14 +15,17 @@
 
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
-import path from 'path';
 import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { createLogger } from '../utils/index.js';
+
+const logger = createLogger('AuditHistory');
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
 
 // Database file path - store in data directory
-const DB_PATH = path.join(__dirname, '../../data/audit-history.db');
+const DB_PATH = join(__dirname, '../../data/audit-history.db');
 
 /**
  * Audit History Service Class
@@ -95,9 +98,9 @@ export class AuditHistoryService {
       `);
 
       this.isInitialized = true;
-      console.log('[AuditHistory] Database initialized:', DB_PATH);
+      logger.info('Database initialized', { path: DB_PATH });
     } catch (error) {
-      console.error('[AuditHistory] Failed to initialize database:', error);
+      logger.error('Failed to initialize database', error);
       throw error;
     }
   }
@@ -158,10 +161,10 @@ export class AuditHistoryService {
         ]
       );
 
-      console.log(`[AuditHistory] Logged ${operation} for event ${eventUid} by ${userEmail || 'system'}`);
+      logger.debug('Logged operation', { operation, eventUid, userEmail: userEmail || 'system' });
       return result.lastID;
     } catch (error) {
-      console.error('[AuditHistory] Failed to log operation:', error);
+      logger.error('Failed to log operation', error);
       // Don't throw - audit logging should never break the application
       return null;
     }
@@ -209,7 +212,7 @@ export class AuditHistoryService {
         user_name: undefined
       }));
     } catch (error) {
-      console.error('[AuditHistory] Failed to get event history:', error);
+      logger.error('Failed to get event history', error);
       return [];
     }
   }
@@ -303,7 +306,7 @@ export class AuditHistoryService {
         user_name: undefined
       }));
     } catch (error) {
-      console.error('[AuditHistory] Failed to get recent history:', error);
+      logger.error('Failed to get recent history', error);
       return [];
     }
   }
@@ -344,7 +347,7 @@ export class AuditHistoryService {
         timestamp: entry.timestamp
       };
     } catch (error) {
-      console.error('[AuditHistory] Failed to get previous state:', error);
+      logger.error('Failed to get previous state', error);
       return null;
     }
   }
@@ -401,7 +404,7 @@ export class AuditHistoryService {
         last24Hours: recentCount.count
       };
     } catch (error) {
-      console.error('[AuditHistory] Failed to get statistics:', error);
+      logger.error('Failed to get statistics', error);
       return null;
     }
   }
@@ -418,7 +421,7 @@ export class AuditHistoryService {
       await this.db.close();
       this.db = null;
       this.isInitialized = false;
-      console.log('[AuditHistory] Database connection closed');
+      logger.info('Database connection closed');
     }
   }
 }
