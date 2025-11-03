@@ -1,4 +1,5 @@
 # CodeQL Security Analysis Container
+# Note: Uses linux/amd64 platform (works on both x86_64 and ARM64 via emulation)
 FROM ubuntu:22.04
 
 # Install dependencies
@@ -9,12 +10,15 @@ RUN apt-get update && apt-get install -y \
     python3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install CodeQL CLI
+# Install CodeQL CLI (x86_64 version)
+# Works on ARM64 via Docker's QEMU emulation
 WORKDIR /opt
-RUN curl -L https://github.com/github/codeql-cli-binaries/releases/download/v2.19.3/codeql-linux64.zip -o codeql.zip \
-    && unzip codeql.zip \
-    && rm codeql.zip \
-    && chmod +x /opt/codeql/codeql
+RUN CODEQL_VERSION="2.19.3" && \
+    echo "Downloading CodeQL v${CODEQL_VERSION} (x86_64)..." && \
+    curl -L "https://github.com/github/codeql-cli-binaries/releases/download/v${CODEQL_VERSION}/codeql-linux64.zip" -o codeql.zip && \
+    unzip codeql.zip && \
+    rm codeql.zip && \
+    chmod +x /opt/codeql/codeql
 
 # Add CodeQL to PATH
 ENV PATH="/opt/codeql:${PATH}"

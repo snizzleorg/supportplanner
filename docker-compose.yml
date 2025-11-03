@@ -41,6 +41,7 @@ services:
     build:
       context: .
       dockerfile: tests/codeql/Dockerfile
+    platform: linux/amd64  # Use x86_64 for CodeQL (works via emulation on ARM)
     container_name: codeql-tests
     volumes:
       - ./test-results:/app/test-results
