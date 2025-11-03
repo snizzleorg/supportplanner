@@ -274,24 +274,26 @@ async function init() {
   // Setup hamburger menu
   const menuBtn = document.getElementById('menuBtn');
   const menuOverlay = document.getElementById('menuOverlay');
+  const menuBackdrop = document.getElementById('menuBackdrop');
   const closeMenuOverlay = document.getElementById('closeMenuOverlay');
   
   // Open menu
   menuBtn?.addEventListener('click', () => {
     menuOverlay?.classList.add('active');
+    menuBackdrop?.classList.add('active');
   });
   
-  // Close menu
-  closeMenuOverlay?.addEventListener('click', () => {
+  // Close menu function
+  const closeMenu = () => {
     menuOverlay?.classList.remove('active');
-  });
+    menuBackdrop?.classList.remove('active');
+  };
   
-  // Close on background click
-  menuOverlay?.addEventListener('click', (e) => {
-    if (e.target === menuOverlay) {
-      menuOverlay.classList.remove('active');
-    }
-  });
+  // Close menu on close button
+  closeMenuOverlay?.addEventListener('click', closeMenu);
+  
+  // Close menu on backdrop click
+  menuBackdrop?.addEventListener('click', closeMenu);
   
   // Setup zoom preset buttons in menu
   document.querySelectorAll('.zoom-preset').forEach(btn => {
@@ -335,7 +337,7 @@ async function init() {
       );
       
       // Close menu
-      menuOverlay?.classList.remove('active');
+      closeMenu();
     });
   });
   
@@ -456,8 +458,8 @@ async function handleEventFromHash() {
 }
 
 /**
- * Scroll the timeline to show one week before today
- * Positions the view to start one week in the past
+ * Scroll timeline to show today's date
+ * Positions the view so today appears about one week in from the left edge
  * @returns {void}
  */
 function scrollToToday() {
@@ -473,24 +475,32 @@ function scrollToToday() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Go back one week (7 days)
-    const oneWeekAgo = new Date(today);
-    oneWeekAgo.setDate(today.getDate() - 7);
+    const dateRange = getDateRange();
+    const rangeFrom = new Date(dateRange.from);
+    rangeFrom.setHours(0, 0, 0, 0);
     
-    // Calculate days from start of date range to one week ago
+    // Calculate days from start of date range to today
     const msPerDay = 1000 * 60 * 60 * 24;
-    const daysFromStart = Math.floor((oneWeekAgo - getDateRange().from) / msPerDay);
+    const daysFromStart = Math.floor((today - rangeFrom) / msPerDay);
     
-    // Calculate pixel position (100px label width + days * pixels per day)
-    const pixelsPerDay = ZOOM_SETTINGS[getZoom()];
-    const scrollPosition = 100 + (daysFromStart * pixelsPerDay);
+    // Calculate pixel position
+    const pixelsPerDay = ZOOM_SETTINGS[getZoom()] || 20;
     
-    console.log('Scrolling to one week before today:', {
+    // Position today about 7 days in from the left edge
+    // This gives context of the past week while showing today prominently
+    const daysOffset = 7;
+    const scrollPosition = (daysFromStart - daysOffset) * pixelsPerDay;
+    
+    console.log('Scrolling to today:', {
+      today: today.toISOString(),
+      rangeFrom: rangeFrom.toISOString(),
       daysFromStart,
+      pixelsPerDay,
+      daysOffset,
       scrollPosition: Math.max(0, scrollPosition)
     });
     
-    container.scrollLeft = Math.max(0, scrollPosition);
+    container.parentElement.scrollLeft = Math.max(0, scrollPosition);
   }, 100);
 }
 
