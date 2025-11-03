@@ -148,14 +148,22 @@ async function init() {
   const searchInput = document.getElementById('searchInput');
   
   searchBtn?.addEventListener('click', () => {
+    const appBarCenter = document.querySelector('.app-bar-center');
+    
     if (searchInput.style.display === 'none') {
       searchInput.style.display = 'flex';
       searchInput.focus();
+      // Make zoom slider smaller when search is visible
+      appBarCenter.classList.remove('search-hidden');
+      appBarCenter.classList.add('search-visible');
     } else {
       searchInput.style.display = 'none';
       searchInput.value = '';
       setSearchQuery('');
       render();
+      // Make zoom slider larger when search is hidden
+      appBarCenter.classList.remove('search-visible');
+      appBarCenter.classList.add('search-hidden');
     }
   });
   
@@ -375,6 +383,12 @@ async function init() {
     document.querySelectorAll('.zoom-preset').forEach(b => 
       b.classList.toggle('active', b.dataset.zoom === currentZoom)
     );
+  }
+  
+  // Set initial zoom slider state (search is hidden by default)
+  const appBarCenter = document.querySelector('.app-bar-center');
+  if (appBarCenter) {
+    appBarCenter.classList.add('search-hidden');
   }
   
   // Scroll to today's position
