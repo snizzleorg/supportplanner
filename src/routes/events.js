@@ -19,9 +19,11 @@ import { body, param, validationResult } from 'express-validator';
 import { calendarCache } from '../services/calendar.js';
 import { getEventType } from '../services/event-type.js';
 import { geocodeLocations } from '../services/geocoding.js';
-import { escapeHtml, formatErrorResponse } from '../utils/index.js';
+import { escapeHtml, formatErrorResponse, createLogger } from '../utils/index.js';
 import { requireRole, validate, eventValidation, uidValidation } from '../middleware/index.js';
 import { loadEventTypesConfig, getEventTypes } from '../config/index.js';
+
+const logger = createLogger('EventRoutes');
 
 const requireEditor = requireRole('editor');
 
@@ -63,12 +65,12 @@ router.post('/all-day', requireEditor, [
 
     // Kick off a background refresh so subsequent reads include the new event
     calendarCache.refreshAllCalendars().catch(err => {
-      console.error('Background refresh after create failed:', err);
+      logger.error('Background refresh after create failed', err);
     });
 
     res.json({ success: true, event: result });
   } catch (error) {
-    console.error('Error creating all-day event:', error);
+    logger.error('Error creating all-day event', error);
     const { status, body } = formatErrorResponse(error, 500);
     res.status(status).json(body);
   }
@@ -95,13 +97,13 @@ router.delete('/:uid', requireRole('editor'), uidValidation, validate, async (re
 
     // Kick off a background refresh so subsequent reads reflect the deletion
     calendarCache.refreshAllCalendars().catch(err => {
-      console.error('Background refresh after delete failed:', err);
+      logger.error('Background refresh after delete failed', err);
     });
 
     // Success
     res.json({ success: true });
   } catch (error) {
-    console.error('Error deleting event:', error);
+    logger.error('Error deleting event', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to delete event' });
   }
 });
@@ -134,7 +136,7 @@ router.get('/search', requireRole('reader'), async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error searching events:', error);
+    logger.error('Error searching events', error);
     res.status(500).json({ 
       error: 'Failed to search events',
       details: error.message 
@@ -279,7 +281,7 @@ router.post('/', async (req, res) => {
     // Hot-reload event types so edits in event-types.json are reflected without restart
     loadEventTypesConfig();
     const { calendarUrls, from, to } = req.body || {};
-    console.log('[events] request', { from, to, count: Array.isArray(calendarUrls) ? calendarUrls.length : 0 });
+    logger.debug('Events request', { from, to, count: Array.isArray(calendarUrls) ? calendarUrls.length : 0 });
     
     if (!Array.isArray(calendarUrls) || calendarUrls.length === 0) {
       return res.status(400).json({ error: 'calendarUrls must be a non-empty array' });
@@ -331,7 +333,7 @@ router.post('/', async (req, res) => {
     // Geocode all unique locations in batch
     const uniqueLocations = [...new Set(cachedEvents.map(e => e.location).filter(Boolean))];
     const geocodedLocations = await geocodeLocations(uniqueLocations);
-    console.log(`[Events] Geocoded ${geocodedLocations.size} locations`);
+    logger.debug('Geocoded locations', { count: geocodedLocations.size });
 
     // Format events for the frontend
     const items = [];
@@ -353,7 +355,7 @@ router.post('/', async (req, res) => {
         
         const groupId = groupMap.get(event.calendar);
         if (!groupId) {
-          console.warn(`No group found for calendar URL: ${event.calendar}`);
+          logger.warn('No group found for calendar URL', { calendar: event.calendar });
           return;
         }
         
@@ -363,7 +365,7 @@ router.post('/', async (req, res) => {
         
         // Debug log to check event data
         if (event.description) {
-          console.log(`Event ${event.summary} has description:`, event.description);
+          logger.debug('Event has description', { summary: event.summary, hasDescription: true });
         }
 
         // Format the date and time
@@ -475,7 +477,7 @@ router.post('/', async (req, res) => {
         
         items.push(item);
       } catch (error) {
-        console.error('Error formatting event:', error, event);
+        logger.error('Error formatting event', { error, eventUid: event.uid });
       }
     });
 
@@ -513,7 +515,7 @@ router.post('/', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Error in /api/events:', err);
+    logger.error('Error in /api/events', err);
     res.status(500).json({ 
       error: err.message || 'Failed to fetch events',
       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
@@ -537,8 +539,7 @@ router.put('/:uid', requireRole('editor'), uidValidation, eventValidation, valid
       }
     }
     
-    // Sanitize log output to prevent format string attacks
-    console.log('[updateEvent] Updating event', uid, 'with data:', JSON.stringify(updateData));
+    logger.info('Updating event', { uid, updateData });
     
     if (!uid) {
       return res.status(400).json({ success: false, error: 'Event UID is required' });
@@ -560,18 +561,18 @@ router.put('/:uid', requireRole('editor'), uidValidation, eventValidation, valid
       return res.status(404).json({ success: false, error: 'Event not found or update failed' });
     }
     
-    console.log(`[updateEvent] Successfully updated event ${uid}`);
+    logger.info('Successfully updated event', { uid });
     
     // Kick off a background refresh so subsequent reads include the updated event
     calendarCache.refreshAllCalendars().catch(err => {
-      console.error('Background refresh after update failed:', err);
+      logger.error('Background refresh after update failed', err);
     });
     
     // Get the complete updated event data
     const completeEvent = await calendarCache.getEvent(uid);
     
     if (!completeEvent) {
-      console.warn(`[updateEvent] Could not fetch complete event data for ${uid} after update`);
+      logger.warn('Could not fetch complete event data after update', { uid });
       return res.json({
         success: true,
         message: 'Event updated but could not fetch complete data',
@@ -586,7 +587,7 @@ router.put('/:uid', requireRole('editor'), uidValidation, eventValidation, valid
     });
     
   } catch (error) {
-    console.error('Error updating event:', error);
+    logger.error('Error updating event', error);
     
     // Determine appropriate status code based on error
     let statusCode = 500;
@@ -627,7 +628,7 @@ router.get('/:uid', uidValidation, validate, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error fetching event:', error);
+    logger.error('Error fetching event', error);
     res.status(500).json({ 
       error: 'Failed to fetch event',
       details: error.message 
@@ -641,7 +642,7 @@ router.post('/:uid/move', requireRole('editor'), async (req, res) => {
     const { uid } = req.params;
     const { targetCalendarUrl } = req.body;
 
-    console.log(`[moveEvent] Request to move event ${uid} to calendar ${targetCalendarUrl}`);
+    logger.info('Request to move event', { uid, targetCalendarUrl });
 
     // Basic validation
     if (!uid) {
@@ -657,7 +658,7 @@ router.post('/:uid/move', requireRole('editor'), async (req, res) => {
     
     // Kick off a background refresh so subsequent reads reflect the moved event
     calendarCache.refreshAllCalendars().catch(err => {
-      console.error('Background refresh after move failed:', err);
+      logger.error('Background refresh after move failed', err);
     });
     
     // In a real implementation, we would handle the actual move operation here
@@ -670,7 +671,7 @@ router.post('/:uid/move', requireRole('editor'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error moving event:', error);
+    logger.error('Error moving event', error);
     res.status(500).json({ 
       error: 'Failed to move event',
       details: error.message 
