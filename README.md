@@ -13,6 +13,9 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
   - Touch gestures (tap, long-press, pinch-zoom)
   - Landscape-only mode with rotate guidance
   - **Dark theme** with automatic system preference detection and manual toggle (v0.8.0)
+  - **Hamburger menu** with backdrop overlay for compact mobile UI (v0.9.0)
+  - **Smart positioning**: Timeline starts with today 7 days in from left edge
+  - **Dynamic zoom controls**: Full-width slider that adapts to search visibility
 - Desktop timeline with vis-timeline library
 - Leaflet-based map with per-location markers and group-colored pins
 - Accessible edit modal (focus on open, Escape to close, focus trap)
@@ -681,6 +684,31 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
 MIT
 
 ## What's New
+
+### v0.9.0 (2025-11-03) - Mobile UI Optimization
+
+**Mobile Interface Enhancements:**
+- Hamburger menu with backdrop overlay for better space utilization
+- Tap anywhere outside menu to close (intuitive mobile gesture)
+- System expert overlay properly layers above menu (z-index fix)
+- Menu slides in from left with smooth animations
+
+**Zoom Controls:**
+- Week zoom set as default for all devices (better granularity)
+- Zoom slider uses full available space (removed width constraints)
+- Dynamic slider width based on search visibility
+- Smooth transitions between expanded/contracted states
+
+**Smart Timeline Positioning:**
+- Timeline now positions today 7 days in from left edge
+- Shows past week context while keeping today prominent
+- Fixed scroll targeting for proper initial positioning
+- Retry logic with proper render detection
+
+**Dark Theme Improvements:**
+- X (close) buttons now clearly visible in dark theme
+- Consistent styling across all modals and menu
+- Subtle hover and active effects for better feedback
 
 ### v0.5.0 (2025-10-17) - Data Integrity & Race Condition Protection
 

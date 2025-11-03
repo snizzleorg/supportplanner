@@ -2,7 +2,34 @@
 
 ## Recent Releases
 
-### [2025-11-03] v0.8.0 🎨 UI/UX RELEASE - **CURRENT**
+### [2025-11-03] v0.9.0 📱 MOBILE UI OPTIMIZATION - **CURRENT**
+**Comprehensive Mobile Interface Improvements**
+- **Hamburger Menu**: Compact mobile UI with backdrop overlay
+  - Tap anywhere outside to close (intuitive gesture)
+  - Slides in from left with smooth animations
+  - System expert overlay properly layers above menu (z-index fix)
+  - Better space utilization on mobile devices
+- **Smart Zoom Controls**:
+  - Week zoom set as default for all devices (better granularity)
+  - Full-width zoom slider (removed max-width constraints)
+  - Dynamic slider width based on search visibility
+  - Smooth transitions between expanded/contracted states
+- **Timeline Positioning**:
+  - Timeline starts with today 7 days in from left edge
+  - Shows past week context while keeping today prominent
+  - Fixed scroll targeting (.timeline-container vs .timeline-wrapper)
+  - Retry logic with proper render detection
+- **Dark Theme Polish**:
+  - X (close) buttons clearly visible in dark theme
+  - Consistent styling across all modals and menu
+  - Subtle hover and active effects for better feedback
+- **Technical Improvements**:
+  - Fixed scroll container reference for proper positioning
+  - Added comprehensive scroll debugging
+  - requestAnimationFrame for proper render timing
+  - Better mobile space utilization
+
+### [2025-11-03] v0.8.0 🎨 UI/UX RELEASE
 **Dark Theme & Audit History Fix**
 - **Dark Theme for Mobile App**: Complete dark mode implementation
   - **Theme Toggle**: Moon/sun icon button in app bar for easy switching
