@@ -96,9 +96,11 @@ export async function logOperation(operation, details) {
     
     await fs.appendFile(LOG_FILE, logLine, 'utf8');
     
-    // Also log to console in development
+    // Also log to console in development (sanitized)
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[OperationLog] ${operation}:`, details);
+      // Sanitize details to prevent format string attacks
+      const sanitized = JSON.parse(JSON.stringify(details));
+      console.log('[OperationLog]', operation, ':', sanitized);
     }
   } catch (error) {
     // Don't throw - logging should never break the application

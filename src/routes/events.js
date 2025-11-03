@@ -537,7 +537,8 @@ router.put('/:uid', requireRole('editor'), uidValidation, eventValidation, valid
       }
     }
     
-    console.log(`[updateEvent] Updating event ${uid} with data:`, updateData);
+    // Sanitize log output to prevent format string attacks
+    console.log('[updateEvent] Updating event', uid, 'with data:', JSON.stringify(updateData));
     
     if (!uid) {
       return res.status(400).json({ success: false, error: 'Event UID is required' });

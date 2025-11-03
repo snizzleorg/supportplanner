@@ -77,21 +77,42 @@ export class CalendarCache {
   extractYaml(description) {
     const result = { text: description || '', meta: null, rawYaml: '' };
     if (!description) return result;
-    // Look for fenced yaml block ```yaml ... ```
-    const fenceRe = /```\s*yaml\s*\n([\s\S]*?)```\s*$/i;
-    const m = description.match(fenceRe);
-    if (m) {
-      const yamlSrc = m[1];
-      result.rawYaml = yamlSrc;
-      try {
-        result.meta = YAML.parse(yamlSrc) || null;
-      } catch (e) {
-        // Keep meta null on parse error; preserve raw text
-        result.meta = null;
-      }
-      // Remove the fenced block from the visible text
-      result.text = description.replace(fenceRe, '').trimEnd();
+    
+    // Security: Limit description length to prevent ReDoS attacks
+    const MAX_DESCRIPTION_LENGTH = 50000; // 50KB limit
+    if (description.length > MAX_DESCRIPTION_LENGTH) {
+      console.warn('[extractYaml] Description exceeds max length, truncating');
+      description = description.substring(0, MAX_DESCRIPTION_LENGTH);
     }
+    
+    // Look for fenced yaml block ```yaml ... ```
+    // Use indexOf for safer parsing instead of complex regex
+    const yamlStart = description.indexOf('```yaml\n');
+    const yamlAltStart = description.indexOf('```YAML\n');
+    const startIndex = yamlStart !== -1 ? yamlStart : yamlAltStart;
+    
+    if (startIndex !== -1) {
+      const contentStart = startIndex + 8; // Length of '```yaml\n'
+      const endMarker = description.indexOf('```', contentStart);
+      
+      if (endMarker !== -1) {
+        const yamlSrc = description.substring(contentStart, endMarker);
+        result.rawYaml = yamlSrc;
+        try {
+          result.meta = YAML.parse(yamlSrc) || null;
+        } catch (e) {
+          // Keep meta null on parse error; preserve raw text
+          result.meta = null;
+        }
+        // Remove the fenced block from the visible text
+        result.text = (description.substring(0, startIndex) + description.substring(endMarker + 3)).trimEnd();
+      } else {
+        result.text = description;
+      }
+    } else {
+      result.text = description;
+    }
+    
     return result;
   }
 

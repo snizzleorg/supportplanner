@@ -29,6 +29,7 @@ import {
   authEnabled,
   AUTH_DISABLED_DEFAULT_ROLE
 } from '../config/index.js';
+import { escapeHtml } from '../utils/index.js';
 
 /**
  * OIDC client promise (initialized on first use)
@@ -289,8 +290,8 @@ export function initializeAuth(app) {
 </head><body>
 <div class="card">
   <h2>Sign-in Error</h2>
-  <p>${msg}</p>
-  <p class="muted">Code: <code>${code}</code></p>
+  <p>${escapeHtml(msg)}</p>
+  <p class="muted">Code: <code>${escapeHtml(code)}</code></p>
   <a class="button" href="/auth/login">Try again</a>
 </div>
 </body></html>`;

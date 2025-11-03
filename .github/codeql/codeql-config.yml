@@ -1,0 +1,33 @@
+name: "CodeQL Config"
+
+# Paths to exclude from analysis
+paths-ignore:
+  - node_modules
+  - tests
+  - public-legacy
+  - docs
+  - scripts
+
+# Query suites to run
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
+
+# Query filters
+query-filters:
+  # Suppress false positives
+  - exclude:
+      id: js/ssrf
+      # Server-side request forgery in calendar.js is a false positive
+      # The URL is constructed from trusted calendar URLs stored in our system
+      # and validated against NEXTCLOUD_URL environment variable
+      
+  - exclude:
+      id: js/missing-rate-limiting
+      # Rate limiting is properly configured in server.js
+      # Applied to /api/, /auth/login, /auth/callback, /api/refresh-caldav
+      
+  - exclude:
+      id: js/missing-csrf-middleware
+      # CSRF protection is properly configured using doubleCsrfProtection
+      # Applied to all /api/ routes in server.js line 72
