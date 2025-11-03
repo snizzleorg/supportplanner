@@ -148,7 +148,7 @@ describe('Audit History - Advanced Tests', () => {
       const history = await auditService.getEventHistory('multi-user');
       expect(history).toHaveLength(3);
       
-      const emails = history.map(h => h.user_email);
+      const emails = history.map(h => h.user?.email);
       users.forEach(u => expect(emails).toContain(u.email));
       console.log('   ✅ All 3 users tracked correctly!\n');
     });

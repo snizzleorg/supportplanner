@@ -194,13 +194,19 @@ export class AuditHistoryService {
         [eventUid, limit]
       );
 
-      // Parse JSON fields
+      // Parse JSON fields and transform to camelCase with nested user object
       return entries.map(entry => ({
         ...entry,
         beforeState: entry.before_state ? JSON.parse(entry.before_state) : null,
         afterState: entry.after_state ? JSON.parse(entry.after_state) : null,
+        user: entry.user_email || entry.user_name ? {
+          email: entry.user_email,
+          name: entry.user_name
+        } : null,
         before_state: undefined, // Remove snake_case
-        after_state: undefined
+        after_state: undefined,
+        user_email: undefined,
+        user_name: undefined
       }));
     } catch (error) {
       console.error('[AuditHistory] Failed to get event history:', error);
@@ -282,13 +288,19 @@ export class AuditHistoryService {
         params
       );
 
-      // Parse JSON fields
+      // Parse JSON fields and transform to camelCase with nested user object
       return entries.map(entry => ({
         ...entry,
         beforeState: entry.before_state ? JSON.parse(entry.before_state) : null,
         afterState: entry.after_state ? JSON.parse(entry.after_state) : null,
+        user: entry.user_email || entry.user_name ? {
+          email: entry.user_email,
+          name: entry.user_name
+        } : null,
         before_state: undefined,
-        after_state: undefined
+        after_state: undefined,
+        user_email: undefined,
+        user_name: undefined
       }));
     } catch (error) {
       console.error('[AuditHistory] Failed to get recent history:', error);

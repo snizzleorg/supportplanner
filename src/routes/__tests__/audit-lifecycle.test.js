@@ -263,7 +263,7 @@ describe('Audit History API - Event Lifecycle Integration', () => {
     console.log('\n   📋 Complete audit trail (newest first):\n');
     history.forEach((entry, index) => {
       console.log(`   ${index + 1}. ${entry.operation} at ${entry.timestamp}`);
-      console.log(`      By: ${entry.user_name} <${entry.user_email}>`);
+      console.log(`      By: ${entry.user?.name} <${entry.user?.email}>`);
       console.log(`      Status: ${entry.status}`);
       
       if (entry.beforeState) {
@@ -283,8 +283,8 @@ describe('Audit History API - Event Lifecycle Integration', () => {
 
     // Verify user attribution
     history.forEach(entry => {
-      expect(entry.user_email).toBe('test-editor@example.com');
-      expect(entry.user_name).toBe('Test Editor');
+      expect(entry.user?.email).toBe('test-editor@example.com');
+      expect(entry.user?.name).toBe('Test Editor');
     });
 
     console.log('   ✅ All operations tracked correctly');
