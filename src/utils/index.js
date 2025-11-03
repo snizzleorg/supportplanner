@@ -9,3 +9,5 @@
 export { isValidDate } from './date.js';
 export { escapeHtml } from './html.js';
 export { formatError, formatErrorResponse, isClientSafeError } from './error.js';
+export { createLogger } from './logger.js';
+export { default as logger } from './logger.js';
