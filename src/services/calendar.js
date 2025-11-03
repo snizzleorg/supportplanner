@@ -1228,8 +1228,8 @@ export class CalendarCache {
           // For all-day events, use DATE format (YYYYMMDD)
           return date.toISOString().replace(/[-:T.]/g, '').substring(0, 8);
         } else {
-          // For timed events, use UTC format
-          return date.toISOString().replace(/[-:.]/g, '').replace('Z', 'Z');
+          // For timed events, use UTC format (YYYYMMDDTHHMMSSZ)
+          return date.toISOString().replace(/[-:.]/g, '');
         }
       };
       
@@ -1393,9 +1393,7 @@ export class CalendarCache {
   formatDateForIcal(date) {
     return date.toISOString()
       .replace(/[-:]/g, '')
-      .replace(/\.\d{3}/, '')
-      .replace('Z', 'Z')
-      .replace('T', 'T');
+      .replace(/\.\d{3}/, '');
   }
 
   /**
