@@ -199,7 +199,7 @@ describe('Audit History - Event Lifecycle', () => {
     console.log('\n   📋 Audit log entries (newest first):');
     history.forEach((entry, index) => {
       console.log(`\n   ${index + 1}. ${entry.operation} (${entry.timestamp})`);
-      console.log(`      User: ${entry.user_name} <${entry.user_email}>`);
+      console.log(`      User: ${entry.user?.name} <${entry.user?.email}>`);
       console.log(`      Status: ${entry.status}`);
       
       if (entry.beforeState) {
@@ -217,7 +217,7 @@ describe('Audit History - Event Lifecycle', () => {
 
     // Verify DELETE (most recent)
     expect(history[0].operation).toBe('DELETE');
-    expect(history[0].user_email).toBe(userEmail);
+    expect(history[0].user?.email).toBe(userEmail);
     expect(history[0].beforeState).toBeDefined();
     expect(history[0].beforeState.summary).toBe('Updated Test Event');
     expect(history[0].afterState).toBeNull();

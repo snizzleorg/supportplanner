@@ -228,7 +228,7 @@ describe('Audit History E2E - Real CalDAV Operations', () => {
 
     console.log('\n   📋 Audit entry details:');
     console.log(`      Operation: ${createEntry.operation}`);
-    console.log(`      User: ${createEntry.user_name || 'Unknown'} <${createEntry.user_email || 'Unknown'}>`);
+    console.log(`      User: ${createEntry.user?.name || 'Unknown'} <${createEntry.user?.email || 'Unknown'}>`);
     console.log(`      Timestamp: ${createEntry.timestamp}`);
     console.log(`      Status: ${createEntry.status}`);
     

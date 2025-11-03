@@ -284,7 +284,7 @@ describe('AuditHistoryService', () => {
     it('should filter by user email', async () => {
       const history = await auditService.getRecentHistory({ userEmail: 'alice@example.com' });
       
-      expect(history.every(h => h.user_email === 'alice@example.com')).toBe(true);
+      expect(history.every(h => h.user?.email === 'alice@example.com')).toBe(true);
     });
 
     it('should respect limit parameter', async () => {
