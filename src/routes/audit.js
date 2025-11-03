@@ -17,7 +17,9 @@ import { param, query, validationResult } from 'express-validator';
 import { auditHistory } from '../services/audit-history.js';
 import { calendarCache } from '../services/calendar.js';
 import { requireRole, validate, uidValidation } from '../middleware/index.js';
-import { formatErrorResponse } from '../utils/index.js';
+import { formatErrorResponse, createLogger } from '../utils/index.js';
+
+const logger = createLogger('AuditRoutes');
 
 const router = Router();
 
@@ -39,7 +41,7 @@ router.get('/event/:uid', requireRole('reader'), uidValidation, validate, async 
       history
     });
   } catch (error) {
-    console.error('[audit] Error getting event history:', error);
+    logger.error('Error getting event history', error);
     const { status, body } = formatErrorResponse(error, 500);
     res.status(status).json(body);
   }
@@ -81,7 +83,7 @@ router.get('/recent', requireRole('reader'), [
       history
     });
   } catch (error) {
-    console.error('[audit] Error getting recent history:', error);
+    logger.error('Error getting recent history', error);
     const { status, body } = formatErrorResponse(error, 500);
     res.status(status).json(body);
   }
@@ -95,7 +97,7 @@ router.post('/undo/:uid', requireRole('editor'), uidValidation, validate, async 
   try {
     const { uid } = req.params;
 
-    console.log(`[audit] Undo requested for event ${uid}`);
+    logger.info('Undo requested for event', { uid });
 
     // Get the previous state from audit history
     const previousState = await auditHistory.getPreviousState(uid);
@@ -107,7 +109,7 @@ router.post('/undo/:uid', requireRole('editor'), uidValidation, validate, async 
       });
     }
 
-    console.log(`[audit] Found previous state from ${previousState.operation} at ${previousState.timestamp}`);
+    logger.info('Found previous state', { operation: previousState.operation, timestamp: previousState.timestamp });
 
     // Extract user info from session
     const user = req.session?.user ? {
@@ -122,8 +124,7 @@ router.post('/undo/:uid', requireRole('editor'), uidValidation, validate, async 
     switch (previousState.operation) {
       case 'DELETE':
         // Restore deleted event by recreating it
-        console.log(`[audit] Restoring deleted event ${uid}`);
-        console.log(`[audit] Event state:`, JSON.stringify(state, null, 2));
+        logger.info('Restoring deleted event', { uid, state });
         
         // Validate required fields
         const calUrl = state.calendar || state.calendarUrl;
@@ -149,7 +150,7 @@ router.post('/undo/:uid', requireRole('editor'), uidValidation, validate, async 
       case 'UPDATE':
       case 'MOVE':
         // Restore previous state by updating to it
-        console.log(`[audit] Restoring previous state for event ${uid}`);
+        logger.info('Restoring previous state for event', { uid });
         result = await calendarCache.updateEvent(
           uid,
           {
@@ -168,7 +169,7 @@ router.post('/undo/:uid', requireRole('editor'), uidValidation, validate, async 
 
       case 'CREATE':
         // Undo create by deleting the event
-        console.log(`[audit] Deleting created event ${uid}`);
+        logger.info('Deleting created event', { uid });
         await calendarCache.deleteEvent(uid, user);
         result = { success: true, message: 'Event deleted (undo CREATE)' };
         break;
@@ -182,7 +183,7 @@ router.post('/undo/:uid', requireRole('editor'), uidValidation, validate, async 
 
     // Refresh calendars to reflect the change
     calendarCache.refreshAllCalendars().catch(err => {
-      console.error('[audit] Background refresh after undo failed:', err);
+      logger.error('Background refresh after undo failed', err);
     });
 
     res.json({
@@ -193,7 +194,7 @@ router.post('/undo/:uid', requireRole('editor'), uidValidation, validate, async 
       result
     });
   } catch (error) {
-    console.error('[audit] Error performing undo:', error);
+    logger.error('Error performing undo', error);
     const { status, body } = formatErrorResponse(error, 500);
     res.status(status).json(body);
   }
@@ -219,7 +220,7 @@ router.get('/stats', requireRole('admin'), async (req, res) => {
       stats
     });
   } catch (error) {
-    console.error('[audit] Error getting statistics:', error);
+    logger.error('Error getting statistics', error);
     const { status, body } = formatErrorResponse(error, 500);
     res.status(status).json(body);
   }
