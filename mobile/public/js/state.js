@@ -26,7 +26,7 @@ const state = {
   events: [],
   holidays: [],
   dateRange: getDefaultDateRange(),
-  zoom: 'month',
+  zoom: window.innerWidth <= 768 ? 'week' : 'month',
   searchQuery: '',
   selectedCalendars: new Set(),
   eventTypes: null
@@ -212,7 +212,7 @@ export function resetState() {
   state.events = [];
   state.holidays = [];
   state.dateRange = getDefaultDateRange();
-  state.zoom = 'month';
+  state.zoom = window.innerWidth <= 768 ? 'week' : 'month';
   state.searchQuery = '';
   state.selectedCalendars = new Set();
   state.eventTypes = null;

@@ -112,65 +112,32 @@ async function init() {
   const loadingState = document.getElementById('loadingState');
   if (loadingState) loadingState.style.display = 'none';
   
-  // Setup zoom buttons
+  // Setup zoom slider for continuous zoom control
   const zoomSlider = document.getElementById('zoomSlider');
   let lastPixelsPerDay = ZOOM_SETTINGS[getZoom()]; // Track last zoom level
   
-  document.querySelectorAll('.zoom-controls .control-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const container = document.querySelector('.timeline-container');
-      if (!container) return;
-      
-      // Calculate which date is currently at the left edge of the viewport
-      const currentScrollLeft = container.scrollLeft;
-      const daysFromStart = Math.floor((currentScrollLeft - 100) / lastPixelsPerDay);
-      
-      // Change zoom and re-render
-      setZoom(btn.dataset.zoom);
-      document.querySelectorAll('.zoom-controls .control-btn').forEach(b => 
-        b.classList.toggle('active', b.dataset.zoom === getZoom())
-      );
-      
-      // Update slider to match preset
-      const newPixelsPerDay = ZOOM_SETTINGS[getZoom()];
-      if (zoomSlider) {
-        zoomSlider.value = newPixelsPerDay;
-      }
-      
-      render();
-      
-      // Scroll to maintain the same date position
-      const newScrollLeft = 100 + (daysFromStart * newPixelsPerDay);
-      container.scrollLeft = Math.max(0, newScrollLeft);
-      
-      // Update last pixels per day for next zoom change
-      lastPixelsPerDay = newPixelsPerDay;
-    });
-  });
-  
-  // Setup zoom slider for continuous zoom control
   zoomSlider?.addEventListener('input', (e) => {
     const container = document.querySelector('.timeline-container');
     if (!container) return;
     
     // Calculate which date is currently at the left edge of the viewport
-    const currentScrollLeft = container.scrollLeft;
-    const daysFromStart = Math.floor((currentScrollLeft - 100) / lastPixelsPerDay);
+    const currentScrollLeft = container.parentElement.scrollLeft;
+    const daysFromStart = Math.floor(currentScrollLeft / lastPixelsPerDay);
     
     // Update zoom to custom (slider value is used directly)
     const newPixelsPerDay = parseInt(e.target.value);
     setZoom('custom');
     
     // Deactivate preset buttons when using custom zoom
-    document.querySelectorAll('.zoom-controls .control-btn').forEach(b => 
+    document.querySelectorAll('.zoom-preset').forEach(b => 
       b.classList.remove('active')
     );
     
     render();
     
     // Scroll to maintain the same date position
-    const newScrollLeft = 100 + (daysFromStart * newPixelsPerDay);
-    container.scrollLeft = Math.max(0, newScrollLeft);
+    const newScrollLeft = daysFromStart * newPixelsPerDay;
+    container.parentElement.scrollLeft = Math.max(0, newScrollLeft);
     
     // Update last pixels per day for next zoom change
     lastPixelsPerDay = newPixelsPerDay;
@@ -296,6 +263,74 @@ async function init() {
     }
   });
   
+  // Setup hamburger menu
+  const menuBtn = document.getElementById('menuBtn');
+  const menuOverlay = document.getElementById('menuOverlay');
+  const closeMenuOverlay = document.getElementById('closeMenuOverlay');
+  
+  // Open menu
+  menuBtn?.addEventListener('click', () => {
+    menuOverlay?.classList.add('active');
+  });
+  
+  // Close menu
+  closeMenuOverlay?.addEventListener('click', () => {
+    menuOverlay?.classList.remove('active');
+  });
+  
+  // Close on background click
+  menuOverlay?.addEventListener('click', (e) => {
+    if (e.target === menuOverlay) {
+      menuOverlay.classList.remove('active');
+    }
+  });
+  
+  // Setup zoom preset buttons in menu
+  document.querySelectorAll('.zoom-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const container = document.querySelector('.timeline-container');
+      if (!container) return;
+      
+      const zoom = btn.dataset.zoom;
+      const newPixelsPerDay = ZOOM_SETTINGS[zoom];
+      
+      // Calculate which date is currently at the left edge of the viewport
+      const scrollLeft = container.parentElement.scrollLeft;
+      const daysFromStart = Math.floor(scrollLeft / lastPixelsPerDay);
+      const currentDateAtLeft = new Date(daysFromStart * 24 * 60 * 60 * 1000);
+      
+      // Set new zoom
+      setZoom(zoom);
+      
+      // Update slider to match preset
+      const zoomSlider = document.getElementById('zoomSlider');
+      if (zoomSlider) {
+        zoomSlider.value = newPixelsPerDay;
+      }
+      
+      // Update last pixels per day for next zoom change
+      lastPixelsPerDay = newPixelsPerDay;
+      
+      // Re-render timeline with new zoom
+      render();
+      
+      // Scroll to keep the same date at the left edge
+      const newScrollLeft = daysFromStart * newPixelsPerDay;
+      container.parentElement.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth'
+      });
+      
+      // Update active state
+      document.querySelectorAll('.zoom-preset').forEach(b => 
+        b.classList.toggle('active', b.dataset.zoom === zoom)
+      );
+      
+      // Close menu
+      menuOverlay?.classList.remove('active');
+    });
+  });
+  
   // Setup audit history modal
   initAuditModal();
   
@@ -325,6 +360,22 @@ async function init() {
   
   // Render
   render();
+  
+  // Set initial zoom preset active state and slider value
+  const currentZoom = getZoom();
+  if (currentZoom !== 'custom') {
+    const newPixelsPerDay = ZOOM_SETTINGS[currentZoom];
+    const zoomSlider = document.getElementById('zoomSlider');
+    if (zoomSlider) {
+      zoomSlider.value = newPixelsPerDay;
+    }
+    lastPixelsPerDay = newPixelsPerDay;
+    
+    // Update active state for zoom presets
+    document.querySelectorAll('.zoom-preset').forEach(b => 
+      b.classList.toggle('active', b.dataset.zoom === currentZoom)
+    );
+  }
   
   // Scroll to today's position
   scrollToToday();
