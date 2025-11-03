@@ -14,6 +14,10 @@ if ! command -v codeql &> /dev/null; then
     exit 1
 fi
 
+# Download query packs if needed
+echo "📥 Downloading CodeQL query packs..."
+codeql pack download codeql/javascript-queries
+
 # Create database
 echo "📦 Creating CodeQL database..."
 codeql database create codeql-db \
@@ -26,14 +30,15 @@ echo "🔎 Running security queries..."
 codeql database analyze codeql-db \
     --format=sarif-latest \
     --output=codeql-results.sarif \
-    javascript-security-extended.qls
+    --sarif-category=javascript \
+    codeql/javascript-queries:codeql-suites/javascript-security-extended.qls
 
 # Generate human-readable report
 echo "📊 Generating report..."
 codeql database analyze codeql-db \
     --format=csv \
     --output=codeql-results.csv \
-    javascript-security-extended.qls
+    codeql/javascript-queries:codeql-suites/javascript-security-extended.qls
 
 echo "✅ Analysis complete!"
 echo "   SARIF results: codeql-results.sarif"
