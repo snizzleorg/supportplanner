@@ -9,18 +9,23 @@
  */
 
 import { Router } from 'express';
+import { createLogger } from '../utils/index.js';
 
+const logger = createLogger('ClientRoutes');
 const router = Router();
 
 // Client-side logging endpoint
 router.post('/client-log', (req, res) => {
   const { level, message, extra } = req.body;
-  const logMessage = `[CLIENT ${level.toUpperCase()}] ${message}${extra ? ' ' + JSON.stringify(extra) : ''}`;
   
+  // Log client-side messages with appropriate server-side level
+  // Client errors are logged as warnings (not errors) since they're expected
   if (level === 'error') {
-    console.error(logMessage);
+    logger.warn('Client error', { message, extra });
+  } else if (level === 'warn') {
+    logger.warn('Client warning', { message, extra });
   } else {
-    console.log(logMessage);
+    logger.debug('Client log', { level, message, extra });
   }
   
   res.json({ success: true });

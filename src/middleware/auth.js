@@ -29,7 +29,9 @@ import {
   authEnabled,
   AUTH_DISABLED_DEFAULT_ROLE
 } from '../config/index.js';
-import { escapeHtml } from '../utils/index.js';
+import { escapeHtml, createLogger } from '../utils/index.js';
+
+const logger = createLogger('AuthMiddleware');
 
 /**
  * OIDC client promise (initialized on first use)
@@ -98,12 +100,14 @@ export function initializeAuth(app) {
     }
     
     try {
-      console.log('[OIDC] Discovered issuer:', issuer.issuer);
-      console.log('[OIDC] token_endpoint:', issuer.metadata?.token_endpoint);
-      console.log('[OIDC] end_session_endpoint:', issuer.metadata?.end_session_endpoint || 'n/a');
-      console.log('[OIDC] Using token auth method:', OIDC_TOKEN_AUTH_METHOD);
-      console.log('[OIDC] Redirect URI:', OIDC_REDIRECT_URI);
-      console.log('[OIDC] Client ID present:', Boolean(OIDC_CLIENT_ID));
+      logger.info('OIDC discovered', {
+        issuer: issuer.issuer,
+        tokenEndpoint: issuer.metadata?.token_endpoint,
+        endSessionEndpoint: issuer.metadata?.end_session_endpoint || 'n/a',
+        tokenAuthMethod: OIDC_TOKEN_AUTH_METHOD,
+        redirectUri: OIDC_REDIRECT_URI,
+        hasClientId: Boolean(OIDC_CLIENT_ID)
+      });
     } catch (_) {}
     
     try { 
@@ -136,8 +140,7 @@ export function initializeAuth(app) {
       res.redirect(url);
     } catch (e) {
       try {
-        console.error('[auth/login] OIDC error:', e?.message || e);
-        if (e?.response?.body) console.error('[auth/login] response body:', e.response.body);
+        logger.error('OIDC login error', { error: e?.message || e, responseBody: e?.response?.body });
       } catch (_) {}
       next(e);
     }
@@ -149,10 +152,10 @@ export function initializeAuth(app) {
       const params = client.callbackParams(req);
       
       try {
-        console.log('[OIDC] /auth/callback params:', {
-          has_code: Boolean(params.code),
-          has_state: Boolean(params.state),
-          token_auth_method: OIDC_TOKEN_AUTH_METHOD
+        logger.debug('OIDC callback params', {
+          hasCode: Boolean(params.code),
+          hasState: Boolean(params.state),
+          tokenAuthMethod: OIDC_TOKEN_AUTH_METHOD
         });
       } catch (_) {}
       
@@ -215,8 +218,7 @@ export function initializeAuth(app) {
       res.redirect('/');
     } catch (e) {
       try {
-        console.error('[auth/callback] OIDC error:', e?.message || e);
-        if (e?.response?.body) console.error('[auth/callback] response body:', e.response.body);
+        logger.error('OIDC callback error', { error: e?.message || e, responseBody: e?.response?.body });
       } catch (_) {}
       
       const errName = e?.name || 'OIDC Error';
