@@ -35,5 +35,11 @@ data/audit-history.db-journal
 data/audit-history.db-shm
 data/audit-history.db-wal
 
+# Test results
+test-results/
+codeql-db/
+codeql-results.sarif
+codeql-results.csv
+
 # Misc
 *.local.*

@@ -36,3 +36,12 @@ services:
 
   # Legacy frontend tests removed - mobile app needs new test suite
   # See docs/MOBILE_TESTING.md for mobile testing strategy
+
+  codeql-tests:
+    build:
+      context: .
+      dockerfile: tests/codeql/Dockerfile
+    container_name: codeql-tests
+    volumes:
+      - ./test-results:/app/test-results
+    restart: "no"

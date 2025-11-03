@@ -1,5 +1,27 @@
 # Testing Guide
 
+## Test Suites
+
+This project has three test suites:
+
+1. **Backend Tests** - Unit/integration tests for Node.js backend
+2. **Frontend Tests** - Integration tests for the web interface
+3. **CodeQL Security Tests** - Static security analysis (NEW!)
+
+## Quick Start
+
+Run all tests:
+```bash
+./run-all-tests.sh
+```
+
+Or run individual test suites:
+```bash
+docker compose run --rm backend-tests
+docker compose run --rm frontend-tests
+docker compose run --rm codeql-tests
+```
+
 ## Backend Tests
 
 Backend tests come in two types:
@@ -363,8 +385,62 @@ npm test -- --watch
 Frontend tests are planned for future implementation.
 See `docs/MOBILE_TESTING.md` for mobile app testing strategy.
 
+## CodeQL Security Tests
+
+CodeQL performs static security analysis to find vulnerabilities.
+
+### Running Security Analysis
+
+```bash
+# Run CodeQL tests
+docker compose run --rm codeql-tests
+
+# Results will be in test-results/
+cat test-results/codeql-results.csv
+```
+
+### What It Checks
+
+- **XSS (Cross-Site Scripting)** - Injection vulnerabilities
+- **SQL Injection** - Database security
+- **Command Injection** - OS command execution
+- **ReDoS** - Regular expression denial of service
+- **SSRF** - Server-side request forgery
+- **Log Injection** - Log file manipulation
+- **Missing CSRF Protection** - Cross-site request forgery
+- **Information Disclosure** - Sensitive data exposure
+
+### First Run
+
+The first run downloads CodeQL query packs (~500MB) and may take 5-10 minutes. Subsequent runs are faster (~2-3 minutes).
+
+### Understanding Results
+
+Results are saved in two formats:
+- `test-results/codeql-results.csv` - Human-readable
+- `test-results/codeql-results.sarif` - Machine-readable
+
+Severity levels:
+- **error** - High severity, fix immediately
+- **warning** - Medium severity, should fix
+- **note** - Low severity, informational
+
+### Current Status
+
+✅ All critical security issues fixed:
+- XSS vulnerabilities (escapeHtml utility)
+- ReDoS vulnerabilities (safe string parsing)
+- Format string attacks (sanitized logging)
+
+See `docs/CODEQL_FIXES.md` for detailed security documentation.
+
+### Detailed Documentation
+
+See [tests/codeql/README.md](codeql/README.md) for complete CodeQL documentation.
+
 ## Related Documentation
 
 - [Audit History Documentation](../docs/AUDIT_HISTORY.md)
 - [Implementation Summary](../IMPLEMENTATION_SUMMARY.md)
 - [Backend Testing Strategy](../README.md#testing)
+- [CodeQL Security Fixes](../docs/CODEQL_FIXES.md)
