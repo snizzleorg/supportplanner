@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.8.0] - 2025-11-03 🎨 UI/UX RELEASE
+
+### Added
+- **Dark Theme for Mobile App**: Complete dark mode implementation with system preference detection
+  - Automatic theme detection based on `prefers-color-scheme`
+  - Manual theme toggle with persistence (localStorage)
+  - Smooth transitions between themes
+  - Optimized color palette for readability and reduced eye strain
+  - Theme toggle button in mobile navigation
+  - See `DARK_THEME_IMPLEMENTATION.md` for technical details
+
+### Fixed
+- **Audit History User Display**: Fixed issue where audit history showed "unknown" instead of logged-in user
+  - Transformed database fields (`user_email`, `user_name`) to nested user object format
+  - Updated `getEventHistory()` and `getRecentHistory()` methods in audit-history service
+  - All audit-related tests updated and passing (24 tests)
+
+### Testing
+- All 157 backend tests passing (1 E2E timing test excluded)
+- Dark theme tested across multiple devices and browsers
+- Audit history user attribution verified
+
 ## [0.6.0] - 2025-10-17 🔒 SECURITY RELEASE
 
 ### Security Improvements

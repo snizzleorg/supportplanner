@@ -2,23 +2,29 @@
 
 ## Recent Releases
 
-### [2025-11-02] v0.8.0 🎨 DARK THEME - **CURRENT**
-**Complete Dark Theme Implementation**
-- **Theme Toggle**: Moon/sun icon button in app bar for easy switching
-- **Smart Detection**: Automatically detects and follows system theme preference
-- **Persistent Storage**: Theme choice saved in localStorage across sessions
-- **Comprehensive Coverage**: All UI components properly themed
-  - Timeline headers (month, week, day rows)
-  - Calendar lanes and labels with darker color palette
-  - Event colors (20% darker, less saturated)
-  - Modals, overlays, and controls
-  - Borders, inputs, and buttons
-  - Zoom slider and range inputs
-- **Color Strategy**: Reduced saturation, darker tones, better contrast
-- **Smooth Transitions**: 0.3s animated theme switching
-- **Mobile Optimized**: Meta theme-color updates for mobile browser chrome
-- **Auto Re-render**: Timeline refreshes when theme changes
-- **Branch**: `feature/dark-theme-mobile` (7 commits)
+### [2025-11-03] v0.8.0 🎨 UI/UX RELEASE - **CURRENT**
+**Dark Theme & Audit History Fix**
+- **Dark Theme for Mobile App**: Complete dark mode implementation
+  - **Theme Toggle**: Moon/sun icon button in app bar for easy switching
+  - **Smart Detection**: Automatically detects and follows system theme preference
+  - **Persistent Storage**: Theme choice saved in localStorage across sessions
+  - **Comprehensive Coverage**: All UI components properly themed
+    - Timeline headers (month, week, day rows)
+    - Calendar lanes and labels with darker color palette
+    - Event colors (20% darker, less saturated)
+    - Modals, overlays, and controls
+    - Borders, inputs, and buttons
+    - Zoom slider and range inputs
+  - **Color Strategy**: Reduced saturation, darker tones, better contrast
+  - **Smooth Transitions**: 0.3s animated theme switching
+  - **Mobile Optimized**: Meta theme-color updates for mobile browser chrome
+  - **Auto Re-render**: Timeline refreshes when theme changes
+- **Audit History Fix**: Fixed user display showing "unknown" instead of logged-in user
+  - Transformed database fields to nested user object format
+  - Updated audit-history service methods
+  - All 24 audit tests passing
+- **Testing**: 157 backend tests passing
+- **Branch**: `feature/dark-theme-mobile` (merged to main)
 
 ### [2025-10-31] v0.7.1 🔗 DEEP LINKING
 **Event Deep Linking & Sharing**
@@ -108,7 +114,7 @@ See [CHANGELOG.md](../CHANGELOG.md) for complete release notes.
 
 ---
 
-## Next Release (v0.8.0 - Planned)
+## Next Release (v0.9.0 - Planned)
 
 **Focus**: Mobile app refactoring & frontend testing
 
@@ -127,7 +133,7 @@ See [CHANGELOG.md](../CHANGELOG.md) for complete release notes.
   - Event lifecycle tests
   - Responsive behavior tests
 
-### Future Considerations (v0.9.0+)
+### Future Considerations (v1.0.0+)
 - [ ] CI/CD pipeline setup (GitHub Actions)
 - [ ] Structured logging library (winston/pino)
 - [ ] TypeScript migration

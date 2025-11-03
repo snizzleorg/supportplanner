@@ -12,6 +12,7 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
   - Calendar lanes with event color coding
   - Touch gestures (tap, long-press, pinch-zoom)
   - Landscape-only mode with rotate guidance
+  - **Dark theme** with automatic system preference detection and manual toggle (v0.8.0)
 - Desktop timeline with vis-timeline library
 - Leaflet-based map with per-location markers and group-colored pins
 - Accessible edit modal (focus on open, Escape to close, focus trap)
