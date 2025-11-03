@@ -6,7 +6,7 @@ import clientRouter from '../client.js';
 describe('client routes', () => {
   let app;
   let consoleLogSpy;
-  let consoleErrorSpy;
+  let consoleWarnSpy;
 
   beforeEach(() => {
     app = express();
@@ -14,7 +14,7 @@ describe('client routes', () => {
     app.use('/', clientRouter);
     
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   describe('POST /client-log', () => {
@@ -31,7 +31,7 @@ describe('client routes', () => {
       expect(response.body).toEqual({ success: true });
     });
 
-    it('should log info messages to console.log', async () => {
+    it('should log info messages to console.log (debug level)', async () => {
       await request(app)
         .post('/client-log')
         .send({
@@ -42,7 +42,7 @@ describe('client routes', () => {
       expect(consoleLogSpy).toHaveBeenCalled();
     });
 
-    it('should log error messages to console.error', async () => {
+    it('should log client errors as warnings', async () => {
       await request(app)
         .post('/client-log')
         .send({
@@ -50,7 +50,7 @@ describe('client routes', () => {
           message: 'Error message'
         });
       
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      expect(consoleWarnSpy).toHaveBeenCalled();
     });
 
     it('should handle messages without extra data', async () => {
