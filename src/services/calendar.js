@@ -28,6 +28,9 @@ import IcalExpander from 'ical-expander';
 import YAML from 'yaml';
 import { calendarOrder, calendarExclude } from '../config/calendar-order.js';
 import { calendarColorOverrides } from '../config/calendar-colors.js';
+import { createLogger } from '../utils/index.js';
+
+const logger = createLogger('CalendarService');
 
 // Enable required Dayjs plugins for comparison helpers used below
 dayjs.extend(utc);
@@ -81,7 +84,7 @@ export class CalendarCache {
     // Security: Limit description length to prevent ReDoS attacks
     const MAX_DESCRIPTION_LENGTH = 50000; // 50KB limit
     if (description.length > MAX_DESCRIPTION_LENGTH) {
-      console.warn('[extractYaml] Description exceeds max length, truncating');
+      logger.warn('Description exceeds max length, truncating');
       description = description.substring(0, MAX_DESCRIPTION_LENGTH);
     }
     
@@ -242,7 +245,7 @@ export class CalendarCache {
       try {
         this.cache.del(`calendar:${calendarUrl}`);
       } catch (cacheError) {
-        console.error('[createAllDayEvent] Cache invalidation failed (non-critical):', cacheError);
+        logger.warn('Cache invalidation failed (non-critical)', cacheError);
       }
 
       // Build the event state for audit log
@@ -271,7 +274,7 @@ export class CalendarCache {
           status: 'SUCCESS'
         });
       } catch (auditError) {
-        console.error('[createAllDayEvent] Audit logging failed (non-critical):', auditError);
+        logger.error('[createAllDayEvent] Audit logging failed (non-critical):', auditError);
       }
 
       // Log the operation to file (legacy, non-critical)
@@ -284,7 +287,7 @@ export class CalendarCache {
           metadata: { start, end, location, allDay: true }
         });
       } catch (logError) {
-        console.error('[createAllDayEvent] Operation logging failed (non-critical):', logError);
+        logger.warn('Operation logging failed (non-critical)', logError);
       }
 
       return {
@@ -302,7 +305,7 @@ export class CalendarCache {
       };
     } catch (error) {
       // CalDAV creation failed - log and rethrow
-      console.error(`[createAllDayEvent] Failed to create event in CalDAV:`, error);
+      logger.error('Failed to create event in CalDAV', error);
       
       // Log failure to audit history (best effort)
       try {
@@ -318,7 +321,7 @@ export class CalendarCache {
           errorMessage: error.message
         });
       } catch (auditError) {
-        console.error('[createAllDayEvent] Audit logging failed (non-critical):', auditError);
+        logger.error('[createAllDayEvent] Audit logging failed (non-critical):', auditError);
       }
 
       // Try to log the failure to file (legacy, best effort)
@@ -331,7 +334,7 @@ export class CalendarCache {
           error: error.message
         });
       } catch (logError) {
-        console.error('[createAllDayEvent] Failed to log error (non-critical):', logError);
+        logger.warn('Failed to log error (non-critical)', logError);
       }
       
       throw new Error(`Failed to create event: ${error.message}`);
@@ -374,9 +377,9 @@ export class CalendarCache {
         3 * 60 * 1000 // 3 minutes
       );
       
-      console.log('Calendar cache initialized');
+      logger.info('Calendar cache initialized');
     } catch (error) {
-      console.error('Failed to initialize calendar cache:', error);
+      logger.error('Failed to initialize calendar cache', error);
       throw error;
     }
   }
@@ -392,7 +395,7 @@ export class CalendarCache {
    */
   async refreshAllCalendars() {
     if (this.refreshInProgress) {
-      console.log('Refresh already in progress, skipping');
+      logger.debug('Refresh already in progress, skipping');
       return;
     }
     
@@ -400,7 +403,7 @@ export class CalendarCache {
     const startTime = Date.now();
     
     try {
-      console.log('Starting calendar refresh...');
+      logger.info('Starting calendar refresh');
       
       // Get calendars again in case they've changed
       this.calendars = await this.client.fetchCalendars();
@@ -413,9 +416,9 @@ export class CalendarCache {
       await Promise.all(refreshPromises);
       
       const duration = (Date.now() - startTime) / 1000;
-      console.log(`Calendar refresh completed in ${duration.toFixed(2)}s`);
+      logger.info('Calendar refresh completed', { durationSeconds: duration.toFixed(2) });
     } catch (error) {
-      console.error('Error refreshing calendars:', error);
+      logger.error('Error refreshing calendars', error);
     } finally {
       this.refreshInProgress = false;
     }
@@ -442,7 +445,7 @@ export class CalendarCache {
     const threeMonthsFromNowDate = threeMonthsFromNow.toDate();
     
     const displayName = this.extractFirstname(calendar.displayName) || calendar.url;
-    console.log(`[${displayName}] Fetching events from ${threeMonthsAgo.format('YYYY-MM-DD')} to ${threeMonthsFromNow.format('YYYY-MM-DD')}`);
+    logger.debug(`[${displayName}] Fetching events from ${threeMonthsAgo.format('YYYY-MM-DD')} to ${threeMonthsFromNow.format('YYYY-MM-DD')}`);
     
     // Store the calendar client for later use in updates
     if (!this.calendarClients[calendar.url]) {
@@ -450,7 +453,7 @@ export class CalendarCache {
         client: this.client,
         calendar: calendar
       };
-      console.log(`[${displayName}] Stored calendar client for updates`);
+      logger.debug(`[${displayName}] Stored calendar client for updates`);
     }
     
     try {
@@ -462,7 +465,7 @@ export class CalendarCache {
         },
       });
       
-      console.log(`[${displayName}] Found ${objects.length} calendar objects`);
+      logger.debug(`[${displayName}] Found ${objects.length} calendar objects`);
       
       const events = [];
       let eventCount = 0;
@@ -471,7 +474,7 @@ export class CalendarCache {
       // Process all calendar objects in parallel
       await Promise.all(objects.map(async (obj, index) => {
         try {
-          console.log(`[${displayName}] Processing object ${index + 1}/${objects.length}`);
+          logger.debug(`[${displayName}] Processing object ${index + 1}/${objects.length}`);
           const icalExpander = new IcalExpander({ ics: obj.data, maxIterations: 1000 });
           const expanded = icalExpander.between(threeMonthsAgoDate, threeMonthsFromNowDate);
           
@@ -501,13 +504,13 @@ export class CalendarCache {
             };
             
             // Log details of event for debugging
-            console.log(`[${displayName}] Processing event: ${eventData.uid} - ${eventData.summary} (${eventData.start} - ${eventData.end})`);
+            logger.debug(`[${displayName}] Processing event: ${eventData.uid} - ${eventData.summary} (${eventData.start} - ${eventData.end})`);
             
             events.push(eventData);
             eventCount++;
             
             if (eventCount <= 3) { // Log first few events for debugging
-              console.log(`[${displayName}] Event: ${eventData.summary} (${eventData.start} - ${eventData.end})`);
+              logger.debug(`[${displayName}] Event: ${eventData.summary} (${eventData.start} - ${eventData.end})`);
             }
           });
           
@@ -539,14 +542,14 @@ export class CalendarCache {
             occurrenceCount++;
             
             if (occurrenceCount <= 3) { // Log first few occurrences for debugging
-              console.log(`[${calendar.displayName || calendar.url}] Occurrence: ${occurrenceData.summary} (${occurrenceData.start} - ${occurrenceData.end})`);
+              logger.debug(`[${calendar.displayName || calendar.url}] Occurrence: ${occurrenceData.summary} (${occurrenceData.start} - ${occurrenceData.end})`);
             }
           });
           
-          console.log(`[${calendar.displayName || calendar.url}] Processed object ${index + 1}/${objects.length}: ${expanded.events.length} events, ${expanded.occurrences.length} occurrences`);
+          logger.debug(`[${calendar.displayName || calendar.url}] Processed object ${index + 1}/${objects.length}: ${expanded.events.length} events, ${expanded.occurrences.length} occurrences`);
           
         } catch (error) {
-          console.error(`[${calendar.displayName || calendar.url}] Error processing calendar object:`, error);
+          logger.error(`[${calendar.displayName || calendar.url}] Error processing calendar object:`, error);
         }
       }));
       
@@ -562,10 +565,10 @@ export class CalendarCache {
         }
       });
       
-      console.log(`[${calendar.displayName || calendar.url}] Cache updated with ${events.length} events (${eventCount} regular, ${occurrenceCount} occurrences)`);
+      logger.debug(`[${calendar.displayName || calendar.url}] Cache updated with ${events.length} events (${eventCount} regular, ${occurrenceCount} occurrences)`);
       return events;
     } catch (error) {
-      console.error(`Failed to refresh calendar ${calendar.displayName || calendar.url}:`, error);
+      logger.error(`Failed to refresh calendar ${calendar.displayName || calendar.url}:`, error);
       throw error;
     }
   }
@@ -682,14 +685,14 @@ export class CalendarCache {
     const startDate = dayjs(start).startOf('day');
     const endDate = dayjs(end).endOf('day');
     
-    console.log(`[getEvents] Requested calendars: ${calendarUrls.length}, from ${start} to ${end}`);
+    logger.debug(`[getEvents] Requested calendars: ${calendarUrls.length}, from ${start} to ${end}`);
 
     const allEvents = [];
     const calendarData = [];
     const cacheKeys = this.cache.keys();
     
-    console.log(`[getEvents] Available cache keys: ${cacheKeys.length}`);
-    cacheKeys.forEach(key => console.log(` - ${key}`));
+    logger.debug(`[getEvents] Available cache keys: ${cacheKeys.length}`);
+    cacheKeys.forEach(key => logger.debug(` - ${key}`));
 
     // Process each requested calendar URL
     calendarUrls.forEach(calendarUrl => {
@@ -703,14 +706,14 @@ export class CalendarCache {
       });
       
       if (!cacheKey) {
-        console.log(`[getEvents] No cache entry found for: ${calendarUrl}`);
+        logger.debug(`[getEvents] No cache entry found for: ${calendarUrl}`);
         return;
       }
       
       const data = this.cache.get(cacheKey);
       
       if (!data) {
-        console.log(`[getEvents] No data in cache for key: ${cacheKey}`);
+        logger.debug(`[getEvents] No data in cache for key: ${cacheKey}`);
         return;
       }
       
@@ -748,7 +751,7 @@ export class CalendarCache {
         );
       });
       
-      console.log(`[getEvents] Found ${calendarEvents.length} events for ${data.calendar.displayName || 'unnamed calendar'}`);
+      logger.debug(`[getEvents] Found ${calendarEvents.length} events for ${data.calendar.displayName || 'unnamed calendar'}`);
       allEvents.push(...calendarEvents);
     });
 
@@ -802,33 +805,33 @@ export class CalendarCache {
       throw new Error('Event UID is required');
     }
 
-    console.log(`[getEvent] Looking for event with UID: ${uid}`);
+    logger.debug(`[getEvent] Looking for event with UID: ${uid}`);
     
     // Get all calendar cache keys
     const cacheKeys = this.cache.keys();
-    console.log(`[getEvent] Found ${cacheKeys.length} cache keys`);
+    logger.debug(`[getEvent] Found ${cacheKeys.length} cache keys`);
     
     // Find the event in any calendar
     for (const key of cacheKeys) {
       if (key.startsWith('calendar:')) {
-        console.log(`[getEvent] Checking cache key: ${key}`);
+        logger.debug(`[getEvent] Checking cache key: ${key}`);
         const cacheData = this.cache.get(key);
         
         if (!cacheData) {
-          console.log(`[getEvent] No data in cache for key: ${key}`);
+          logger.debug(`[getEvent] No data in cache for key: ${key}`);
           continue;
         }
         
         if (!cacheData.events) {
-          console.log(`[getEvent] No events in cache data for key: ${key}`);
+          logger.debug(`[getEvent] No events in cache data for key: ${key}`);
           continue;
         }
         
-        console.log(`[getEvent] Found ${cacheData.events.length} events in cache`);
+        logger.debug(`[getEvent] Found ${cacheData.events.length} events in cache`);
         
         // Log first few events for debugging with more details
         const sampleEvents = cacheData.events.slice(0, 5);
-        console.log(`[${key.replace('calendar:', '')}] Events in cache:`, sampleEvents.map(e => ({
+        logger.debug(`[${key.replace('calendar:', '')}] Events in cache:`, sampleEvents.map(e => ({
           id: e.id,
           uid: e.uid,
           summary: e.summary || e.title,
@@ -859,14 +862,14 @@ export class CalendarCache {
         };
         
         const searchUid = extractUid(uid);
-        console.log(`[getEvent] Searching for UID: '${searchUid}' in calendar ${key}`);
+        logger.debug(`[getEvent] Searching for UID: '${searchUid}' in calendar ${key}`);
         
         // Try to find the event by UID or ID
         const event = cacheData.events.find(e => {
           const eventUid = extractUid(e.uid || '');
           const eventId = extractUid(e.id || '');
           
-          console.log(`[getEvent] Checking event:`, {
+          logger.debug(`[getEvent] Checking event:`, {
             eventUid,
             eventId,
             searchUid,
@@ -878,7 +881,7 @@ export class CalendarCache {
         });
         
         if (event) {
-          console.log(`[getEvent] Found matching event:`, {
+          logger.debug(`[getEvent] Found matching event:`, {
             id: event.id,
             uid: event.uid,
             summary: event.summary || event.title,
@@ -938,7 +941,7 @@ export class CalendarCache {
     }
 
     // 3) Delete the calendar object
-    console.log(`[deleteEvent] Attempting to delete calendar object:`, {
+    logger.debug(`[deleteEvent] Attempting to delete calendar object:`, {
       url: eventObject.url,
       etag: eventObject.etag,
       uid: uid
@@ -949,9 +952,9 @@ export class CalendarCache {
         calendarObject: eventObject,
         etag: eventObject.etag
       });
-      console.log(`[deleteEvent] Successfully deleted calendar object from Nextcloud`);
+      logger.debug(`[deleteEvent] Successfully deleted calendar object from Nextcloud`);
     } catch (deleteError) {
-      console.error(`[deleteEvent] Failed to delete from Nextcloud:`, deleteError);
+      logger.error(`[deleteEvent] Failed to delete from Nextcloud:`, deleteError);
       throw new Error(`Failed to delete event from Nextcloud: ${deleteError.message}`);
     }
 
@@ -959,7 +962,7 @@ export class CalendarCache {
     try {
       this.cache.del(`calendar:${calendarUrl}`);
     } catch (cacheError) {
-      console.error('[deleteEvent] Cache invalidation failed (non-critical):', cacheError);
+      logger.error('[deleteEvent] Cache invalidation failed (non-critical):', cacheError);
     }
     
     // Log to audit history (non-critical)
@@ -978,7 +981,7 @@ export class CalendarCache {
         meta: event.meta
       };
       
-      console.log('[deleteEvent] Captured event state for audit:', eventState);
+      logger.debug('[deleteEvent] Captured event state for audit:', eventState);
       
       await auditHistory.logOperation({
         eventUid: uid,
@@ -991,7 +994,7 @@ export class CalendarCache {
         status: 'SUCCESS'
       });
     } catch (auditError) {
-      console.error('[deleteEvent] Audit logging failed (non-critical):', auditError);
+      logger.error('[deleteEvent] Audit logging failed (non-critical):', auditError);
     }
 
     // Log the operation to file (legacy, non-critical)
@@ -1003,7 +1006,7 @@ export class CalendarCache {
         status: 'SUCCESS'
       });
     } catch (logError) {
-      console.error('[deleteEvent] Operation logging failed (non-critical):', logError);
+      logger.error('[deleteEvent] Operation logging failed (non-critical):', logError);
     }
     
     return true;
@@ -1029,17 +1032,17 @@ export class CalendarCache {
 
     // RACE CONDITION PROTECTION: Wait for any in-flight updates to complete
     if (this.updateLocks.has(uid)) {
-      console.log(`[updateEvent] Waiting for in-flight update to ${uid} to complete...`);
+      logger.debug(`[updateEvent] Waiting for in-flight update to ${uid} to complete...`);
       try {
         await this.updateLocks.get(uid);
-        console.log(`[updateEvent] Previous update completed, proceeding with new update`);
+        logger.debug(`[updateEvent] Previous update completed, proceeding with new update`);
       } catch (error) {
-        console.log(`[updateEvent] Previous update failed, proceeding with new update`);
+        logger.debug(`[updateEvent] Previous update failed, proceeding with new update`);
       }
     }
 
-    console.log(`[updateEvent] Starting update for event ${uid}`);
-    console.log(`[updateEvent] Update data:`, JSON.stringify(updateData, null, 2));
+    logger.debug(`[updateEvent] Starting update for event ${uid}`);
+    logger.debug(`[updateEvent] Update data:`, JSON.stringify(updateData, null, 2));
 
     // Create a promise for this update operation
     const updatePromise = this._performUpdate(uid, updateData, authHeader, user);
@@ -1053,7 +1056,7 @@ export class CalendarCache {
     } finally {
       // Always clean up the lock
       this.updateLocks.delete(uid);
-      console.log(`[updateEvent] Released lock for ${uid}`);
+      logger.debug(`[updateEvent] Released lock for ${uid}`);
     }
   }
 
@@ -1075,11 +1078,11 @@ export class CalendarCache {
     // 1. Get the current event data
     let event = await this.getEvent(uid);
     if (!event) {
-      console.error(`[updateEvent] Event ${uid} not found in any calendar`);
+      logger.error(`[updateEvent] Event ${uid} not found in any calendar`);
       throw new Error(`Event ${uid} not found`);
     }
     
-    console.log(`[updateEvent] Found existing event:`, {
+    logger.debug(`[updateEvent] Found existing event:`, {
       uid: event.uid,
       summary: event.summary,
       start: event.start,
@@ -1090,7 +1093,7 @@ export class CalendarCache {
     
     // Handle moving to a different calendar if requested (single-pass, no recursion)
     if (updateData.targetCalendarUrl && updateData.targetCalendarUrl !== (event.calendarUrl || event.calendar)) {
-      console.log(`[updateEvent] Moving event ${uid} to calendar ${updateData.targetCalendarUrl}`);
+      logger.debug(`[updateEvent] Moving event ${uid} to calendar ${updateData.targetCalendarUrl}`);
       const movedEvent = await this.moveEvent(uid, updateData.targetCalendarUrl, user);
 
       // Adopt moved event as the current base event and strip targetCalendarUrl from updates
@@ -1104,7 +1107,7 @@ export class CalendarCache {
       }
     }
 
-    console.log(`[updateEvent] Found event:`, {
+    logger.debug(`[updateEvent] Found event:`, {
       uid: event.uid,
       summary: event.summary,
       start: event.start,
@@ -1125,17 +1128,17 @@ export class CalendarCache {
       // If YAML was found in description, use it (unless explicit meta provided)
       if (parsed.meta && !updateData.meta) {
         metaToUse = parsed.meta;
-        console.log(`[updateEvent] Extracted metadata from description:`, metaToUse);
+        logger.debug(`[updateEvent] Extracted metadata from description:`, metaToUse);
       }
     }
     
     // If no new metadata provided (and meta wasn't explicitly set to null), preserve existing metadata
     if (metaToUse === undefined && event.meta) {
       metaToUse = event.meta;
-      console.log(`[updateEvent] Preserving existing metadata:`, metaToUse);
+      logger.debug(`[updateEvent] Preserving existing metadata:`, metaToUse);
     } else if (updateData.meta !== undefined) {
       // Meta was explicitly provided (even if null), so use it
-      console.log(`[updateEvent] Using provided metadata:`, metaToUse);
+      logger.debug(`[updateEvent] Using provided metadata:`, metaToUse);
     }
 
     // 3. Update the event data
@@ -1147,7 +1150,7 @@ export class CalendarCache {
       updatedAt: new Date().toISOString()
     };
 
-    console.log(`[updateEvent] Updated event data:`, {
+    logger.debug(`[updateEvent] Updated event data:`, {
       summary: updatedEvent.summary,
       description: updatedEvent.description,
       meta: updatedEvent.meta,
@@ -1162,7 +1165,7 @@ export class CalendarCache {
 
     const calendarInfo = this.calendarClients[calendarUrl];
     if (!calendarInfo || !calendarInfo.client) {
-      console.error(`[updateEvent] No calendar client found for URL:`, {
+      logger.error(`[updateEvent] No calendar client found for URL:`, {
         calendarUrl,
         availableClients: Object.keys(this.calendarClients)
       });
@@ -1174,10 +1177,10 @@ export class CalendarCache {
 
     try {
       // 4. Fetch all calendar objects to find our event
-      console.log(`[updateEvent] Fetching all calendar objects from ${calendarUrl}`);
+      logger.debug(`[updateEvent] Fetching all calendar objects from ${calendarUrl}`);
       
       // Log the calendar object structure
-      console.log('[updateEvent] Calendar object structure:', {
+      logger.debug('[updateEvent] Calendar object structure:', {
         calendarUrl,
         calendarInfo: calendarInfo,
         hasClient: !!calendarInfo.client,
@@ -1190,7 +1193,7 @@ export class CalendarCache {
         expand: true
       });
       
-      console.log(`[updateEvent] Found ${calendarObjects.length} calendar objects`);
+      logger.debug(`[updateEvent] Found ${calendarObjects.length} calendar objects`);
       
       // Find the specific event by UID
       const eventObject = calendarObjects.find(obj => {
@@ -1201,7 +1204,7 @@ export class CalendarCache {
         throw new Error(`Event with UID ${uid} not found in calendar`);
       }
       
-      console.log('[updateEvent] Found event object:', {
+      logger.debug('[updateEvent] Found event object:', {
         url: eventObject.url,
         etag: eventObject.etag || 'no etag',
         hasData: !!eventObject.data
@@ -1216,7 +1219,7 @@ export class CalendarCache {
                      (updatedEvent.start && updatedEvent.start.endsWith('T00:00:00.000Z') && 
                       updatedEvent.end && updatedEvent.end.endsWith('T00:00:00.000Z'));
       
-      console.log(`[updateEvent] Generating iCal data for ${isAllDay ? 'all-day' : 'timed'} event (preserved from original: ${event.allDay !== undefined ? 'yes' : 'no'})`);
+      logger.debug(`[updateEvent] Generating iCal data for ${isAllDay ? 'all-day' : 'timed'} event (preserved from original: ${event.allDay !== undefined ? 'yes' : 'no'})`);
       
       // Format dates for iCal
       const formatDate = (dateStr) => {
@@ -1273,15 +1276,15 @@ export class CalendarCache {
       );
       
       const icalData = icalLines.filter(Boolean).join('\r\n');
-      console.log('[updateEvent] Generated iCal data:', icalData);
+      logger.debug('[updateEvent] Generated iCal data:', icalData);
 
       // 7. Update the event on the CalDAV server
-      console.log(`[updateEvent] Updating event with UID: ${uid}`);
+      logger.debug(`[updateEvent] Updating event with UID: ${uid}`);
       
       // Make sure the URL is a full URL (not relative)
       const fullEventUrl = eventUrl.startsWith('http') ? eventUrl : `${calendar.url}${eventUrl}`;
       
-      console.log(`[updateEvent] Updating event at URL: ${fullEventUrl} with ETag: ${currentEtag}`);
+      logger.debug(`[updateEvent] Updating event at URL: ${fullEventUrl} with ETag: ${currentEtag}`);
       
       try {
         // Get the account object from the client
@@ -1318,7 +1321,7 @@ export class CalendarCache {
         
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('[updateEvent] PUT failed', {
+          logger.error('[updateEvent] PUT failed', {
             status: response.status,
             statusText: response.statusText,
             errorText
@@ -1326,16 +1329,16 @@ export class CalendarCache {
           throw new Error(`Failed to update event: ${response.status} ${response.statusText}: ${errorText}`);
         }
         
-        console.log(`[updateEvent] Successfully updated event at ${fullEventUrl}`);
-        console.log(`[updateEvent] Successfully updated event ${uid} in calendar ${event.calendar}`);
+        logger.debug(`[updateEvent] Successfully updated event at ${fullEventUrl}`);
+        logger.debug(`[updateEvent] Successfully updated event ${uid} in calendar ${event.calendar}`);
         
         // 8. Invalidate the cache for this calendar (non-critical)
         try {
           const cacheKey = `calendar:${event.calendar}`;
           this.cache.del(cacheKey);
-          console.log(`[updateEvent] Invalidated cache for ${cacheKey}`);
+          logger.debug(`[updateEvent] Invalidated cache for ${cacheKey}`);
         } catch (cacheError) {
-          console.error('[updateEvent] Cache invalidation failed (non-critical):', cacheError);
+          logger.error('[updateEvent] Cache invalidation failed (non-critical):', cacheError);
         }
         
         // Log to audit history (non-critical)
@@ -1351,7 +1354,7 @@ export class CalendarCache {
             status: 'SUCCESS'
           });
         } catch (auditError) {
-          console.error('[updateEvent] Audit logging failed (non-critical):', auditError);
+          logger.error('[updateEvent] Audit logging failed (non-critical):', auditError);
         }
 
         // Log the operation to file (legacy, non-critical)
@@ -1368,17 +1371,17 @@ export class CalendarCache {
             }
           });
         } catch (logError) {
-          console.error('[updateEvent] Operation logging failed (non-critical):', logError);
+          logger.error('[updateEvent] Operation logging failed (non-critical):', logError);
         }
         
         // 9. Return the updated event
         return updatedEvent;
       } catch (error) {
-        console.error(`[updateEvent] Error updating event:`, error);
+        logger.error(`[updateEvent] Error updating event:`, error);
         throw new Error(`Failed to update event: ${error.message}`);
       }
     } catch (error) {
-      console.error(`[updateEvent] Error updating event ${uid}:`, error);
+      logger.error(`[updateEvent] Error updating event ${uid}:`, error);
       throw new Error(`Failed to update event: ${error.message}`);
     }
   }
@@ -1403,21 +1406,21 @@ export class CalendarCache {
    * @returns {Promise<Object>} The moved event
    */
   async moveEvent(uid, targetCalendarUrl, user) {
-    console.log(`[moveEvent] Starting to move event ${uid} to ${targetCalendarUrl}`);
+    logger.debug(`[moveEvent] Starting to move event ${uid} to ${targetCalendarUrl}`);
 
     if (!uid || !targetCalendarUrl) {
       throw new Error('Event UID and target calendar URL are required');
     }
 
     // 1. Get the current event data
-    console.log(`[moveEvent] Getting event data for ${uid}`);
+    logger.debug(`[moveEvent] Getting event data for ${uid}`);
     const event = await this.getEvent(uid);
     if (!event) {
-      console.error(`[moveEvent] Event ${uid} not found in any calendar`);
+      logger.error(`[moveEvent] Event ${uid} not found in any calendar`);
       throw new Error(`Event ${uid} not found`);
     }
     
-    console.log(`[moveEvent] Found event in source calendar:`, {
+    logger.debug(`[moveEvent] Found event in source calendar:`, {
       uid: event.uid,
       summary: event.summary,
       start: event.start,
@@ -1431,7 +1434,7 @@ export class CalendarCache {
     }
     
     if (sourceCalendarUrl === targetCalendarUrl) {
-      console.log(`[moveEvent] Event ${uid} is already in the target calendar`);
+      logger.debug(`[moveEvent] Event ${uid} is already in the target calendar`);
       return event;
     }
     
@@ -1466,7 +1469,7 @@ export class CalendarCache {
         throw new Error(`Event with UID ${uid} not found in source calendar`);
       }
     } catch (error) {
-      console.error(`[moveEvent] Error fetching event from source calendar:`, error);
+      logger.error(`[moveEvent] Error fetching event from source calendar:`, error);
       throw new Error(`Failed to fetch event from source calendar: ${error.message}`);
     }
     
@@ -1475,12 +1478,12 @@ export class CalendarCache {
     let createdInTarget = false;
     
     try {
-      console.log(`[moveEvent] Creating event in target calendar ${targetCalendarUrl}`);
+      logger.debug(`[moveEvent] Creating event in target calendar ${targetCalendarUrl}`);
       
       // Always use UID for filename to avoid path corruption issues
       // Using the source filename can cause issues when moving between calendars
       filename = `${uid}.ics`;
-      console.log(`[moveEvent] Using filename: ${filename}`);
+      logger.debug(`[moveEvent] Using filename: ${filename}`);
       
       // Add the new event to the target calendar
       await targetClient.createCalendarObject({
@@ -1490,10 +1493,10 @@ export class CalendarCache {
       });
       
       createdInTarget = true;
-      console.log(`[moveEvent] Successfully created event in target calendar`);
+      logger.debug(`[moveEvent] Successfully created event in target calendar`);
       
       // 4.5. Verify the event was created by fetching it
-      console.log(`[moveEvent] Verifying event was created in target...`);
+      logger.debug(`[moveEvent] Verifying event was created in target...`);
       const targetObjects = await targetClient.fetchCalendarObjects({
         calendar: targetCalendarInfo.calendar || { url: targetCalendarUrl },
         expand: true
@@ -1507,29 +1510,29 @@ export class CalendarCache {
         throw new Error('Event creation verification failed - event not found in target calendar');
       }
       
-      console.log(`[moveEvent] Verified event exists in target calendar`);
+      logger.debug(`[moveEvent] Verified event exists in target calendar`);
       
       // 5. Delete the event from the source calendar
       try {
-        console.log(`[moveEvent] Deleting event from source calendar...`);
+        logger.debug(`[moveEvent] Deleting event from source calendar...`);
         await sourceClient.deleteCalendarObject({
           calendarObject: eventObject,
           etag: eventObject.etag
         });
-        console.log(`[moveEvent] Successfully deleted event from source calendar`);
+        logger.debug(`[moveEvent] Successfully deleted event from source calendar`);
       } catch (deleteError) {
         // If deletion fails, we have a duplicate - try to clean up
-        console.error(`[moveEvent] CRITICAL: Failed to delete event from source calendar:`, deleteError);
-        console.error(`[moveEvent] Event now exists in both calendars - attempting cleanup...`);
+        logger.error(`[moveEvent] CRITICAL: Failed to delete event from source calendar:`, deleteError);
+        logger.error(`[moveEvent] Event now exists in both calendars - attempting cleanup...`);
         
         // Try to delete from target to restore original state
         try {
-          console.log(`[moveEvent] Attempting to rollback - deleting from target...`);
+          logger.debug(`[moveEvent] Attempting to rollback - deleting from target...`);
           await targetClient.deleteCalendarObject({
             calendarObject: verifyCreated,
             etag: verifyCreated.etag
           });
-          console.log(`[moveEvent] Successfully rolled back - deleted from target`);
+          logger.debug(`[moveEvent] Successfully rolled back - deleted from target`);
           
           // Log the failed operation
           await auditHistory.logOperation({
@@ -1556,8 +1559,8 @@ export class CalendarCache {
           
           throw new Error(`Move failed: Could not delete from source calendar. Operation rolled back.`);
         } catch (cleanupError) {
-          console.error(`[moveEvent] CRITICAL: Rollback failed:`, cleanupError);
-          console.error(`[moveEvent] Event is now duplicated in both calendars!`);
+          logger.error(`[moveEvent] CRITICAL: Rollback failed:`, cleanupError);
+          logger.error(`[moveEvent] Event is now duplicated in both calendars!`);
           
           // Log the partial failure
           await auditHistory.logOperation({
@@ -1629,7 +1632,7 @@ export class CalendarCache {
       };
       
     } catch (error) {
-      console.error(`[moveEvent] Error moving event:`, error);
+      logger.error(`[moveEvent] Error moving event:`, error);
       throw new Error(`Failed to move event: ${error.message}`);
     }
   }
