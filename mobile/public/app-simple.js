@@ -393,8 +393,13 @@ async function init() {
     appBarCenter.classList.add('search-hidden');
   }
   
-  // Scroll to today's position
-  scrollToToday();
+  // Scroll to today's position after render completes
+  // Use requestAnimationFrame to ensure DOM has updated
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      scrollToToday();
+    });
+  });
   
   // Handle URL hash for direct event links
   handleEventFromHash();
@@ -463,44 +468,91 @@ async function handleEventFromHash() {
  * @returns {void}
  */
 function scrollToToday() {
-  // Small delay to ensure DOM is fully rendered
-  setTimeout(() => {
-    // Scroll the timeline-container, not the wrapper
-    const container = document.querySelector('.timeline-container');
-    if (!container) {
-      console.warn('Timeline container not found for scrolling');
-      return;
+  // Get the scrollable container element (not the wrapper!)
+  const container = document.querySelector('.timeline-container');
+  
+  if (!container) {
+    console.warn('Timeline container not found for scrolling');
+    return;
+  }
+  
+  // Check if timeline has been rendered (container scrollWidth > clientWidth)
+  const containerWidth = container.scrollWidth;
+  const containerClientWidth = container.clientWidth;
+  
+  if (containerWidth <= containerClientWidth) {
+    console.warn('Timeline not yet rendered, retrying...', {
+      containerWidth,
+      containerClientWidth,
+      retryCount: (scrollToToday.retryCount || 0) + 1
+    });
+    // Limit retries to prevent infinite loop
+    scrollToToday.retryCount = (scrollToToday.retryCount || 0) + 1;
+    if (scrollToToday.retryCount < 100) {
+      setTimeout(scrollToToday, 100);
+    } else {
+      console.error('Timeline render timeout - giving up on auto-scroll');
     }
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const dateRange = getDateRange();
-    const rangeFrom = new Date(dateRange.from);
-    rangeFrom.setHours(0, 0, 0, 0);
-    
-    // Calculate days from start of date range to today
-    const msPerDay = 1000 * 60 * 60 * 24;
-    const daysFromStart = Math.floor((today - rangeFrom) / msPerDay);
-    
-    // Calculate pixel position
-    const pixelsPerDay = ZOOM_SETTINGS[getZoom()] || 20;
-    
-    // Position today about 7 days in from the left edge
-    // This gives context of the past week while showing today prominently
-    const daysOffset = 7;
-    const scrollPosition = (daysFromStart - daysOffset) * pixelsPerDay;
-    
-    console.log('Scrolling to today:', {
-      today: today.toISOString(),
-      rangeFrom: rangeFrom.toISOString(),
-      daysFromStart,
-      pixelsPerDay,
-      daysOffset,
-      scrollPosition: Math.max(0, scrollPosition)
+    return;
+  }
+  
+  // Reset retry count on success
+  scrollToToday.retryCount = 0;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const dateRange = getDateRange();
+  const rangeFrom = new Date(dateRange.from);
+  rangeFrom.setHours(0, 0, 0, 0);
+  
+  // Calculate days from start of date range to today
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const daysFromStart = Math.floor((today - rangeFrom) / msPerDay);
+  
+  // Calculate pixel position
+  const currentZoom = getZoom();
+  const pixelsPerDay = ZOOM_SETTINGS[currentZoom] || 20;
+  
+  // Position today about 7 days in from the left edge
+  // This gives context of the past week while showing today prominently
+  const daysOffset = 7;
+  const scrollPosition = (daysFromStart - daysOffset) * pixelsPerDay;
+  
+  console.log('Scrolling to today:', {
+    today: today.toISOString(),
+    rangeFrom: rangeFrom.toISOString(),
+    daysFromStart,
+    currentZoom,
+    pixelsPerDay,
+    daysOffset,
+    calculatedScroll: scrollPosition,
+    finalScroll: Math.max(0, scrollPosition),
+    containerWidth,
+    containerClientWidth
+  });
+  
+  // Use setTimeout to ensure browser has laid out the scrollable area
+  setTimeout(() => {
+    const targetScroll = Math.max(0, scrollPosition);
+    console.log('Attempting scroll:', {
+      targetScroll,
+      containerBefore: container.scrollLeft,
+      containerScrollWidth: container.scrollWidth,
+      containerClientWidth: container.clientWidth
     });
     
-    container.parentElement.scrollLeft = Math.max(0, scrollPosition);
+    // Try both methods
+    container.scrollLeft = targetScroll;
+    container.scrollTo({ left: targetScroll, behavior: 'auto' });
+    
+    // Check result after a brief moment
+    setTimeout(() => {
+      console.log('After scroll - container.scrollLeft:', container.scrollLeft);
+      if (container.scrollLeft === 0 && targetScroll > 0) {
+        console.error('Scroll failed! Container may not be scrollable.');
+      }
+    }, 10);
   }, 100);
 }
 
