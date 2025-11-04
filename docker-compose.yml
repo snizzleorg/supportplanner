@@ -12,9 +12,11 @@ services:
       - "5175:5173"
     volumes:
       - ./data:/usr/src/support-planner/data
+    # Workaround for Docker Desktop DNS issues on macOS
     dns:
+      - 1.1.1.1
       - 8.8.8.8
-      - 8.8.4.4
+    dns_search: .
     restart: unless-stopped
 
   backend-tests:
