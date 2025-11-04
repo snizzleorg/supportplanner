@@ -20,13 +20,29 @@ const CURRENT_LEVEL = process.env.LOG_LEVEL
   : (process.env.NODE_ENV === 'production' ? LOG_LEVELS.WARN : LOG_LEVELS.DEBUG);
 
 /**
- * Sanitize data for logging to prevent log injection
+ * Sanitize data for logging
+ * Removes control characters and safely stringifies objects
  * @param {any} data - Data to sanitize
  * @returns {string} Sanitized string representation
  * @private
  */
 function sanitize(data) {
   if (data === null || data === undefined) return String(data);
+  
+  // Handle Error objects specially (they don't stringify well)
+  if (data instanceof Error) {
+    const errorObj = {
+      message: data.message,
+      name: data.name,
+      stack: data.stack
+    };
+    // Include any custom properties
+    Object.keys(data).forEach(key => {
+      errorObj[key] = data[key];
+    });
+    const str = JSON.stringify(errorObj);
+    return str.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+  }
   
   // Convert to string and remove control characters
   const str = typeof data === 'object' ? JSON.stringify(data) : String(data);
