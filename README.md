@@ -607,13 +607,25 @@ For a quick start, copy `.env.example` to `.env` and adjust for your IdP.
 
 ## Docker Support
 
-You can also run the application using Docker:
+### Local Development
+
+You can run the application using Docker Compose:
 
 ```bash
 docker-compose up -d --build
 ```
 
 The application will be available at `http://localhost:5175`.
+
+### Portainer Deployment
+
+For production deployment using Portainer, see the **[Portainer Deployment Guide](PORTAINER_DEPLOYMENT.md)**.
+
+Key features:
+- No `.env` file required - environment variables managed in Portainer
+- Named volumes for data persistence
+- Easy updates via pull and redeploy
+- Secure secrets management
 
 Notes for mobile testing
 - iOS/Android device emulation or real device recommended.

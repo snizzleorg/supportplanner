@@ -1,0 +1,52 @@
+# Portainer Environment Variables Template
+# Copy these into Portainer's "Environment variables" section when creating the stack
+
+# === DOCKER IMAGE CONFIGURATION ===
+# Replace with your Docker Hub username
+DOCKER_USERNAME=your-dockerhub-username
+IMAGE_VERSION=latest
+
+# === REQUIRED VARIABLES ===
+
+# Authentik OIDC Configuration
+OIDC_ISSUER_URL=https://auth.example.com/application/o/supportplanner/
+OIDC_CLIENT_ID=your-client-id-here
+OIDC_CLIENT_SECRET=your-client-secret-here
+OIDC_REDIRECT_URI=https://supportplanner.example.com/auth/callback
+OIDC_POST_LOGOUT_REDIRECT_URI=https://supportplanner.example.com/logged-out
+
+# Nextcloud Integration
+NEXTCLOUD_URL=https://your-nextcloud.example.com
+NEXTCLOUD_USERNAME=your-nextcloud-username
+NEXTCLOUD_PASSWORD=your-nextcloud-password
+
+# Security Secrets (REQUIRED - generate with: openssl rand -base64 32)
+SESSION_SECRET=REPLACE_WITH_RANDOM_STRING
+CSRF_SECRET=REPLACE_WITH_RANDOM_STRING
+
+# === OPTIONAL VARIABLES ===
+
+# Port Configuration
+PORT=5173
+EXTERNAL_PORT=5175
+
+# CORS Configuration (comma-separated)
+ALLOWED_ORIGINS=https://supportplanner.example.com
+
+# Role Mapping by Groups (comma-separated)
+ADMIN_GROUPS=admins,superusers
+EDITOR_GROUPS=editors,moderators
+
+# Role Mapping by Email (comma-separated, overrides groups)
+ADMIN_EMAILS=admin@example.com
+EDITOR_EMAILS=editor@example.com
+
+# OIDC Scopes (default: openid profile email)
+OIDC_SCOPES=openid profile email
+
+# Logging (ERROR, WARN, INFO, DEBUG)
+LOG_LEVEL=WARN
+
+# Auth Overrides (for testing only - DO NOT USE IN PRODUCTION)
+# AUTH_DISABLED=false
+# AUTH_BYPASS_ROLE=reader

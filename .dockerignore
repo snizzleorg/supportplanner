@@ -7,3 +7,23 @@ Dockerfile*
 .dockerignore
 public/*.map
 .env
+
+# Test files and results
+tests/
+test-results/
+*.test.js
+*.spec.js
+
+# Documentation
+*.md
+docs/
+
+# CI/CD
+.github/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
