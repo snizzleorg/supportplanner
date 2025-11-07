@@ -1502,6 +1502,7 @@ input[type="range"] {
     height: 6px;
     outline: none;
     width: 100%;
+    max-width: 500px;
 }
 
 /* Mobile zoom slider optimization */
@@ -1512,6 +1513,11 @@ input[type="range"] {
     
     .app-bar-center.search-visible {
         padding: 0 4px;
+    }
+    
+    /* Hide zoom slider on mobile when search is visible */
+    .app-bar-center.search-visible ~ .app-bar-right input[type="range"] {
+        display: none;
     }
     
     input[type="range"] {

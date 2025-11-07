@@ -93,7 +93,7 @@ export const EVENT_STATES = {
  */
 export const API_BASE = window.location.hostname === 'localhost' 
   ? 'http://localhost:5175'
-  : window.location.origin.replace(':5174', ':5175');
+  : window.location.origin;
 
 // ============================================
 // LAYOUT CONSTANTS
