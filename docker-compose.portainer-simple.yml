@@ -1,0 +1,39 @@
+# Simplified Portainer Docker Compose file
+# Configure environment variables directly in Portainer's stack editor
+
+services:
+  support-planner:
+    image: universaldilettant/support-planner:latest
+    container_name: support-planner
+    environment:
+      # Configure these values directly in Portainer's Environment variables section
+      # Or replace the ${VAR} syntax with actual values below
+      - OIDC_ISSUER_URL=
+      - OIDC_CLIENT_ID=
+      - OIDC_CLIENT_SECRET=
+      - OIDC_REDIRECT_URI=https://supportplanner.b.picoquant.com/auth/callback
+      - OIDC_SCOPES=openid profile email
+      - OIDC_POST_LOGOUT_REDIRECT_URI=https://supportplanner.b.picoquant.com/logged-out
+      - PORT=5173
+      - NEXTCLOUD_URL=
+      - NEXTCLOUD_USERNAME=
+      - NEXTCLOUD_PASSWORD=
+      - SESSION_SECRET=
+      - CSRF_SECRET=
+      - SKIP_SESSION_SECRET_CHECK=true
+      - ALLOWED_ORIGINS=https://supportplanner.b.picoquant.com
+      - AUTH_DISABLED=false
+      - LOG_LEVEL=WARN
+    ports:
+      - "5173:5173"
+    volumes:
+      - support-planner-data:/usr/src/support-planner/data
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    dns_search: .
+    restart: unless-stopped
+
+volumes:
+  support-planner-data:
+    driver: local

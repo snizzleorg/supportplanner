@@ -8,46 +8,35 @@
 
 services:
   support-planner:
-    image: universaldilettant/support-planner:${IMAGE_VERSION:-latest}
+    image: universaldilettant/support-planner:latest
     container_name: support-planner
-    # No env_file - Portainer will inject environment variables
+    # Environment variables will be set via Portainer web interface
+    # Go to: Stacks > [Your Stack] > Environment variables
     environment:
-      # OIDC Configuration
-      - OIDC_ISSUER_URL=${OIDC_ISSUER_URL}
-      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID}
-      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET}
-      - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI}
-      - OIDC_SCOPES=${OIDC_SCOPES:-openid profile email}
-      - OIDC_POST_LOGOUT_REDIRECT_URI=${OIDC_POST_LOGOUT_REDIRECT_URI}
-      
-      # App Configuration
-      - PORT=${PORT:-5173}
-      - NEXTCLOUD_URL=${NEXTCLOUD_URL}
-      - NEXTCLOUD_USERNAME=${NEXTCLOUD_USERNAME}
-      - NEXTCLOUD_PASSWORD=${NEXTCLOUD_PASSWORD}
-      
-      # Security (REQUIRED in production)
-      - SESSION_SECRET=${SESSION_SECRET}
-      - CSRF_SECRET=${CSRF_SECRET}
+      # These will be populated from Portainer's environment variables section
+      - OIDC_ISSUER_URL
+      - OIDC_CLIENT_ID
+      - OIDC_CLIENT_SECRET
+      - OIDC_REDIRECT_URI
+      - OIDC_SCOPES
+      - OIDC_POST_LOGOUT_REDIRECT_URI
+      - PORT
+      - NEXTCLOUD_URL
+      - NEXTCLOUD_USERNAME
+      - NEXTCLOUD_PASSWORD
+      - SESSION_SECRET
+      - CSRF_SECRET
       - SKIP_SESSION_SECRET_CHECK=true
-      
-      # CORS (optional)
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
-      
-      # Roles (optional)
-      - ADMIN_GROUPS=${ADMIN_GROUPS:-}
-      - EDITOR_GROUPS=${EDITOR_GROUPS:-}
-      - ADMIN_EMAILS=${ADMIN_EMAILS:-}
-      - EDITOR_EMAILS=${EDITOR_EMAILS:-}
-      
-      # Auth overrides (optional)
-      - AUTH_DISABLED=${AUTH_DISABLED:-false}
-      - AUTH_BYPASS_ROLE=${AUTH_BYPASS_ROLE:-reader}
-      
-      # Logging (optional)
-      - LOG_LEVEL=${LOG_LEVEL:-WARN}
+      - ALLOWED_ORIGINS
+      - ADMIN_GROUPS
+      - EDITOR_GROUPS
+      - ADMIN_EMAILS
+      - EDITOR_EMAILS
+      - AUTH_DISABLED
+      - AUTH_BYPASS_ROLE
+      - LOG_LEVEL
     ports:
-      - "${EXTERNAL_PORT:-5175}:5173"
+      - "5173:5173"
     volumes:
       - support-planner-data:/usr/src/support-planner/data
     dns:
