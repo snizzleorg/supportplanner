@@ -43,7 +43,7 @@ services:
       - 1.1.1.1
       - 8.8.8.8
     dns_search: .
-    restart: unless-stopped
+    restart: always
 
 volumes:
   support-planner-data:
