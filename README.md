@@ -22,6 +22,7 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
 - Quick-zoom timeline controls (Month, Quarter)
 - OIDC login with roles (admin/editor/reader) and logout
 - Search filter with calendar-name support (type a calendar name to highlight its events)
+- Bot authentication via bearer token for automation scripts (v0.10.0)
 - **Comprehensive Security** (v0.6.0):
   - **CSRF Protection**: Double-submit cookie pattern with automatic token management
   - **Authenticated Search**: Search endpoint requires reader role
@@ -390,6 +391,30 @@ GET /api/events/search-events?query=Installation&from=2025-01-01&to=2025-12-31
 - Returns direct links to events for easy navigation
 - Requires authentication (reader role or higher)
 
+### Support Assignments (Today)
+
+Returns who has support today based on events whose summary matches:
+- `Support 1 <name>`
+- `Support 2 <name>`
+
+If the title does not include a name (e.g. just `Support 1`), the endpoint falls back to the event's `calendarName`.
+
+```http
+GET /api/events/support-today
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "date": "2025-12-17",
+  "assignments": {
+    "Support 1": { "name": "Anton", "start": "2025-12-15", "end": "2025-12-19" },
+    "Support 2": { "name": "Steffen", "start": "2025-12-15", "end": "2025-12-19" }
+  }
+}
+```
+
 ### Update Event
 
 Updates an existing event.
@@ -580,6 +605,24 @@ OIDC_POST_LOGOUT_REDIRECT_URI=http://localhost:5175/logged-out
 # EDITOR_EMAILS=
 ```
 
+### Bot tokens (for scripts)
+
+Bots can authenticate without the OIDC browser flow by providing a bearer token.
+
+Configure one or more bot tokens in `BOT_TOKENS` as a comma-separated list of `token:role` entries.
+Supported roles: `reader`, `editor`.
+
+```
+BOT_TOKENS=your-reader-token:reader,your-editor-token:editor
+```
+
+Call an endpoint with:
+
+```bash
+curl -H "Authorization: Bearer your-reader-token" \
+  http://localhost:5175/api/events/support-today
+```
+
 ### No-auth mode (OIDC disabled)
 
 If any OIDC variable is missing, authentication is disabled. You can choose the effective role applied to all requests:
@@ -696,6 +739,11 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
 MIT
 
 ## What's New
+
+### v0.10.0 (2025-12-17) - Automation & API Enhancements
+
+- Added `/api/events/support-today` to query who has support today (Support 1/2)
+- Added bearer token auth for automation via `BOT_TOKENS` (per-token role)
 
 ### v0.9.0 (2025-11-03) - Mobile UI Optimization
 

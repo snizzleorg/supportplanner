@@ -50,3 +50,7 @@ LOG_LEVEL=WARN
 # Auth Overrides (for testing only - DO NOT USE IN PRODUCTION)
 # AUTH_DISABLED=false
 # AUTH_BYPASS_ROLE=reader
+
+# Bot tokens (for scripts)
+# Comma-separated list of token:role entries. Roles: reader, editor.
+# BOT_TOKENS=your-reader-token:reader,your-editor-token:editor

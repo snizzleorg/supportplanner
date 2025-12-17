@@ -25,7 +25,7 @@ export DOCKER_USERNAME="your-dockerhub-username"
 docker login
 
 # Build and push (automatically uses version from package.json)
-./build-and-push.sh          # Uses package.json version (e.g., "0.9.0" → v0.9.0)
+./build-and-push.sh          # Uses package.json version (e.g., "0.10.0" → v0.10.0)
 ./build-and-push.sh v1.0.0   # Override with specific version
 ```
 
@@ -86,17 +86,17 @@ Set these environment variables in Portainer:
 1. **Update version in package.json:**
    ```json
    {
-     "version": "0.9.0"
+     "version": "0.10.0"
    }
    ```
 
 2. **Build new version:**
    ```bash
-   ./build-and-push.sh  # Automatically uses v0.9.0 from package.json
+   ./build-and-push.sh  # Automatically uses v0.10.0 from package.json
    ```
 
 3. **Update in Portainer:**
-   - Option A: Update `IMAGE_VERSION` env var to `v0.9.0` and redeploy
+   - Option A: Update `IMAGE_VERSION` env var to `v0.10.0` and redeploy
    - Option B: Just click "Pull and redeploy" if using `latest`
 
 ## Documentation

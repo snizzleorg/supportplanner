@@ -38,7 +38,7 @@ docker login
 Run the build script:
 
 ```bash
-# Automatically uses version from package.json (e.g., "0.9.0" → v0.9.0)
+# Automatically uses version from package.json (e.g., "0.10.0" → v0.10.0)
 ./build-and-push.sh
 
 # Or override with a specific version
@@ -123,6 +123,11 @@ LOG_LEVEL=WARN
 
 # OIDC scopes (default: openid profile email)
 OIDC_SCOPES=openid profile email
+
+# Bot tokens (for scripts)
+# Comma-separated list of token:role entries. Roles: reader, editor.
+# Use with: Authorization: Bearer <token>
+BOT_TOKENS=your-reader-token:reader,your-editor-token:editor
 ```
 
 ### 4. Deploy the Stack

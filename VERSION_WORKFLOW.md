@@ -9,13 +9,13 @@ The build script automatically reads the version from `package.json` and prefixe
 ```json
 // package.json
 {
-  "version": "0.9.0"
+  "version": "0.10.0"
 }
 ```
 
 ```bash
 ./build-and-push.sh
-# Builds and pushes: v0.9.0 and latest
+# Builds and pushes: v0.10.0 and latest
 ```
 
 ## Release Workflow
@@ -26,7 +26,7 @@ The build script automatically reads the version from `package.json` and prefixe
 # Edit package.json
 {
   "name": "supportplanner",
-  "version": "0.9.0",  // ← Update this
+  "version": "0.10.0",  // ← Update this
   ...
 }
 ```
@@ -35,32 +35,32 @@ The build script automatically reads the version from `package.json` and prefixe
 
 ```bash
 git add package.json
-git commit -m "Bump version to 0.9.0"
+git commit -m "Bump version to 0.10.0"
 git push
 ```
 
 ### 3. Build and Push to Docker Hub
 
 ```bash
-# Script automatically uses v0.9.0 from package.json
+# Script automatically uses v0.10.0 from package.json
 ./build-and-push.sh
 ```
 
 Output:
 ```
-📦 Using version from package.json: v0.9.0
+📦 Using version from package.json: v0.10.0
 ================================================
 Building and pushing Support Planner to Docker Hub
 Multi-architecture: AMD64 (x86_64) + ARM64 (Apple Silicon)
 ================================================
 Image: your-username/support-planner
-Version: v0.9.0
+Version: v0.10.0
 ...
 ```
 
 ### 4. Deploy to Portainer
 
-Update the `IMAGE_VERSION` environment variable in Portainer to `v0.9.0` and redeploy.
+Update the `IMAGE_VERSION` environment variable in Portainer to `v0.10.0` and redeploy.
 
 Or, if using `latest`, just click "Pull and redeploy".
 
@@ -76,7 +76,7 @@ You can still override the version manually:
 ./build-and-push.sh v1.0.0-rc1
 
 # For hotfixes
-./build-and-push.sh v0.9.1-hotfix
+./build-and-push.sh v0.10.1-hotfix
 ```
 
 ## Semantic Versioning Guidelines
@@ -91,10 +91,10 @@ Follow semantic versioning in `package.json`:
 
 ```json
 // New feature release
-"version": "0.9.0" → "0.10.0"
+"version": "0.10.0" → "0.11.0"
 
 // Bug fix
-"version": "0.9.0" → "0.9.1"
+"version": "0.10.0" → "0.10.1"
 
 // Major release with breaking changes
 "version": "0.9.5" → "1.0.0"
@@ -144,19 +144,19 @@ docker exec support-planner cat package.json | grep version
 
 ```bash
 # 1. Update version
-vim package.json  # Change "version": "0.9.0" to "0.10.0"
+vim package.json  # Change "version": "0.10.0" to "0.11.0"
 
 # 2. Commit
 git add package.json
-git commit -m "Release v0.9.0: Add new feature X"
-git tag v0.9.0
+git commit -m "Release v0.10.0: Add new feature X"
+git tag v0.10.0
 git push origin main --tags
 
 # 3. Build and push Docker image
-./build-and-push.sh  # Automatically uses v0.9.0
+./build-and-push.sh  # Automatically uses v0.10.0
 
 # 4. Deploy
-# Update IMAGE_VERSION in Portainer to v0.9.0 and redeploy
+# Update IMAGE_VERSION in Portainer to v0.10.0 and redeploy
 ```
 
 ## Troubleshooting

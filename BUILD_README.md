@@ -14,7 +14,7 @@ docker login
 ```
 
 The script automatically reads the version from `package.json` and prefixes it with `v`.
-For example, if `package.json` has `"version": "0.9.0"`, it builds as `v0.9.0`.
+For example, if `package.json` has `"version": "0.10.0"`, it builds as `v0.10.0`.
 
 ## Multi-Architecture Support
 
@@ -30,8 +30,8 @@ Docker will automatically pull the correct architecture for your platform.
 ```bash
 ./build-and-push.sh
 ```
-If `package.json` has `"version": "0.9.0"`, creates and pushes:
-- `your-username/support-planner:v0.9.0`
+If `package.json` has `"version": "0.10.0"`, creates and pushes:
+- `your-username/support-planner:v0.10.0`
 - `your-username/support-planner:latest`
 
 ### Build with Specific Version (Override)
