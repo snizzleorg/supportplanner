@@ -121,17 +121,17 @@ router.get('/search', requireRole('reader'), async (req, res) => {
       return res.status(400).json({ error: 'Summary parameter is required' });
     }
     
-    // Default to ±1 year from today if not specified
+    // Default to ±5 years from today if not specified
     const now = new Date();
-    const defaultFrom = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().split('T')[0];
-    const defaultTo = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()).toISOString().split('T')[0];
+    const defaultFrom = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate()).toISOString().split('T')[0];
+    const defaultTo = new Date(now.getFullYear() + 5, now.getMonth(), now.getDate()).toISOString().split('T')[0];
     const startDate = from || defaultFrom;
     const endDate = to || defaultTo;
     
-    // Warn if date range is very large (> 3 years)
+    // Warn if date range is very large (> 12 years)
     const rangeMs = new Date(endDate) - new Date(startDate);
     const rangeYears = rangeMs / (365.25 * 24 * 60 * 60 * 1000);
-    if (rangeYears > 3) {
+    if (rangeYears > 12) {
       logger.warn(`Large search range requested: ${rangeYears.toFixed(1)} years`);
     }
     
@@ -214,17 +214,17 @@ router.get('/search-events', requireRole('reader'), async (req, res) => {
       });
     }
     
-    // Default to ±1 year from today if not specified
+    // Default to ±5 years from today if not specified
     const now = new Date();
-    const defaultFrom = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().split('T')[0];
-    const defaultTo = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()).toISOString().split('T')[0];
+    const defaultFrom = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate()).toISOString().split('T')[0];
+    const defaultTo = new Date(now.getFullYear() + 5, now.getMonth(), now.getDate()).toISOString().split('T')[0];
     const startDate = from || defaultFrom;
     const endDate = to || defaultTo;
     
-    // Warn if date range is very large (> 3 years)
+    // Warn if date range is very large (> 12 years)
     const rangeMs = new Date(endDate) - new Date(startDate);
     const rangeYears = rangeMs / (365.25 * 24 * 60 * 60 * 1000);
-    if (rangeYears > 3) {
+    if (rangeYears > 12) {
       logger.warn(`Large search range requested: ${rangeYears.toFixed(1)} years`);
     }
     
