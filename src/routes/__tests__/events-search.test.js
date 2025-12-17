@@ -408,10 +408,15 @@ describe('GET /api/events/search-events', () => {
         .get('/api/events/search-events?query=test')
         .expect(200);
       
+      // Default is ±5 years from today
+      const now = new Date();
+      const expectedFrom = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate()).toISOString().split('T')[0];
+      const expectedTo = new Date(now.getFullYear() + 5, now.getMonth(), now.getDate()).toISOString().split('T')[0];
+      
       expect(calendarCache.getEvents).toHaveBeenCalledWith(
         expect.any(Array),
-        '2020-01-01',
-        '2030-12-31'
+        expectedFrom,
+        expectedTo
       );
     });
     
