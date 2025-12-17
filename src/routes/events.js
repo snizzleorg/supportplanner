@@ -16,12 +16,16 @@
 
 import { Router } from 'express';
 import { body, param, validationResult } from 'express-validator';
+import { createRequire } from 'module';
 import { calendarCache } from '../services/calendar.js';
 import { getEventType } from '../services/event-type.js';
 import { geocodeLocations } from '../services/geocoding.js';
 import { escapeHtml, formatErrorResponse, createLogger } from '../utils/index.js';
 import { requireRole, validate, eventValidation, uidValidation } from '../middleware/index.js';
 import { loadEventTypesConfig, getEventTypes } from '../config/index.js';
+
+const require = createRequire(import.meta.url);
+const { version: APP_VERSION } = require('../../package.json');
 
 const logger = createLogger('EventRoutes');
 
@@ -390,7 +394,7 @@ router.post('/', async (req, res) => {
           from,
           to,
           calendarCount: 0,
-          version: '0.3.0',
+          version: APP_VERSION,
           occurrenceCount: 0,
           isEmpty: true,
           source: 'cache',

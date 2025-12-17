@@ -87,6 +87,19 @@ app.get('/event-types.json', (req, res) => {
 // Register all application routes
 registerRoutes(app);
 
+// Global error handler - must be after routes
+// Catches unhandled errors and prevents stack trace leakage in production
+app.use((err, req, res, _next) => {
+  const isDev = process.env.NODE_ENV === 'development';
+  console.error('[GlobalErrorHandler]', err.stack || err);
+  
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({
+    error: isDev ? err.message : 'Internal server error',
+    ...(isDev && { stack: err.stack })
+  });
+});
+
 // Initialize the calendar cache and audit history
 Promise.all([
   calendarCache.initialize(NEXTCLOUD_URL, NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),

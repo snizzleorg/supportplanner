@@ -48,6 +48,6 @@ export const sessionMiddleware = session({
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
-    secure: false // set true when behind HTTPS/terminating proxy
+    secure: process.env.NODE_ENV === 'production' || process.env.COOKIE_SECURE === 'true'
   }
 });
