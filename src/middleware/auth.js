@@ -332,6 +332,11 @@ export function initializeAuth(app) {
     const openPaths = ['/auth/login', '/auth/callback', '/auth/logout', '/auth/error', '/api/me', '/logged-out', '/api/client-log'];
     if (openPaths.includes(req.path) || req.path.startsWith('/public/')) return next();
     if (req.session && req.session.user) return next();
+
+    if (req.path.startsWith('/api/')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     return res.redirect('/auth/login');
   });
 }
