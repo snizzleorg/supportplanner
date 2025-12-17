@@ -8,6 +8,9 @@
  */
 
 import cors from 'cors';
+import { createLogger } from '../utils/index.js';
+
+const logger = createLogger('CORS');
 
 /**
  * List of allowed origins for CORS requests
@@ -41,18 +44,18 @@ const allowOriginPattern = /^https?:\/\/[^:]+:(5173|5174|5175)$/;
  */
 export const corsMiddleware = cors({
   origin: (origin, callback) => {
-    console.log('[CORS] Request from origin:', origin);
+    logger.debug('Request from origin:', origin);
     
     // Allow requests with no origin (mobile apps, Postman, same-origin requests)
     // These are legitimate requests from native apps or server-to-server calls
     if (!origin) {
-      console.log('[CORS] ✓ Allowed (no origin - mobile app or same-origin)');
+      logger.debug('✓ Allowed (no origin - mobile app or same-origin)');
       return callback(null, true);
     }
     
     // Check exact match in allowed origins
     if (allowedOrigins.includes(origin)) {
-      console.log('[CORS] ✓ Allowed (exact match)');
+      logger.debug('✓ Allowed (exact match)');
       return callback(null, true);
     }
     
@@ -67,15 +70,15 @@ export const corsMiddleware = cors({
       const isAllowedPort = ['5173', '5174', '5175'].includes(url.port);
       
       if (isAllowedHost && isAllowedPort) {
-        console.log('[CORS] ✓ Allowed (whitelisted dev host + port)');
+        logger.debug('✓ Allowed (whitelisted dev host + port)');
         return callback(null, true);
       }
     } catch (err) {
-      console.log('[CORS] ✗ BLOCKED - Invalid origin URL');
+      logger.warn('✗ BLOCKED - Invalid origin URL');
       return callback(new Error('Invalid origin'));
     }
     
-    console.log('[CORS] ✗ BLOCKED - Origin not in allowed list');
+    logger.warn('✗ BLOCKED - Origin not in allowed list:', origin);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true

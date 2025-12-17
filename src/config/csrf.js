@@ -8,6 +8,9 @@
  */
 
 import { doubleCsrf } from 'csrf-csrf';
+import { createLogger } from '../utils/index.js';
+
+const logger = createLogger('CSRF');
 
 /**
  * CSRF protection configuration
@@ -28,10 +31,12 @@ import { doubleCsrf } from 'csrf-csrf';
 // In true production with HTTPS, you would want secure: true and __Host- prefix
 const isHttps = process.env.USE_HTTPS === 'true';
 
-console.log('[CSRF Config] NODE_ENV:', process.env.NODE_ENV);
-console.log('[CSRF Config] USE_HTTPS:', process.env.USE_HTTPS);
-console.log('[CSRF Config] Cookie name:', isHttps ? '__Host-psifi.x-csrf-token' : 'psifi.x-csrf-token');
-console.log('[CSRF Config] Secure flag:', isHttps);
+logger.info('Config loaded', {
+  nodeEnv: process.env.NODE_ENV,
+  useHttps: process.env.USE_HTTPS,
+  cookieName: isHttps ? '__Host-psifi.x-csrf-token' : 'psifi.x-csrf-token',
+  secure: isHttps
+});
 
 export const {
   generateToken,      // Generate new CSRF token

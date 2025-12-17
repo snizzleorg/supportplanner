@@ -63,8 +63,10 @@ export function initializeAuth(app) {
         if (!req.session.user || !req.session.user.role) {
           req.session.user = { role: AUTH_DISABLED_DEFAULT_ROLE };
         }
-      } catch (_) {}
-      next();
+      } catch (e) {
+        logger.debug('Bot token check error (non-critical)', e?.message);
+      }
+      next()
     });
     
     // Provide a simple /api/me for diagnostics when auth is disabled
@@ -108,11 +110,15 @@ export function initializeAuth(app) {
         redirectUri: OIDC_REDIRECT_URI,
         hasClientId: Boolean(OIDC_CLIENT_ID)
       });
-    } catch (_) {}
+    } catch (e) {
+      logger.debug('OIDC discovery log error (non-critical)', e?.message);
+    }
     
     try { 
       oidcEndSessionEndpoint = issuer.metadata?.end_session_endpoint || null; 
-    } catch (_) {}
+    } catch (e) {
+      logger.debug('End session endpoint extraction error (non-critical)', e?.message);
+    }
     
     return client;
   })();
@@ -141,7 +147,9 @@ export function initializeAuth(app) {
     } catch (e) {
       try {
         logger.error('OIDC login error', { error: e?.message || e, responseBody: e?.response?.body });
-      } catch (_) {}
+      } catch (logErr) {
+        logger.debug('OIDC login log error', logErr?.message);
+      }
       next(e);
     }
   });
@@ -323,7 +331,9 @@ export function initializeAuth(app) {
         req.session.user = { role: normalizedRole, name: 'bot', email: null };
         break;
       }
-    } catch (_) {}
+    } catch (e) {
+      logger.debug('Bot token check error (non-critical)', e?.message);
+    }
     next();
   });
 

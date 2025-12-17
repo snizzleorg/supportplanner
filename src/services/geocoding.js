@@ -10,7 +10,10 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createLogger } from '../utils/index.js';
 // Note: Using Node.js 20+ built-in fetch (no import needed)
+
+const logger = createLogger('Geocoding');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -75,7 +78,7 @@ async function loadCache() {
       }
     }
     
-    console.log(`[Geocoding] Loaded ${geocodeCache.size} cached locations (${expiredCount} expired entries removed)`);
+    logger.info(`Loaded ${geocodeCache.size} cached locations (${expiredCount} expired entries removed)`);
     
     // Save cleaned cache if we removed expired entries
     if (expiredCount > 0) {
@@ -83,7 +86,7 @@ async function loadCache() {
     }
   } catch (err) {
     if (err.code !== 'ENOENT') {
-      console.error('[Geocoding] Error loading cache:', err.message);
+      logger.error('Error loading cache:', err.message);
     }
     // File doesn't exist or error - start with empty cache
     geocodeCache = new Map();
@@ -105,9 +108,9 @@ async function saveCache() {
     // Convert Map to object for JSON serialization
     const obj = Object.fromEntries(geocodeCache);
     await fs.writeFile(CACHE_FILE, JSON.stringify(obj, null, 2), 'utf-8');
-    console.log(`[Geocoding] Saved ${geocodeCache.size} locations to cache`);
+    logger.debug(`Saved ${geocodeCache.size} locations to cache`);
   } catch (err) {
-    console.error('[Geocoding] Error saving cache:', err.message);
+    logger.error('Error saving cache:', err.message);
   }
 }
 
@@ -155,13 +158,13 @@ async function geocodeWithNominatim(address) {
     lastRequestTime = Date.now();
     
     if (!response.ok) {
-      console.error(`[Geocoding] Nominatim error: ${response.status}`);
+      logger.error(`Nominatim error: ${response.status}`);
       return null;
     }
     
     const data = await response.json();
     if (!Array.isArray(data) || data.length === 0) {
-      console.log(`[Geocoding] No results for: ${address}`);
+      logger.debug(`No results for: ${address}`);
       return null;
     }
     
@@ -171,7 +174,7 @@ async function geocodeWithNominatim(address) {
       lon: parseFloat(result.lon)
     };
   } catch (err) {
-    console.error(`[Geocoding] Error geocoding "${address}":`, err.message);
+    logger.error(`Error geocoding "${address}":`, err.message);
     return null;
   }
 }
@@ -206,13 +209,13 @@ export async function geocodeLocation(locationStr) {
       return { lat: cached.lat, lon: cached.lon };
     } else {
       // Cache expired - remove it
-      console.log(`[Geocoding] Cache expired for "${locationStr}" (age: ${Math.round(age / (24 * 60 * 60 * 1000))} days)`);
+      logger.debug(`Cache expired for "${locationStr}" (age: ${Math.round(age / (24 * 60 * 60 * 1000))} days)`);
       geocodeCache.delete(cacheKey);
     }
   }
   
   // Geocode with Nominatim
-  console.log(`[Geocoding] Geocoding new location: ${locationStr}`);
+  logger.debug(`Geocoding new location: ${locationStr}`);
   const result = await geocodeWithNominatim(locationStr);
   
   if (result) {
@@ -224,7 +227,7 @@ export async function geocodeLocation(locationStr) {
     });
     
     // Save cache asynchronously (don't wait)
-    saveCache().catch(err => console.error('[Geocoding] Error saving cache:', err));
+    saveCache().catch(err => logger.error('Error saving cache:', err));
   }
   
   return result;
@@ -268,7 +271,7 @@ export async function geocodeLocations(locations) {
   
   // Second pass: geocode uncached locations
   if (toGeocode.length > 0) {
-    console.log(`[Geocoding] Geocoding ${toGeocode.length} new locations`);
+    logger.info(`Geocoding ${toGeocode.length} new locations`);
     
     for (const loc of toGeocode) {
       const result = await geocodeLocation(loc);
@@ -303,5 +306,5 @@ export async function getCacheStats() {
 export async function clearCache() {
   geocodeCache.clear();
   await saveCache();
-  console.log('[Geocoding] Cache cleared');
+  logger.info('Cache cleared');
 }

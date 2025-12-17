@@ -121,9 +121,19 @@ router.get('/search', requireRole('reader'), async (req, res) => {
       return res.status(400).json({ error: 'Summary parameter is required' });
     }
     
-    // Default to a wide date range if not specified
-    const startDate = from || '2020-01-01';
-    const endDate = to || '2030-12-31';
+    // Default to ±1 year from today if not specified
+    const now = new Date();
+    const defaultFrom = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().split('T')[0];
+    const defaultTo = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()).toISOString().split('T')[0];
+    const startDate = from || defaultFrom;
+    const endDate = to || defaultTo;
+    
+    // Warn if date range is very large (> 3 years)
+    const rangeMs = new Date(endDate) - new Date(startDate);
+    const rangeYears = rangeMs / (365.25 * 24 * 60 * 60 * 1000);
+    if (rangeYears > 3) {
+      logger.warn(`Large search range requested: ${rangeYears.toFixed(1)} years`);
+    }
     
     // Get all events in the date range
     const events = await calendarCache.getEvents([], startDate, endDate);
@@ -204,9 +214,19 @@ router.get('/search-events', requireRole('reader'), async (req, res) => {
       });
     }
     
-    // Default to a wide date range if not specified
-    const startDate = from || '2020-01-01';
-    const endDate = to || '2030-12-31';
+    // Default to ±1 year from today if not specified
+    const now = new Date();
+    const defaultFrom = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().split('T')[0];
+    const defaultTo = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()).toISOString().split('T')[0];
+    const startDate = from || defaultFrom;
+    const endDate = to || defaultTo;
+    
+    // Warn if date range is very large (> 3 years)
+    const rangeMs = new Date(endDate) - new Date(startDate);
+    const rangeYears = rangeMs / (365.25 * 24 * 60 * 60 * 1000);
+    if (rangeYears > 3) {
+      logger.warn(`Large search range requested: ${rangeYears.toFixed(1)} years`);
+    }
     
     // Get all calendar URLs from cache keys
     const cacheKeys = calendarCache.cache.keys();
@@ -270,7 +290,7 @@ router.get('/search-events', requireRole('reader'), async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error searching events:', error);
+    logger.error('Error searching events:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to search events',
