@@ -275,6 +275,75 @@ router.get('/search-events', requireRole('reader'), async (req, res) => {
   }
 });
 
+// Get today's support assignments from event titles
+// Looks for events whose summary matches:
+// - "Support 1 <name>"
+// - "Support 2 <name>"
+router.get('/support-today', requireRole('reader'), async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+
+    const cacheKeys = calendarCache.cache.keys();
+    const allCalendarUrls = cacheKeys
+      .filter(key => key.startsWith('calendar:'))
+      .map(key => key.replace('calendar:', ''));
+
+    const { events } = await calendarCache.getEvents(allCalendarUrls, dateStr, dateStr);
+
+    const assignments = {
+      'Support 1': null,
+      'Support 2': null
+    };
+
+    const supportEvents = [];
+
+    const parseSupportAssignment = (summary) => {
+      if (!summary) return null;
+      const m = String(summary).trim().match(/^support\s*([12])\s*[:\-]?\s*(.*)$/i);
+      if (!m) return null;
+      const slot = m[1] === '1' ? 'Support 1' : 'Support 2';
+      const name = String(m[2] || '').trim();
+      return { slot, name: name || null };
+    };
+
+    for (const ev of events || []) {
+      const parsed = parseSupportAssignment(ev.summary);
+      if (!parsed) continue;
+      const assignee = parsed.name || ev.calendarName || null;
+      assignments[parsed.slot] = assignee ? {
+        name: assignee,
+        start: ev.start,
+        end: ev.end
+      } : null;
+      supportEvents.push({
+        uid: ev.uid,
+        summary: ev.summary,
+        start: ev.start,
+        end: ev.end,
+        calendar: ev.calendar,
+        calendarName: ev.calendarName
+      });
+    }
+
+    return res.json({
+      success: true,
+      date: dateStr,
+      assignments,
+      count: supportEvents.length,
+      events: supportEvents
+    });
+  } catch (error) {
+    logger.error('Error fetching support assignments for today', error);
+    const { status, body } = formatErrorResponse(error, 500);
+    return res.status(status).json(body);
+  }
+});
+
 // Get events for selected calendars (main timeline endpoint)
 router.post('/', async (req, res) => {
   try {

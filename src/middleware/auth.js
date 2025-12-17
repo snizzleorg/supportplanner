@@ -300,6 +300,33 @@ export function initializeAuth(app) {
     res.status(400).send(html);
   });
 
+  app.use((req, _res, next) => {
+    try {
+      if (req.session && req.session.user) return next();
+      const tokenConfig = process.env.BOT_TOKENS || '';
+      if (!tokenConfig) return next();
+      const authHeader = req.get('authorization') || '';
+      const m = authHeader.match(/^Bearer\s+(.+)$/i);
+      if (!m) return next();
+      const presented = String(m[1] || '').trim();
+      if (!presented) return next();
+
+      const entries = tokenConfig.split(',').map(s => s.trim()).filter(Boolean);
+      for (const entry of entries) {
+        const parts = entry.split(':');
+        const token = String(parts[0] || '').trim();
+        const role = String(parts[1] || 'reader').trim().toLowerCase();
+        if (!token) continue;
+        if (token !== presented) continue;
+        const normalizedRole = role === 'editor' ? 'editor' : role === 'admin' ? 'admin' : 'reader';
+        req.session = req.session || {};
+        req.session.user = { role: normalizedRole, name: 'bot', email: null };
+        break;
+      }
+    } catch (_) {}
+    next();
+  });
+
   // Protection middleware: require session for all app routes except auth, error page, api/me, logged-out and client-log
   app.use((req, res, next) => {
     const openPaths = ['/auth/login', '/auth/callback', '/auth/logout', '/auth/error', '/api/me', '/logged-out', '/api/client-log'];
