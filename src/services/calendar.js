@@ -435,6 +435,7 @@ export class CalendarCache {
    * @private
    */
   async refreshCalendar(calendar) {
+    const calendarStartTime = Date.now();
     const cacheKey = `calendar:${calendar.url}`;
     const now = dayjs();
     const threeMonthsAgo = now.subtract(3, 'month');
@@ -457,6 +458,7 @@ export class CalendarCache {
     }
     
     try {
+      const fetchStartTime = Date.now();
       const objects = await this.client.fetchCalendarObjects({
         calendar,
         timeRange: { 
@@ -464,8 +466,9 @@ export class CalendarCache {
           end: threeMonthsFromNow.format('YYYY-MM-DDTHH:mm:ss[Z]') 
         },
       });
+      const fetchDuration = Date.now() - fetchStartTime;
       
-      logger.debug(`[${displayName}] Found ${objects.length} calendar objects`);
+      logger.debug(`[${displayName}] Found ${objects.length} calendar objects (fetch: ${fetchDuration}ms)`);
       
       const events = [];
       let eventCount = 0;
@@ -565,7 +568,9 @@ export class CalendarCache {
         }
       });
       
-      logger.debug(`[${calendar.displayName || calendar.url}] Cache updated with ${events.length} events (${eventCount} regular, ${occurrenceCount} occurrences)`);
+      const totalDuration = Date.now() - calendarStartTime;
+      const processingDuration = totalDuration - fetchDuration;
+      logger.info(`[${displayName}] Refreshed: ${events.length} events (fetch: ${fetchDuration}ms, process: ${processingDuration}ms, total: ${totalDuration}ms)`);
       return events;
     } catch (error) {
       logger.error(`Failed to refresh calendar ${calendar.displayName || calendar.url}:`, error);
