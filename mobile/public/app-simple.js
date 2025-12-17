@@ -999,10 +999,8 @@ async function showCreateEventModal(calendar, clickedDate) {
       
       console.log('Event created successfully, reloading...');
       
-      // Trigger background refresh (non-blocking) and reload immediately
-      fetchWithRetry(`${API_BASE}/api/refresh-caldav`, { method: 'POST' })
-        .catch(e => console.warn('Background refresh failed:', e));
-      
+      // Wait for CalDAV to persist, then reload (cache already invalidated by backend)
+      await new Promise(resolve => setTimeout(resolve, 500));
       window.location.reload();
       
     } catch (error) {
@@ -1557,10 +1555,8 @@ async function showEventModal(event) {
         
         console.log('Event deleted successfully, reloading...');
         
-        // Trigger background refresh (non-blocking) and reload immediately
-        fetchWithRetry(`${API_BASE}/api/refresh-caldav`, { method: 'POST' })
-          .catch(e => console.warn('Background refresh failed:', e));
-        
+        // Wait for CalDAV to persist, then reload (cache already invalidated by backend)
+        await new Promise(resolve => setTimeout(resolve, 500));
         window.location.reload();
       } else {
         const errorText = await response.text();
@@ -1757,10 +1753,8 @@ async function showEventModal(event) {
         
         console.log('Event updated successfully, reloading...');
         
-        // Trigger background refresh (non-blocking) and reload immediately
-        fetchWithRetry(`${API_BASE}/api/refresh-caldav`, { method: 'POST' })
-          .catch(e => console.warn('Background refresh failed:', e));
-        
+        // Wait for CalDAV to persist, then reload (cache already invalidated by backend)
+        await new Promise(resolve => setTimeout(resolve, 500));
         window.location.reload();
       } else {
         const errorText = await response.text();
