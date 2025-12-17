@@ -351,19 +351,18 @@ async function init() {
   const loadingOverlay = document.getElementById('loadingOverlay');
   if (loadingOverlay) loadingOverlay.classList.remove('hidden');
   
-  // Force backend to refresh cache from CalDAV on page load
-  try {
-    console.log('Refreshing CalDAV cache...');
-    const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, { 
-      method: 'POST'
-    });
-    console.log('Initial refresh response:', refreshResponse.status);
-  } catch (e) {
-    console.warn('Initial cache refresh failed:', e);
-  }
-  
-  // Load data
+  // Load cached data immediately (don't wait for CalDAV refresh)
   await loadData();
+  
+  // Trigger background refresh to get latest data (non-blocking)
+  // This ensures fresh data without blocking initial page load
+  fetchWithRetry(`${API_BASE}/api/refresh-caldav`, { method: 'POST' })
+    .then(() => {
+      console.log('Background CalDAV refresh completed, reloading data...');
+      // Reload data with fresh cache and re-render
+      loadData().then(() => render());
+    })
+    .catch(e => console.warn('Background cache refresh failed:', e));
   
   // Hide loading overlay
   if (loadingOverlay) loadingOverlay.classList.add('hidden');
