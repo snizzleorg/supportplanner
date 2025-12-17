@@ -2,7 +2,19 @@
 
 ## Recent Releases
 
-### [2025-11-03] v0.9.0 📱 MOBILE UI OPTIMIZATION - **CURRENT**
+### [2025-12-17] v0.10.0 🤖 API & QUALITY RELEASE - **CURRENT**
+**API Enhancements & Code Quality**
+- **Bot Token Authentication**: Bearer token auth for automation scripts
+  - Environment variable `BOT_TOKENS` format: `token1:role1,token2:role2`
+  - Supports all roles: `reader`, `editor`, `admin`
+- **Support Today Endpoint**: `/api/events/support-today` for daily assignments
+- **Logging Consistency**: Replaced console.log with structured `createLogger()`
+- **Global Error Handler**: Prevents stack trace leakage in production
+- **Configurable Search Range**: Default ±5 years (was hardcoded 10+ years)
+- **Empty Catch Blocks**: Added debug logging to auth middleware
+- **Testing**: All backend tests passing
+
+### [2025-11-03] v0.9.0 📱 MOBILE UI OPTIMIZATION
 **Comprehensive Mobile Interface Improvements**
 - **Hamburger Menu**: Compact mobile UI with backdrop overlay
   - Tap anywhere outside to close (intuitive gesture)
@@ -141,30 +153,26 @@ See [CHANGELOG.md](../CHANGELOG.md) for complete release notes.
 
 ---
 
-## Next Release (v0.9.0 - Planned)
+## Next Release (v0.11.0 or v1.0.0 - Planned)
 
-**Focus**: Mobile app refactoring & frontend testing
+**Focus**: Performance, testing & CI/CD
 
 ### Planned Features
+- [ ] Frontend performance optimizations (branch: `perf/frontend-optimization`)
+  - Non-blocking CalDAV refresh on page load
+  - Reduced mutation wait times
 - [ ] Complete mobile app modularization (Steps 5-8)
   - Extract render.js (~400 lines)
   - Extract events.js (~600 lines)
   - Clean up main app (~300-400 lines final)
-  - Add comprehensive testing
 - [ ] Frontend unit tests for mobile modules
   - Test api.js, state.js, utils.js
-  - Test render.js, events.js
   - Target: 80%+ coverage
-- [ ] Mobile E2E tests with Playwright
-  - Touch gesture validation
-  - Event lifecycle tests
-  - Responsive behavior tests
+- [ ] CI/CD pipeline setup (GitHub Actions)
 
 ### Future Considerations (v1.0.0+)
-- [ ] CI/CD pipeline setup (GitHub Actions)
-- [ ] Structured logging library (winston/pino)
 - [ ] TypeScript migration
-- [ ] Performance optimizations
+- [ ] Mobile E2E tests with Playwright
 
 ---
 
@@ -284,10 +292,10 @@ See [CHANGELOG.md](../CHANGELOG.md) for complete release notes.
 - [ ] Add TypeScript support
 - [ ] Implement proper state management
 - [ ] Update dependencies
-- [ ] **Replace console.log with proper logging library** (winston/pino)
-  - Currently ~50+ console.log/error/warn statements throughout codebase
-  - Should include: structured logging, log levels, log rotation, request ID tracking
-  - Deferred from v0.3.1 code review (issue #8) - non-critical improvement
-  - Consider combining with monitoring/observability improvements
+- [x] **Replace console.log with structured logger** ✅ COMPLETE (v0.10.0)
+  - Implemented `createLogger()` utility with context and log levels
+  - Updated: geocoding.js, cors.js, csrf.js, events.js, auth.js
+  - Supports: ERROR, WARN, INFO, DEBUG levels
+  - Environment-aware: WARN+ in production, DEBUG in development
 - [ ] Add server-side input sanitization library (DOMPurify or similar)
 - [ ] Consider adding request ID tracking for better debugging
