@@ -9,13 +9,13 @@ The build script automatically reads the version from `package.json` and prefixe
 ```json
 // package.json
 {
-  "version": "0.8.0"
+  "version": "0.9.0"
 }
 ```
 
 ```bash
 ./build-and-push.sh
-# Builds and pushes: v0.8.0 and latest
+# Builds and pushes: v0.9.0 and latest
 ```
 
 ## Release Workflow
@@ -76,7 +76,7 @@ You can still override the version manually:
 ./build-and-push.sh v1.0.0-rc1
 
 # For hotfixes
-./build-and-push.sh v0.8.1-hotfix
+./build-and-push.sh v0.9.1-hotfix
 ```
 
 ## Semantic Versioning Guidelines
@@ -91,7 +91,7 @@ Follow semantic versioning in `package.json`:
 
 ```json
 // New feature release
-"version": "0.8.0" → "0.9.0"
+"version": "0.9.0" → "0.10.0"
 
 // Bug fix
 "version": "0.9.0" → "0.9.1"
@@ -144,7 +144,7 @@ docker exec support-planner cat package.json | grep version
 
 ```bash
 # 1. Update version
-vim package.json  # Change "version": "0.8.0" to "0.9.0"
+vim package.json  # Change "version": "0.9.0" to "0.10.0"
 
 # 2. Commit
 git add package.json

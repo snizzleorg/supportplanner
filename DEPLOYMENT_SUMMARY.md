@@ -25,7 +25,7 @@ export DOCKER_USERNAME="your-dockerhub-username"
 docker login
 
 # Build and push (automatically uses version from package.json)
-./build-and-push.sh          # Uses package.json version (e.g., "0.8.0" → v0.8.0)
+./build-and-push.sh          # Uses package.json version (e.g., "0.9.0" → v0.9.0)
 ./build-and-push.sh v1.0.0   # Override with specific version
 ```
 

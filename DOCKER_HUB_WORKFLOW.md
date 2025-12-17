@@ -31,7 +31,7 @@ docker login
 ### Build and Push New Version
 
 ```bash
-# Use version from package.json (e.g., if package.json has "version": "0.8.0", builds as v0.8.0)
+# Use version from package.json (e.g., if package.json has "version": "0.9.0", builds as v0.9.0)
 ./build-and-push.sh
 
 # Override with specific version
@@ -66,7 +66,7 @@ The script automatically reads the version from `package.json`:
 1. Update version in `package.json`:
    ```json
    {
-     "version": "0.8.0"
+     "version": "0.9.0"
    }
    ```
 
@@ -74,7 +74,7 @@ The script automatically reads the version from `package.json`:
    ```bash
    ./build-and-push.sh
    ```
-   This creates: `your-username/support-planner:v0.8.0` and `:latest`
+   This creates: `your-username/support-planner:v0.9.0` and `:latest`
 
 ### Semantic Versioning
 
@@ -83,7 +83,7 @@ Use semantic versioning in `package.json`:
 - `1.1.0` - Minor release (new features)
 - `1.1.1` - Patch release (bug fixes)
 
-The script automatically prefixes with `v` (e.g., `0.8.0` → `v0.8.0`)
+The script automatically prefixes with `v` (e.g., `0.9.0` → `v0.9.0`)
 
 ### Manual Version Override
 

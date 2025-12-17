@@ -38,7 +38,7 @@ docker login
 Run the build script:
 
 ```bash
-# Automatically uses version from package.json (e.g., "0.8.0" → v0.8.0)
+# Automatically uses version from package.json (e.g., "0.9.0" → v0.9.0)
 ./build-and-push.sh
 
 # Or override with a specific version
