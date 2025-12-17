@@ -997,27 +997,12 @@ async function showCreateEventModal(calendar, clickedDate) {
       if (loadingText) loadingText.textContent = 'Saving event...';
       loadingOverlay?.classList.remove('hidden');
       
-      console.log('Event created successfully, triggering CalDAV refresh...');
+      console.log('Event created successfully, reloading...');
       
-      // Wait a moment for the event to be saved
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Trigger background refresh (non-blocking) and reload immediately
+      fetchWithRetry(`${API_BASE}/api/refresh-caldav`, { method: 'POST' })
+        .catch(e => console.warn('Background refresh failed:', e));
       
-      // Trigger CalDAV cache refresh
-      if (loadingText) loadingText.textContent = 'Updating calendar...';
-      console.log('Calling refresh-caldav endpoint...');
-      try {
-        const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
-          method: 'POST'
-        });
-        console.log('Refresh response:', refreshResponse.status);
-      } catch (refreshError) {
-        console.error('Refresh failed (non-fatal):', refreshError);
-      }
-      
-      // Wait another moment for refresh to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log('Reloading page...');
       window.location.reload();
       
     } catch (error) {
@@ -1570,24 +1555,12 @@ async function showEventModal(event) {
         if (loadingText) loadingText.textContent = 'Deleting event...';
         loadingOverlay?.classList.remove('hidden');
         
-        console.log('Event deleted successfully, triggering CalDAV refresh...');
+        console.log('Event deleted successfully, reloading...');
         
-        // Wait for backend to save
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Trigger background refresh (non-blocking) and reload immediately
+        fetchWithRetry(`${API_BASE}/api/refresh-caldav`, { method: 'POST' })
+          .catch(e => console.warn('Background refresh failed:', e));
         
-        // Trigger CalDAV cache refresh
-        if (loadingText) loadingText.textContent = 'Refreshing calendar...';
-        try {
-          const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
-            method: 'POST'
-          });
-          console.log('Refresh response:', refreshResponse.status);
-        } catch (refreshError) {
-          console.error('Refresh failed (non-fatal):', refreshError);
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        console.log('Reloading page after delete...');
         window.location.reload();
       } else {
         const errorText = await response.text();
@@ -1782,23 +1755,12 @@ async function showEventModal(event) {
         if (loadingText) loadingText.textContent = 'Updating event...';
         loadingOverlay?.classList.remove('hidden');
         
-        console.log('Event updated successfully, triggering CalDAV refresh...');
+        console.log('Event updated successfully, reloading...');
         
-        // Wait for backend to save
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Trigger background refresh (non-blocking) and reload immediately
+        fetchWithRetry(`${API_BASE}/api/refresh-caldav`, { method: 'POST' })
+          .catch(e => console.warn('Background refresh failed:', e));
         
-        // Trigger CalDAV cache refresh
-        if (loadingText) loadingText.textContent = 'Refreshing calendar...';
-        try {
-          const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
-            method: 'POST'
-          });
-          console.log('Refresh response:', refreshResponse.status);
-        } catch (refreshError) {
-          console.error('Refresh failed (non-fatal):', refreshError);
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
         window.location.reload();
       } else {
         const errorText = await response.text();
