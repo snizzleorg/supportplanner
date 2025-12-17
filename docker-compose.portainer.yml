@@ -36,7 +36,7 @@ services:
       - AUTH_BYPASS_ROLE
       - LOG_LEVEL
     ports:
-      - "5173:5173"
+      - "5175:5173"
     volumes:
       - support-planner-data:/usr/src/support-planner/data
     dns:

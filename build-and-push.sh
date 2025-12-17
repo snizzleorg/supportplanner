@@ -9,10 +9,17 @@ set -e
 #   ./build-and-push.sh latest    # Uses 'latest' tag
 
 # Configuration
-DOCKER_USERNAME="universaldilettant"
+DOCKER_USERNAME="${DOCKER_USERNAME:-}"
 IMAGE_NAME="support-planner"
 FULL_IMAGE_NAME="${DOCKER_USERNAME}/${IMAGE_NAME}"
 BUILDER_NAME="multiarch-builder"
+
+if [ -z "${DOCKER_USERNAME}" ]; then
+    echo "❌ Error: DOCKER_USERNAME is not set."
+    echo "Set it to your Docker Hub username (must own/push to the repository):"
+    echo "  export DOCKER_USERNAME=your-dockerhub-username"
+    exit 1
+fi
 
 # Get version from argument, or extract from package.json, or default to 'latest'
 if [ -n "$1" ]; then
@@ -46,10 +53,18 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
-# Check if logged into Docker Hub
-if ! docker info | grep -q "Username"; then
-    echo "⚠️  Warning: You may not be logged into Docker Hub."
-    echo "Run 'docker login' if the push fails."
+# Preflight: try to access the repository metadata to catch auth/repo issues early.
+# We intentionally don't rely on `docker info | grep Username` since it can be unreliable across Docker Desktop versions.
+INSPECT_OUTPUT=$(docker buildx imagetools inspect "${FULL_IMAGE_NAME}:latest" 2>&1) || true
+if [ -n "${INSPECT_OUTPUT}" ]; then
+    if echo "${INSPECT_OUTPUT}" | grep -qiE "(unauthorized|authentication required|insufficient_scope|denied|forbidden)"; then
+        echo "❌ Error: Not authenticated to push to Docker Hub for ${FULL_IMAGE_NAME}."
+        echo "Run: docker login"
+        exit 1
+    fi
+
+    echo "⚠️  Warning: Unable to inspect ${FULL_IMAGE_NAME}:latest on Docker Hub."
+    echo "If push fails, ensure the repository exists and your account has permission to push."
     echo ""
 fi
 
