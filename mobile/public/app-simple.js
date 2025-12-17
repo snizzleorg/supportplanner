@@ -516,8 +516,7 @@ function scrollToToday() {
   
   // Position today about 7 days in from the left edge
   // This gives context of the past week while showing today prominently
-  const daysOffset = 7;
-  const scrollPosition = (daysFromStart - daysOffset) * pixelsPerDay;
+  const scrollPosition = (daysFromStart - TODAY_SCROLL_OFFSET_DAYS) * pixelsPerDay;
   
   console.log('Scrolling to today:', {
     today: today.toISOString(),
@@ -525,7 +524,7 @@ function scrollToToday() {
     daysFromStart,
     currentZoom,
     pixelsPerDay,
-    daysOffset,
+    daysOffset: TODAY_SCROLL_OFFSET_DAYS,
     calculatedScroll: scrollPosition,
     finalScroll: Math.max(0, scrollPosition),
     containerWidth,
@@ -2312,6 +2311,8 @@ function stopAutoRefresh() {
 // KEYBOARD SHORTCUTS
 // ============================================
 
+const TODAY_SCROLL_OFFSET_DAYS = 7;
+
 /**
  * Setup keyboard shortcuts for navigation and zoom
  * - Plus/Minus OR Arrow Up/Down: Control zoom slider (10 increments)
@@ -2322,7 +2323,7 @@ function stopAutoRefresh() {
 function setupKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
     // Don't trigger shortcuts when typing in input fields
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.key !== 'Escape') {
       return;
     }
     
@@ -2439,7 +2440,7 @@ function setupKeyboardShortcuts() {
         const startDate = getDateRange().from;
         const daysFromStart = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
         const pixelsPerDay = ZOOM_SETTINGS[getZoom()] || parseInt(zoomSlider?.value || 10);
-        const todayScrollLeft = 100 + (daysFromStart * pixelsPerDay);
+        const todayScrollLeft = (daysFromStart - TODAY_SCROLL_OFFSET_DAYS) * pixelsPerDay;
         container.scrollLeft = Math.max(0, todayScrollLeft);
         break;
         
@@ -2454,6 +2455,9 @@ function setupKeyboardShortcuts() {
           e.preventDefault();
           searchInput.style.display = 'none';
           searchInput.value = '';
+          if (document.activeElement === searchInput) {
+            searchInput.blur();
+          }
           setSearchQuery('');
           render();
         }
@@ -2468,6 +2472,7 @@ function setupKeyboardShortcuts() {
  * Update the history badge with count of recent changes
  * Shows changes from the last 24 hours
  * @async
+ */
 async function updateHistoryBadge() {
   try {
     // Calculate timestamp for 24 hours ago
