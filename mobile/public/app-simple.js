@@ -351,18 +351,19 @@ async function init() {
   const loadingOverlay = document.getElementById('loadingOverlay');
   if (loadingOverlay) loadingOverlay.classList.remove('hidden');
   
-  // Load cached data immediately (don't wait for CalDAV refresh)
-  await loadData();
+  // Force backend to refresh cache from CalDAV on page load
+  try {
+    console.log('Refreshing CalDAV cache...');
+    const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, { 
+      method: 'POST'
+    });
+    console.log('Initial refresh response:', refreshResponse.status);
+  } catch (e) {
+    console.warn('Initial cache refresh failed:', e);
+  }
   
-  // Trigger background refresh to get latest data (non-blocking)
-  // This ensures fresh data without blocking initial page load
-  fetchWithRetry(`${API_BASE}/api/refresh-caldav`, { method: 'POST' })
-    .then(() => {
-      console.log('Background CalDAV refresh completed, reloading data...');
-      // Reload data with fresh cache and re-render
-      loadData().then(() => render());
-    })
-    .catch(e => console.warn('Background cache refresh failed:', e));
+  // Load data
+  await loadData();
   
   // Hide loading overlay
   if (loadingOverlay) loadingOverlay.classList.add('hidden');
@@ -997,10 +998,27 @@ async function showCreateEventModal(calendar, clickedDate) {
       if (loadingText) loadingText.textContent = 'Saving event...';
       loadingOverlay?.classList.remove('hidden');
       
-      console.log('Event created successfully, reloading...');
+      console.log('Event created successfully, triggering CalDAV refresh...');
       
-      // Wait for CalDAV to persist, then reload (cache already invalidated by backend)
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait a moment for the event to be saved
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Trigger CalDAV cache refresh
+      if (loadingText) loadingText.textContent = 'Updating calendar...';
+      console.log('Calling refresh-caldav endpoint...');
+      try {
+        const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
+          method: 'POST'
+        });
+        console.log('Refresh response:', refreshResponse.status);
+      } catch (refreshError) {
+        console.error('Refresh failed (non-fatal):', refreshError);
+      }
+      
+      // Wait another moment for refresh to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('Reloading page...');
       window.location.reload();
       
     } catch (error) {
@@ -1553,10 +1571,24 @@ async function showEventModal(event) {
         if (loadingText) loadingText.textContent = 'Deleting event...';
         loadingOverlay?.classList.remove('hidden');
         
-        console.log('Event deleted successfully, reloading...');
+        console.log('Event deleted successfully, triggering CalDAV refresh...');
         
-        // Wait for CalDAV to persist, then reload (cache already invalidated by backend)
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait for backend to save
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Trigger CalDAV cache refresh
+        if (loadingText) loadingText.textContent = 'Refreshing calendar...';
+        try {
+          const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
+            method: 'POST'
+          });
+          console.log('Refresh response:', refreshResponse.status);
+        } catch (refreshError) {
+          console.error('Refresh failed (non-fatal):', refreshError);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('Reloading page after delete...');
         window.location.reload();
       } else {
         const errorText = await response.text();
@@ -1751,10 +1783,23 @@ async function showEventModal(event) {
         if (loadingText) loadingText.textContent = 'Updating event...';
         loadingOverlay?.classList.remove('hidden');
         
-        console.log('Event updated successfully, reloading...');
+        console.log('Event updated successfully, triggering CalDAV refresh...');
         
-        // Wait for CalDAV to persist, then reload (cache already invalidated by backend)
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait for backend to save
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Trigger CalDAV cache refresh
+        if (loadingText) loadingText.textContent = 'Refreshing calendar...';
+        try {
+          const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
+            method: 'POST'
+          });
+          console.log('Refresh response:', refreshResponse.status);
+        } catch (refreshError) {
+          console.error('Refresh failed (non-fatal):', refreshError);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
         window.location.reload();
       } else {
         const errorText = await response.text();
