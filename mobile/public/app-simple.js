@@ -2328,12 +2328,66 @@ function setupKeyboardShortcuts() {
     
     const container = document.querySelector('.timeline-container');
     const zoomSlider = document.getElementById('zoomSlider');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
     if (!container) return;
     
     const scrollAmount = 200; // pixels to scroll horizontally
     const zoomStep = 10; // zoom slider increments (larger steps for keyboard)
+    const currentZoom = getZoom();
+    const currentPixelsPerDay = ZOOM_SETTINGS[currentZoom] || parseInt(zoomSlider?.value || 10);
     
+    // Ctrl+F / Cmd+F -> focus search input (and open if hidden)
+    if ((e.key === 'f' || e.key === 'F') && (e.ctrlKey || e.metaKey)) {
+      if (searchInput) {
+        e.preventDefault();
+        if (searchInput.style.display === 'none') {
+          searchInput.style.display = 'flex';
+        }
+        searchInput.focus();
+        if (typeof searchInput.select === 'function') {
+          searchInput.select();
+        }
+      }
+      return;
+    }
+
     switch(e.key) {
+      // Zoom presets with number keys 1/2/3 -> week/month/quarter
+      case '1':
+      case '2':
+      case '3': {
+        const presetMap = { '1': 'week', '2': 'month', '3': 'quarter' };
+        const targetZoom = presetMap[e.key];
+        if (!targetZoom || targetZoom === getZoom()) {
+          break;
+        }
+        
+        e.preventDefault();
+        
+        // Keep the same date at the left edge while changing zoom
+        const currentScrollLeft = container.scrollLeft;
+        const daysFromStart = Math.floor((currentScrollLeft - 100) / currentPixelsPerDay);
+        
+        setZoom(targetZoom);
+        
+        // Sync zoom preset buttons
+        document.querySelectorAll('.zoom-controls .control-btn').forEach(b => 
+          b.classList.toggle('active', b.dataset.zoom === getZoom())
+        );
+        
+        // Update slider to match preset
+        const newPixelsPerDay = ZOOM_SETTINGS[getZoom()];
+        if (zoomSlider && newPixelsPerDay) {
+          zoomSlider.value = newPixelsPerDay;
+        }
+        
+        render();
+        
+        const newScrollLeft = 100 + (daysFromStart * (ZOOM_SETTINGS[getZoom()] || newPixelsPerDay || currentPixelsPerDay));
+        container.scrollLeft = Math.max(0, newScrollLeft);
+        break;
+      }
       // Zoom in with +/= or arrow up
       case '+':
       case '=': // Also handle = key (same key as + without shift)
@@ -2377,6 +2431,8 @@ function setupKeyboardShortcuts() {
         
       // Home/End for quick navigation
       case 'Home':
+      case 't':
+      case 'T':
         e.preventDefault();
         // Jump to today
         const today = new Date();
@@ -2391,17 +2447,27 @@ function setupKeyboardShortcuts() {
         e.preventDefault();
         container.scrollLeft = container.scrollWidth;
         break;
+
+      // ESC to close and clear inline search
+      case 'Escape':
+        if (searchInput && searchInput.style.display !== 'none') {
+          e.preventDefault();
+          searchInput.style.display = 'none';
+          searchInput.value = '';
+          setSearchQuery('');
+          render();
+        }
+        break;
     }
   });
   
-  console.log('[Keyboard] Shortcuts enabled: +/- or ↑/↓ (zoom ±10), ←/→ (scroll), Home (today), End (end)');
+  console.log('[Keyboard] Shortcuts enabled: 1/2/3 (zoom presets), +/- or ↑/↓ (zoom ±10), ←/→ (scroll), Home/T (today), End (end), Ctrl/Cmd+F (search), ESC (close search)');
 }
 
 /**
  * Update the history badge with count of recent changes
  * Shows changes from the last 24 hours
  * @async
- */
 async function updateHistoryBadge() {
   try {
     // Calculate timestamp for 24 hours ago
