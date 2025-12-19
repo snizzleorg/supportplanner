@@ -2645,10 +2645,38 @@ async function showMapView() {
     attribution: '© OpenStreetMap'
   }).addTo(mapViewInstance);
   
-  // Get date range from timeline (uses from/to properties)
+  // Calculate visible date range based on current scroll position and viewport
+  const container = document.querySelector('.timeline-container');
+  const wrapper = container?.parentElement;
   const dateRange = getDateRange();
-  const startDate = new Date(dateRange.from);
-  const endDate = new Date(dateRange.to);
+  const timelineStart = new Date(dateRange.from);
+  
+  // Get current zoom (pixels per day)
+  const zoomSlider = document.getElementById('zoomSlider');
+  const pixelsPerDay = parseInt(zoomSlider?.value || 10);
+  
+  // Calculate visible range from scroll position
+  let startDate, endDate;
+  if (wrapper && pixelsPerDay > 0) {
+    const scrollLeft = wrapper.scrollLeft;
+    const viewportWidth = wrapper.clientWidth;
+    const labelWidth = 100; // Account for calendar labels
+    
+    // Days from timeline start to left edge of viewport
+    const daysToLeftEdge = Math.floor((scrollLeft) / pixelsPerDay);
+    // Days visible in viewport
+    const daysVisible = Math.ceil((viewportWidth - labelWidth) / pixelsPerDay);
+    
+    startDate = new Date(timelineStart);
+    startDate.setDate(startDate.getDate() + daysToLeftEdge);
+    
+    endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + daysVisible);
+  } else {
+    // Fallback to full range
+    startDate = timelineStart;
+    endDate = new Date(dateRange.to);
+  }
   
   // Display date range
   const formatDate = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
