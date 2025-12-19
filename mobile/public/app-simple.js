@@ -2614,6 +2614,12 @@ async function showMapView() {
   const appBar = document.querySelector('.app-bar');
   const timelineWrapper = document.getElementById('timelineWrapper');
   
+  // IMPORTANT: Capture scroll position BEFORE hiding timeline
+  const container = document.querySelector('.timeline-container');
+  const wrapper = container?.parentElement;
+  const capturedScrollLeft = wrapper?.scrollLeft || 0;
+  const capturedViewportWidth = wrapper?.clientWidth || window.innerWidth;
+  
   // Close menu
   if (menuOverlay) menuOverlay.classList.remove('active');
   if (menuBackdrop) menuBackdrop.classList.remove('active');
@@ -2645,9 +2651,7 @@ async function showMapView() {
     attribution: '© OpenStreetMap'
   }).addTo(mapViewInstance);
   
-  // Calculate visible date range based on current scroll position and viewport
-  const container = document.querySelector('.timeline-container');
-  const wrapper = container?.parentElement;
+  // Calculate visible date range using captured scroll position
   const dateRange = getDateRange();
   const timelineStart = new Date(dateRange.from);
   
@@ -2655,17 +2659,15 @@ async function showMapView() {
   const zoomSlider = document.getElementById('zoomSlider');
   const pixelsPerDay = parseInt(zoomSlider?.value || 10);
   
-  // Calculate visible range from scroll position
+  // Calculate visible range from captured scroll position (before timeline was hidden)
   let startDate, endDate;
-  if (wrapper && pixelsPerDay > 0) {
-    const scrollLeft = wrapper.scrollLeft;
-    const viewportWidth = wrapper.clientWidth;
+  if (pixelsPerDay > 0) {
     const labelWidth = 100; // Account for calendar labels
     
     // Days from timeline start to left edge of viewport
-    const daysToLeftEdge = Math.floor((scrollLeft) / pixelsPerDay);
+    const daysToLeftEdge = Math.floor(capturedScrollLeft / pixelsPerDay);
     // Days visible in viewport
-    const daysVisible = Math.ceil((viewportWidth - labelWidth) / pixelsPerDay);
+    const daysVisible = Math.ceil((capturedViewportWidth - labelWidth) / pixelsPerDay);
     
     startDate = new Date(timelineStart);
     startDate.setDate(startDate.getDate() + daysToLeftEdge);
