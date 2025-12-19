@@ -2839,7 +2839,7 @@ function createColoredMarker(lat, lon, color, event, calendarName) {
       <div style="font-size: 12px; margin-top: 2px;">
         📍 ${escapeHtml(event.location)}
       </div>
-      <button onclick="openEventFromMap('${event.uid || event.id}')" 
+      <button class="map-view-details-btn" data-event-id="${event.uid || event.id}" 
               style="margin-top: 8px; padding: 6px 12px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;">
         View Details
       </button>
@@ -2876,6 +2876,16 @@ function openEventFromMap(eventId) {
 
 // Make function globally accessible immediately
 window.openEventFromMap = openEventFromMap;
+
+// Event delegation for map popup buttons (inline onclick doesn't work reliably in Leaflet popups)
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('map-view-details-btn')) {
+    const eventId = e.target.dataset.eventId;
+    if (eventId) {
+      openEventFromMap(eventId);
+    }
+  }
+});
 
 /**
  * Hide the map view
