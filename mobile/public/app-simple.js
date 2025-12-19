@@ -2615,10 +2615,12 @@ async function showMapView() {
   const timelineWrapper = document.getElementById('timelineWrapper');
   
   // IMPORTANT: Capture scroll position BEFORE hiding timeline
-  const container = document.querySelector('.timeline-container');
-  const wrapper = container?.parentElement;
-  const capturedScrollLeft = wrapper?.scrollLeft || 0;
-  const capturedViewportWidth = wrapper?.clientWidth || window.innerWidth;
+  // The timeline-wrapper is the scroll container (overflow: auto)
+  const scrollContainer = document.querySelector('.timeline-wrapper');
+  const capturedScrollLeft = scrollContainer?.scrollLeft || 0;
+  const capturedViewportWidth = scrollContainer?.clientWidth || window.innerWidth;
+  
+  console.log('[MapView] Captured before hide - scrollLeft:', capturedScrollLeft, 'viewportWidth:', capturedViewportWidth);
   
   // Close menu
   if (menuOverlay) menuOverlay.classList.remove('active');
@@ -2659,6 +2661,9 @@ async function showMapView() {
   const zoomSlider = document.getElementById('zoomSlider');
   const pixelsPerDay = parseInt(zoomSlider?.value || 10);
   
+  console.log('[MapView] Timeline start:', dateRange.from, '-> parsed:', timelineStart);
+  console.log('[MapView] Captured scroll:', capturedScrollLeft, 'viewport:', capturedViewportWidth, 'pxPerDay:', pixelsPerDay);
+  
   // Calculate visible range from captured scroll position (before timeline was hidden)
   let startDate, endDate;
   if (pixelsPerDay > 0) {
@@ -2669,11 +2674,13 @@ async function showMapView() {
     // Days visible in viewport
     const daysVisible = Math.ceil((capturedViewportWidth - labelWidth) / pixelsPerDay);
     
-    startDate = new Date(timelineStart);
-    startDate.setDate(startDate.getDate() + daysToLeftEdge);
+    console.log('[MapView] daysToLeftEdge:', daysToLeftEdge, 'daysVisible:', daysVisible);
     
-    endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + daysVisible);
+    // Create new date by adding days (use getTime to avoid mutation issues)
+    startDate = new Date(timelineStart.getTime() + daysToLeftEdge * 24 * 60 * 60 * 1000);
+    endDate = new Date(startDate.getTime() + daysVisible * 24 * 60 * 60 * 1000);
+    
+    console.log('[MapView] Calculated range:', startDate, 'to', endDate);
   } else {
     // Fallback to full range
     startDate = timelineStart;
