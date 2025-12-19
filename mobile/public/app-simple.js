@@ -2651,38 +2651,18 @@ async function showMapView() {
     attribution: '© OpenStreetMap'
   }).addTo(mapViewInstance);
   
-  // Use the captured date range text from timeline header (already shows visible range)
-  // Display it directly in the map header
-  if (dateRangeEl && capturedDateRangeText) {
-    dateRangeEl.textContent = capturedDateRangeText;
-  }
-  
-  // Parse the date range for filtering events
-  // Format is typically "Dec 2025 - Feb 2026" or similar
-  let startDate, endDate;
+  // Use full date range for now (visible range calculation was problematic)
   const dateRange = getDateRange();
+  const startDate = new Date(dateRange.from);
+  const endDate = new Date(dateRange.to);
   
-  // Try to parse the captured text, fallback to full range
-  const dateMatch = capturedDateRangeText.match(/(\w+)\s+(\d{4})\s*-\s*(\w+)\s+(\d{4})/);
-  if (dateMatch) {
-    const [, startMonth, startYear, endMonth, endYear] = dateMatch;
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const startMonthIdx = monthNames.findIndex(m => startMonth.startsWith(m));
-    const endMonthIdx = monthNames.findIndex(m => endMonth.startsWith(m));
-    
-    if (startMonthIdx >= 0 && endMonthIdx >= 0) {
-      startDate = new Date(parseInt(startYear), startMonthIdx, 1);
-      endDate = new Date(parseInt(endYear), endMonthIdx + 1, 0); // Last day of end month
-    }
+  // Display date range in map header
+  const formatDate = (d) => d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  if (dateRangeEl) {
+    dateRangeEl.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
   }
   
-  // Fallback to full range if parsing failed
-  if (!startDate || !endDate) {
-    startDate = new Date(dateRange.from);
-    endDate = new Date(dateRange.to);
-  }
-  
-  console.log('[MapView] Parsed visible range:', startDate, 'to', endDate);
+  console.log('[MapView] Using full range:', startDate, 'to', endDate);
   
   // Get calendars and event types
   const calendars = getCalendars();
