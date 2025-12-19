@@ -1036,14 +1036,14 @@ async function showCreateEventModal(calendar, clickedDate) {
   const deleteEventBtn = document.getElementById('deleteEventBtn');
   if (deleteEventBtn) deleteEventBtn.style.display = 'none';
   
-  // Show modal as bottom sheet
-  showEventSheet(modal);
+  // Show modal
+  modal.classList.add('active');
   
   const closeModal = document.getElementById('closeModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const saveEventBtn = document.getElementById('saveEventBtn');
   
-  const closeHandler = () => hideEventSheet(modal);
+  const closeHandler = () => modal.classList.remove('active');
   
   const newSaveBtn = saveEventBtn.cloneNode(true);
   saveEventBtn.parentNode.replaceChild(newSaveBtn, saveEventBtn);
@@ -1136,7 +1136,7 @@ async function showCreateEventModal(calendar, clickedDate) {
       console.log('Event added to local state:', newEvent.uid);
       
       // Close modal and re-render immediately (no loading overlay needed)
-      hideEventSheet(modal);
+      modal.classList.remove('active');
       render();
       
       // Fire-and-forget: trigger background refresh (don't await)
@@ -1526,11 +1526,11 @@ async function showEventModal(event) {
   // Show delete button in edit mode
   if (deleteEventBtn) deleteEventBtn.style.display = '';
   
-  // Show modal as bottom sheet
-  showEventSheet(modal);
+  // Show modal
+  modal.classList.add('active');
   
   const closeHandler = () => {
-    hideEventSheet(modal);
+    modal.classList.remove('active');
   };
   
   // Clean up old event listeners by cloning buttons
@@ -1716,7 +1716,7 @@ async function showEventModal(event) {
         console.log('Event removed from local state:', event.id);
         
         // Close modal and re-render immediately (no loading overlay needed)
-        hideEventSheet(modal);
+        modal.classList.remove('active');
         render();
         
         // Fire-and-forget: trigger background refresh (don't await)
@@ -1860,7 +1860,7 @@ async function showEventModal(event) {
               if (userChoice) {
                 // User chose to reload - close modal and reopen with fresh data
                 operationInProgress = false;
-                hideEventSheet(modal);
+                modal.classList.remove('active');
                 console.log('[Staleness Check] User chose to reload, fetching fresh data...');
                 
                 // Reload the event
@@ -1945,7 +1945,7 @@ async function showEventModal(event) {
         console.log('Event updated in local state:', event.id);
         
         // Close modal and re-render immediately (no loading overlay needed)
-        hideEventSheet(modal);
+        modal.classList.remove('active');
         render();
         
         // Fire-and-forget: trigger background refresh (don't await)
@@ -2652,10 +2652,10 @@ function setupKeyboardShortcuts() {
       case 'Escape':
         e.preventDefault();
         
-        // Priority 1: Close event modal (bottom sheet)
+        // Priority 1: Close event modal
         const eventModal = document.getElementById('eventModal');
-        if (eventModal?.classList.contains('sheet-active')) {
-          hideEventSheet(eventModal);
+        if (eventModal?.classList.contains('active')) {
+          eventModal.classList.remove('active');
           break;
         }
         
