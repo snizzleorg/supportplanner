@@ -1009,20 +1009,19 @@ async function showCreateEventModal(calendar, clickedDate) {
       // Wait a moment for the event to be saved
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Trigger CalDAV cache refresh
+      // Trigger CalDAV cache refresh for the affected calendar only (faster)
       if (loadingText) loadingText.textContent = 'Updating calendar...';
-      console.log('Calling refresh-caldav endpoint...');
+      console.log('Calling refresh-calendar endpoint for:', calendarUrl);
       try {
-        const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
-          method: 'POST'
+        const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ calendarUrl })
         });
         console.log('Refresh response:', refreshResponse.status);
       } catch (refreshError) {
         console.error('Refresh failed (non-fatal):', refreshError);
       }
-      
-      // Wait another moment for refresh to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
       
       console.log('Reloading page...');
       window.location.reload();
@@ -1582,18 +1581,23 @@ async function showEventModal(event) {
         // Wait for backend to save
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Trigger CalDAV cache refresh
+        // Trigger CalDAV cache refresh for the affected calendar only (faster)
         if (loadingText) loadingText.textContent = 'Refreshing calendar...';
+        const eventCalendar = getCalendars().find(c => c.id === event.group);
+        const calendarUrl = eventCalendar?.url;
         try {
-          const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
-            method: 'POST'
-          });
-          console.log('Refresh response:', refreshResponse.status);
+          if (calendarUrl) {
+            const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ calendarUrl })
+            });
+            console.log('Refresh response:', refreshResponse.status);
+          }
         } catch (refreshError) {
           console.error('Refresh failed (non-fatal):', refreshError);
         }
         
-        await new Promise(resolve => setTimeout(resolve, 1000));
         console.log('Reloading page after delete...');
         window.location.reload();
       } else {
@@ -1794,18 +1798,31 @@ async function showEventModal(event) {
         // Wait for backend to save
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Trigger CalDAV cache refresh
+        // Trigger CalDAV cache refresh for the affected calendar(s) only (faster)
         if (loadingText) loadingText.textContent = 'Refreshing calendar...';
+        const eventCalendar = getCalendars().find(c => c.id === event.group);
+        const calendarUrl = eventCalendar?.url;
         try {
-          const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
-            method: 'POST'
-          });
-          console.log('Refresh response:', refreshResponse.status);
+          if (calendarUrl) {
+            const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ calendarUrl })
+            });
+            console.log('Refresh response:', refreshResponse.status);
+          }
+          // If calendar changed, also refresh the target calendar
+          if (targetCalendarUrl && targetCalendarUrl !== calendarUrl) {
+            await fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ calendarUrl: targetCalendarUrl })
+            });
+          }
         } catch (refreshError) {
           console.error('Refresh failed (non-fatal):', refreshError);
         }
         
-        await new Promise(resolve => setTimeout(resolve, 1000));
         window.location.reload();
       } else {
         const errorText = await response.text();

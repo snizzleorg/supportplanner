@@ -395,22 +395,9 @@ export class CalendarCache {
    * @returns {Promise<void>}
    */
   async refreshAllCalendars() {
-    // If refresh is already in progress, wait for it to complete instead of skipping
     if (this.refreshInProgress) {
-      logger.debug('Refresh already in progress, waiting for it to complete...');
-      const maxWait = 30000;
-      const pollInterval = 100;
-      let waited = 0;
-      while (this.refreshInProgress && waited < maxWait) {
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
-        waited += pollInterval;
-      }
-      if (this.refreshInProgress) {
-        logger.warn('Refresh wait timeout, proceeding anyway');
-      } else {
-        logger.debug('Previous refresh completed, returning');
-        return;
-      }
+      logger.debug('Refresh already in progress, skipping');
+      return;
     }
     
     this.refreshInProgress = true;
@@ -604,6 +591,32 @@ export class CalendarCache {
     } catch (error) {
       logger.error(`Failed to refresh calendar ${calendar.displayName || calendar.url}:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Refresh a single calendar by URL
+   * 
+   * More efficient than refreshAllCalendars when only one calendar changed.
+   * Used after event create/update/delete operations.
+   * 
+   * @param {string} calendarUrl - Calendar URL to refresh
+   * @returns {Promise<boolean>} True if calendar was found and refreshed
+   */
+  async refreshSingleCalendar(calendarUrl) {
+    const calendar = this.calendars.find(c => c.url === calendarUrl);
+    if (!calendar) {
+      logger.warn(`Calendar not found for refresh: ${calendarUrl}`);
+      return false;
+    }
+    
+    try {
+      await this.refreshCalendar(calendar);
+      logger.info(`Single calendar refreshed: ${calendar.displayName || calendarUrl}`);
+      return true;
+    } catch (error) {
+      logger.error(`Failed to refresh single calendar: ${calendarUrl}`, error);
+      return false;
     }
   }
 
