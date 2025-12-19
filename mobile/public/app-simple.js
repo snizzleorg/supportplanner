@@ -2211,12 +2211,18 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
     const eventTitle = event.content || event.summary || '';
     const isUnconfirmed = eventTitle.includes(EVENT_STATES.UNCONFIRMED.marker);
     const isBooked = eventTitle.includes(EVENT_STATES.BOOKED.marker);
+    const isRemote = event.meta?.isRemote === true;
     
     // Prepare display title (strip markers)
     let displayTitle = eventTitle
       .replace(/\s*\?\?\?\s*/g, '')
       .replace(/\s*!\s*/g, '')
       .trim();
+    
+    // Add remote icon prefix if event is remote
+    if (isRemote) {
+      displayTitle = '📹 ' + displayTitle;
+    }
     
     // Build styling based on state
     let backgroundColor, textColor, border, boxShadow, iconPrefix;
