@@ -251,6 +251,11 @@ router.get('/search-events', requireRole('reader'), async (req, res) => {
         return true;
       }
       
+      // Search in location (city, country, address)
+      if (event.location && String(event.location).toLowerCase().includes(searchLower)) {
+        return true;
+      }
+      
       // Search in all metadata fields (orderNumber, ticketLink, systemType, etc.)
       if (event.meta && typeof event.meta === 'object') {
         for (const [key, value] of Object.entries(event.meta)) {
@@ -278,6 +283,7 @@ router.get('/search-events', requireRole('reader'), async (req, res) => {
       start: event.start,
       end: event.end,
       description: event.description,
+      location: event.location,
       meta: event.meta,
       link: `${req.protocol}://${req.get('host')}/#event=${event.uid}`
     }));

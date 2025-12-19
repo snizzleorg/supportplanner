@@ -230,6 +230,100 @@ describe('GET /api/events/search-events', () => {
     });
   });
   
+  describe('Search in location', () => {
+    it('should find events by city name', async () => {
+      calendarCache.getEvents.mockResolvedValue({
+        events: [{
+          uid: 'event-1',
+          summary: 'Installation',
+          start: '2025-01-01',
+          end: '2025-01-02',
+          location: '123 High Street, London, UK',
+          meta: {}
+        }]
+      });
+      
+      const response = await request(app)
+        .get('/api/events/search-events?query=London')
+        .expect(200);
+      
+      expect(response.body.found).toBe(true);
+      expect(response.body.count).toBe(1);
+      expect(response.body.events[0].location).toBe('123 High Street, London, UK');
+    });
+    
+    it('should find events by country', async () => {
+      calendarCache.getEvents.mockResolvedValue({
+        events: [
+          {
+            uid: 'event-1',
+            summary: 'Installation UK',
+            start: '2025-01-01',
+            end: '2025-01-02',
+            location: 'Manchester, United Kingdom',
+            meta: {}
+          },
+          {
+            uid: 'event-2',
+            summary: 'Installation Germany',
+            start: '2025-01-03',
+            end: '2025-01-04',
+            location: 'Berlin, Germany',
+            meta: {}
+          }
+        ]
+      });
+      
+      const response = await request(app)
+        .get('/api/events/search-events?query=Germany')
+        .expect(200);
+      
+      expect(response.body.found).toBe(true);
+      expect(response.body.count).toBe(1);
+      expect(response.body.events[0].uid).toBe('event-2');
+    });
+    
+    it('should find events by country code in location', async () => {
+      calendarCache.getEvents.mockResolvedValue({
+        events: [{
+          uid: 'event-1',
+          summary: 'Service Visit',
+          start: '2025-01-01',
+          end: '2025-01-02',
+          location: 'New York, USA',
+          meta: {}
+        }]
+      });
+      
+      const response = await request(app)
+        .get('/api/events/search-events?query=USA')
+        .expect(200);
+      
+      expect(response.body.found).toBe(true);
+      expect(response.body.count).toBe(1);
+    });
+    
+    it('should be case-insensitive for location search', async () => {
+      calendarCache.getEvents.mockResolvedValue({
+        events: [{
+          uid: 'event-1',
+          summary: 'Installation',
+          start: '2025-01-01',
+          end: '2025-01-02',
+          location: 'BERLIN, GERMANY',
+          meta: {}
+        }]
+      });
+      
+      const response = await request(app)
+        .get('/api/events/search-events?query=berlin')
+        .expect(200);
+      
+      expect(response.body.found).toBe(true);
+      expect(response.body.count).toBe(1);
+    });
+  });
+  
   describe('Search in metadata', () => {
     it('should find events by order number', async () => {
       calendarCache.getEvents.mockResolvedValue({
