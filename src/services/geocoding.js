@@ -212,8 +212,11 @@ export async function geocodeLocation(locationStr) {
     const cached = geocodeCache.get(cacheKey);
     const age = Date.now() - (cached.timestamp || 0);
     
-    if (age < CACHE_TTL) {
-      // Cache hit and not expired
+    // Re-geocode if cache entry is missing structured location data (migration from old cache format)
+    const hasMissingStructuredData = !cached.country && !cached.countryCode && !cached.city;
+    
+    if (age < CACHE_TTL && !hasMissingStructuredData) {
+      // Cache hit, not expired, and has structured data
       return {
         lat: cached.lat,
         lon: cached.lon,
@@ -221,6 +224,10 @@ export async function geocodeLocation(locationStr) {
         countryCode: cached.countryCode || '',
         city: cached.city || ''
       };
+    } else if (hasMissingStructuredData) {
+      // Cache entry missing structured data - needs re-geocoding
+      logger.debug(`Cache entry for "${locationStr}" missing structured data, re-geocoding`);
+      geocodeCache.delete(cacheKey);
     } else {
       // Cache expired - remove it
       logger.debug(`Cache expired for "${locationStr}" (age: ${Math.round(age / (24 * 60 * 60 * 1000))} days)`);
@@ -278,14 +285,20 @@ export async function geocodeLocations(locations) {
     const cacheKey = String(loc).trim().toLowerCase();
     if (geocodeCache.has(cacheKey)) {
       const cached = geocodeCache.get(cacheKey);
-      results.set(loc, {
-        lat: cached.lat,
-        lon: cached.lon,
-        country: cached.country || '',
-        countryCode: cached.countryCode || '',
-        city: cached.city || ''
-      });
-      continue;
+      // Check if cache entry has structured data (migration from old cache format)
+      const hasMissingStructuredData = !cached.country && !cached.countryCode && !cached.city;
+      if (!hasMissingStructuredData) {
+        results.set(loc, {
+          lat: cached.lat,
+          lon: cached.lon,
+          country: cached.country || '',
+          countryCode: cached.countryCode || '',
+          city: cached.city || ''
+        });
+        continue;
+      }
+      // Missing structured data - needs re-geocoding
+      geocodeCache.delete(cacheKey);
     }
     
     // Need to geocode
