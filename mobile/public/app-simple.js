@@ -1281,12 +1281,6 @@ async function showEventModal(event) {
             <input type="text" id="eventLocation" value="${escapeHtml(location)}" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
           </div>
           <div style="margin-bottom: 12px;">
-            <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; cursor: pointer;">
-              <input type="checkbox" id="eventIsRemote" ${isRemote ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
-              Remote (Zoom/Online)
-            </label>
-          </div>
-          <div style="margin-bottom: 12px;">
             <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Calendar</label>
             <select id="eventCalendar" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
               ${getCalendars().map(cal => 
@@ -1300,7 +1294,13 @@ async function showEventModal(event) {
         <div>
           <div style="margin-bottom: 12px;">
             <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Order Number</label>
-            <input type="text" id="eventOrderNumber" value="${escapeHtml(orderNumber)}" placeholder="e.g., SO-12345" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <input type="text" id="eventOrderNumber" value="${escapeHtml(orderNumber)}" placeholder="e.g., 216214" style="width: 100px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+              <label style="display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; cursor: pointer;">
+                <input type="checkbox" id="eventIsRemote" ${isRemote ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+                Remote
+              </label>
+            </div>
           </div>
           <div style="margin-bottom: 12px;">
             <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">Ticket Link</label>
@@ -1366,14 +1366,14 @@ async function showEventModal(event) {
         <input type="text" id="eventLocation" value="${escapeHtml(location)}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
       </div>
       <div style="margin-bottom: 15px;">
-        <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; cursor: pointer;">
-          <input type="checkbox" id="eventIsRemote" ${isRemote ? 'checked' : ''} style="width: 20px; height: 20px; cursor: pointer;">
-          Remote (Zoom/Online)
-        </label>
-      </div>
-      <div style="margin-bottom: 15px;">
         <label style="display: block; font-weight: 600; margin-bottom: 5px;">Order Number:</label>
-        <input type="text" id="eventOrderNumber" value="${escapeHtml(orderNumber)}" placeholder="e.g., SO-12345" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <input type="text" id="eventOrderNumber" value="${escapeHtml(orderNumber)}" placeholder="e.g., 216214" style="width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; cursor: pointer;">
+            <input type="checkbox" id="eventIsRemote" ${isRemote ? 'checked' : ''} style="width: 20px; height: 20px; cursor: pointer;">
+            Remote
+          </label>
+        </div>
       </div>
       <div style="margin-bottom: 15px;">
         <label style="display: block; font-weight: 600; margin-bottom: 5px;">Ticket Link:</label>
