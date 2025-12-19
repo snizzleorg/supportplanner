@@ -4,6 +4,59 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.10.0] - 2025-12-17 🤖 API & QUALITY RELEASE
+
+### Added
+- **Bot Token Authentication**: Bearer token authentication for automation scripts
+  - Environment variable `BOT_TOKENS` format: `token1:role1,token2:role2`
+  - Supports all roles: `reader`, `editor`, `admin`
+  - Works alongside existing OIDC authentication
+  - Added to Portainer compose configuration
+- **Support Today Endpoint**: New `/api/events/support-today` endpoint
+  - Returns today's support assignments (Support 1 / Support 2)
+  - Parses event summaries like "Support 1: Name" or "Support 1 - Name"
+  - Includes start/end times for each assignment
+- **Global Error Handler**: Express error handler prevents stack trace leakage in production
+- **Configurable Search Range**: Default search range now ±5 years (was hardcoded 10+ years)
+
+### Changed
+- **Logging Consistency**: Replaced `console.log/error` with structured `createLogger()` utility
+  - Updated: `geocoding.js`, `cors.js`, `csrf.js`, `events.js`
+- **Empty Catch Blocks**: Added debug logging to previously empty catch blocks in auth middleware
+- **Session Cookie**: Secure flag now respects `COOKIE_SECURE` env var or production mode
+- **Version Display**: API metadata now reads version from `package.json` dynamically
+
+### Fixed
+- **Search Date Range**: Prevents performance issues from excessively large search ranges
+- **Test Suite**: Updated search tests to match new ±5 year default range
+
+### Testing
+- All backend tests passing
+- Bot token authentication fully tested
+
+## [0.9.0] - 2025-11-03 📱 MOBILE UI OPTIMIZATION
+
+### Added
+- **Hamburger Menu**: Compact mobile UI with backdrop overlay
+  - Tap anywhere outside to close (intuitive gesture)
+  - Slides in from left with smooth animations
+  - System expert overlay properly layers above menu (z-index fix)
+- **Smart Zoom Controls**:
+  - Week zoom set as default for all devices
+  - Full-width zoom slider (removed max-width constraints)
+  - Dynamic slider width based on search visibility
+- **Timeline Positioning**:
+  - Timeline starts with today 7 days in from left edge
+  - Shows past week context while keeping today prominent
+  - Retry logic with proper render detection
+
+### Changed
+- **Dark Theme Polish**: X (close) buttons clearly visible in dark theme
+- **Scroll Container**: Fixed reference for proper positioning
+
+### Testing
+- All 157 backend tests passing
+
 ## [0.8.0] - 2025-11-03 🎨 UI/UX RELEASE
 
 ### Added

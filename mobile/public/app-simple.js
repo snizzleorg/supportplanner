@@ -2275,9 +2275,9 @@ function startAutoRefresh() {
     } catch (error) {
       console.error('[AutoRefresh] Failed to refresh:', error);
     }
-  }, 60 * 1000); // 60 seconds
+  }, 15 * 1000); // 15 seconds - faster sync for multi-user
   
-  console.log('[AutoRefresh] Started (interval: 60s)');
+  console.log('[AutoRefresh] Started (interval: 15s)');
 }
 
 /**

@@ -6,6 +6,7 @@ services:
       - .env
     environment:
       - SKIP_SESSION_SECRET_CHECK=true
+      - LOG_LEVEL=INFO
       # Uncomment for E2E tests:
       # - AUTH_ENABLED=false
     ports:

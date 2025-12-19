@@ -11,7 +11,7 @@ Support Planner is a CalDAV-based team scheduling application with a modular arc
 - **Framework**: Express.js
 - **CalDAV**: dav library
 - **Authentication**: Passport.js with OIDC
-- **Testing**: Vitest (105 tests, 100% passing)
+- **Testing**: Vitest (157+ tests, 100% passing)
 - **Security**: CSRF protection, input validation, rate limiting, error sanitization
 - **Documentation**: JSDoc (100% coverage - all modules fully documented)
 
@@ -68,7 +68,7 @@ src/
 - **RBAC** - Role-based access control (admin, editor, reader)
 - **Caching** - Smart caching with invalidation
 - **Error Handling** - Centralized error management
-- **Logging** - Structured logging with Winston
+- **Logging** - Structured logging with custom createLogger() utility
 
 ## Frontend Architecture
 
