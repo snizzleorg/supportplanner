@@ -2046,6 +2046,34 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
       events = events.filter(e => {
         const query = getSearchQuery();
         
+        // Country code aliases for common abbreviations
+        const COUNTRY_ALIASES = {
+          'uk': ['gb', 'united kingdom', 'great britain', 'england', 'scotland', 'wales'],
+          'usa': ['us', 'united states', 'america'],
+          'uae': ['ae', 'united arab emirates'],
+          'de': ['germany', 'deutschland'],
+          'fr': ['france'],
+          'es': ['spain'],
+          'it': ['italy'],
+          'nl': ['netherlands', 'holland'],
+          'ch': ['switzerland'],
+          'at': ['austria'],
+          'pl': ['poland'],
+          'dk': ['denmark'],
+          'se': ['sweden'],
+          'no': ['norway'],
+          'fi': ['finland']
+        };
+        
+        // Build search terms including aliases
+        const searchTerms = [query];
+        for (const [code, aliases] of Object.entries(COUNTRY_ALIASES)) {
+          if (query === code || aliases.includes(query)) {
+            searchTerms.push(code, ...aliases);
+          }
+        }
+        const uniqueTerms = [...new Set(searchTerms)];
+        
         // Search in basic event fields
         const basicFields = [
           e.content,
@@ -2054,22 +2082,26 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
           e.location
         ].filter(Boolean);
         
-        // Search in metadata fields
+        // Search in metadata fields (including structured location data)
         const meta = e.meta || {};
         const metaFields = [
           meta.orderNumber,
           meta.systemType,
           meta.ticketLink,
-          meta.notes
+          meta.notes,
+          meta.locationCountry,
+          meta.locationCountryCode,
+          meta.locationCity
         ].filter(Boolean);
         
         // Combine all searchable fields
         const allFields = [...basicFields, ...metaFields];
         
-        // Check if any field contains the search query
-        return allFields.some(field => 
-          String(field).toLowerCase().includes(query)
-        );
+        // Check if any field contains any of the search terms (with aliases)
+        return allFields.some(field => {
+          const fieldLower = String(field).toLowerCase();
+          return uniqueTerms.some(term => fieldLower.includes(term));
+        });
       });
     }
     // If calendar matches, show all events from that calendar
