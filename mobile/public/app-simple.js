@@ -2677,14 +2677,21 @@ function setupKeyboardShortcuts() {
           break;
         }
         
-        // Priority 3: Close audit view (handled in audit.js)
+        // Priority 3: Close experts overlay
+        const helpOverlay = document.getElementById('helpOverlay');
+        if (helpOverlay?.classList.contains('active')) {
+          helpOverlay.classList.remove('active');
+          break;
+        }
+        
+        // Priority 4: Close audit view (handled in audit.js)
         const auditModal = document.getElementById('auditModal');
         if (auditModal?.classList.contains('view-active')) {
           // hideAuditView is called from audit.js ESC handler
           break;
         }
         
-        // Priority 4: Close search
+        // Priority 5: Close search
         if (searchInput && searchInput.style.display !== 'none') {
           searchInput.style.display = 'none';
           searchInput.value = '';
@@ -2702,10 +2709,17 @@ function setupKeyboardShortcuts() {
         e.preventDefault();
         toggleMapView();
         break;
+      
+      // Toggle experts view with E
+      case 'KeyE':
+      case 'e':
+        e.preventDefault();
+        toggleExpertsView();
+        break;
     }
   });
   
-  console.log('[Keyboard] Shortcuts enabled: 1/2/3 (zoom presets), +/- or ↑/↓ (zoom ±10), ←/→ (scroll), Home/T (today), End (end), Ctrl/Cmd+F (search), ESC (close search), M (map toggle)');
+  console.log('[Keyboard] Shortcuts enabled: 1/2/3 (zoom presets), +/- or ↑/↓ (zoom ±10), ←/→ (scroll), Home/T (today), End (end), Ctrl/Cmd+F (search), ESC (close), M (map), E (experts)');
 }
 
 /**
@@ -3060,6 +3074,23 @@ function toggleMapView() {
     hideMapView();
   } else {
     showMapView();
+  }
+}
+
+/**
+ * Toggle experts/help overlay
+ */
+function toggleExpertsView() {
+  const helpOverlay = document.getElementById('helpOverlay');
+  const helpBtn = document.getElementById('helpBtn');
+  
+  if (!helpOverlay) return;
+  
+  if (helpOverlay.classList.contains('active')) {
+    helpOverlay.classList.remove('active');
+  } else {
+    // Trigger the help button click to load data and show overlay
+    helpBtn?.click();
   }
 }
 
