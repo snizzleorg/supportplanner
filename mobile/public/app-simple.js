@@ -755,6 +755,123 @@ function render() {
 // TODO: These functions will be replaced with Ionic modal components during migration
 
 /**
+ * Show the event modal as a bottom sheet with slide-up animation
+ * @param {HTMLElement} modal - The modal element
+ */
+function showEventSheet(modal) {
+  if (!modal) return;
+  
+  // Show backdrop
+  let backdrop = document.getElementById('viewBackdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.id = 'viewBackdrop';
+    backdrop.className = 'view-backdrop';
+    backdrop.addEventListener('click', () => hideEventSheet(modal));
+    document.body.appendChild(backdrop);
+  }
+  backdrop.style.display = 'block';
+  backdrop.offsetHeight; // Reflow
+  backdrop.classList.add('backdrop-active');
+  
+  // Show modal with slide-up animation
+  modal.style.display = 'flex';
+  modal.classList.add('sheet-entering');
+  modal.offsetHeight; // Reflow
+  modal.classList.remove('sheet-entering');
+  modal.classList.add('sheet-active');
+  
+  // Setup swipe-to-dismiss
+  setupSheetSwipeGesture(modal);
+}
+
+/**
+ * Hide the event modal with slide-down animation
+ * @param {HTMLElement} modal - The modal element
+ */
+function hideEventSheet(modal) {
+  if (!modal) return;
+  
+  // Hide backdrop
+  const backdrop = document.getElementById('viewBackdrop');
+  if (backdrop) {
+    backdrop.classList.remove('backdrop-active');
+    setTimeout(() => {
+      backdrop.style.display = 'none';
+    }, 300);
+  }
+  
+  // Hide modal with slide-down animation
+  modal.classList.remove('sheet-active');
+  modal.classList.add('sheet-exiting');
+  
+  setTimeout(() => {
+    modal.style.display = 'none';
+    modal.classList.remove('sheet-exiting');
+    modal.style.transform = ''; // Reset any drag transform
+  }, 300);
+}
+
+/**
+ * Setup swipe-to-dismiss gesture for a bottom sheet
+ * @param {HTMLElement} sheet - The sheet element
+ */
+function setupSheetSwipeGesture(sheet) {
+  let startY = 0;
+  let currentY = 0;
+  let isDragging = false;
+  
+  const handleStart = (e) => {
+    // Only start drag from the handle area
+    if (!e.target.closest('.sheet-handle') && !e.target.closest('.sheet-header')) return;
+    const touch = e.touches ? e.touches[0] : e;
+    startY = touch.clientY;
+    isDragging = true;
+    sheet.style.transition = 'none';
+  };
+  
+  const handleMove = (e) => {
+    if (!isDragging) return;
+    const touch = e.touches ? e.touches[0] : e;
+    currentY = touch.clientY;
+    const deltaY = currentY - startY;
+    
+    // Only allow dragging down
+    if (deltaY > 0) {
+      sheet.style.transform = `translateY(${deltaY}px)`;
+    }
+  };
+  
+  const handleEnd = () => {
+    if (!isDragging) return;
+    isDragging = false;
+    sheet.style.transition = '';
+    
+    const deltaY = currentY - startY;
+    
+    // If dragged more than 100px, dismiss
+    if (deltaY > 100) {
+      hideEventSheet(sheet);
+    } else {
+      sheet.style.transform = '';
+    }
+  };
+  
+  // Remove old listeners to prevent duplicates
+  sheet._swipeHandlers = sheet._swipeHandlers || {};
+  if (sheet._swipeHandlers.start) {
+    sheet.removeEventListener('touchstart', sheet._swipeHandlers.start);
+    sheet.removeEventListener('touchmove', sheet._swipeHandlers.move);
+    sheet.removeEventListener('touchend', sheet._swipeHandlers.end);
+  }
+  
+  sheet._swipeHandlers = { start: handleStart, move: handleMove, end: handleEnd };
+  sheet.addEventListener('touchstart', handleStart, { passive: true });
+  sheet.addEventListener('touchmove', handleMove, { passive: true });
+  sheet.addEventListener('touchend', handleEnd);
+}
+
+/**
  * Show modal to create a new event
  * Pre-fills with week number and Mon-Fri dates based on clicked position
  * @param {Object} calendar - Calendar object to create event in
@@ -919,14 +1036,14 @@ async function showCreateEventModal(calendar, clickedDate) {
   const deleteEventBtn = document.getElementById('deleteEventBtn');
   if (deleteEventBtn) deleteEventBtn.style.display = 'none';
   
-  // Show modal
-  modal.classList.add('active');
+  // Show modal as bottom sheet
+  showEventSheet(modal);
   
   const closeModal = document.getElementById('closeModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const saveEventBtn = document.getElementById('saveEventBtn');
   
-  const closeHandler = () => modal.classList.remove('active');
+  const closeHandler = () => hideEventSheet(modal);
   
   const newSaveBtn = saveEventBtn.cloneNode(true);
   saveEventBtn.parentNode.replaceChild(newSaveBtn, saveEventBtn);
@@ -1019,7 +1136,7 @@ async function showCreateEventModal(calendar, clickedDate) {
       console.log('Event added to local state:', newEvent.uid);
       
       // Close modal and re-render immediately (no loading overlay needed)
-      modal.classList.remove('active');
+      hideEventSheet(modal);
       render();
       
       // Fire-and-forget: trigger background refresh (don't await)
@@ -1409,11 +1526,11 @@ async function showEventModal(event) {
   // Show delete button in edit mode
   if (deleteEventBtn) deleteEventBtn.style.display = '';
   
-  // Show modal
-  modal.classList.add('active');
+  // Show modal as bottom sheet
+  showEventSheet(modal);
   
   const closeHandler = () => {
-    modal.classList.remove('active');
+    hideEventSheet(modal);
   };
   
   // Clean up old event listeners by cloning buttons
@@ -1599,7 +1716,7 @@ async function showEventModal(event) {
         console.log('Event removed from local state:', event.id);
         
         // Close modal and re-render immediately (no loading overlay needed)
-        modal.classList.remove('active');
+        hideEventSheet(modal);
         render();
         
         // Fire-and-forget: trigger background refresh (don't await)
@@ -1743,7 +1860,7 @@ async function showEventModal(event) {
               if (userChoice) {
                 // User chose to reload - close modal and reopen with fresh data
                 operationInProgress = false;
-                modal.classList.remove('active');
+                hideEventSheet(modal);
                 console.log('[Staleness Check] User chose to reload, fetching fresh data...');
                 
                 // Reload the event
@@ -1828,7 +1945,7 @@ async function showEventModal(event) {
         console.log('Event updated in local state:', event.id);
         
         // Close modal and re-render immediately (no loading overlay needed)
-        modal.classList.remove('active');
+        hideEventSheet(modal);
         render();
         
         // Fire-and-forget: trigger background refresh (don't await)

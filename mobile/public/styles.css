@@ -2119,6 +2119,40 @@ input[type="range"]::-moz-range-thumb {
     padding: 16px;
 }
 
+.sheet-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-color);
+    background: var(--modal-bg);
+}
+
+/* Event Modal Bottom Sheet specific styles */
+#eventModal {
+    z-index: 1100;
+}
+
+#eventModal .sheet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+#eventModal .sheet-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    flex: 1;
+}
+
+#eventModal .modal-header-actions {
+    display: flex;
+    gap: 8px;
+}
+
 /* Smooth transitions for timeline hide/show */
 #timelineWrapper,
 .app-bar {

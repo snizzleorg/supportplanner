@@ -148,26 +148,25 @@
         </div>
     </div>
 
-    <!-- Event Details Modal -->
-    <div class="modal" id="eventModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle">Event Details</h2>
-                <div class="modal-header-actions">
-                    <button class="icon-btn" id="copyEventLinkBtn" title="Copy event link">
-                        <span class="material-icons">link</span>
-                    </button>
-                    <button class="icon-btn" id="closeModal">✕</button>
-                </div>
+    <!-- Event Details Modal (Bottom Sheet) -->
+    <div class="bottom-sheet" id="eventModal">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <h2 id="modalTitle" class="sheet-title">Event Details</h2>
+            <div class="modal-header-actions">
+                <button class="icon-btn" id="copyEventLinkBtn" title="Copy event link">
+                    <span class="material-icons">link</span>
+                </button>
+                <button class="icon-btn" id="closeModal">✕</button>
             </div>
-            <div class="modal-body" id="modalBody">
-                <!-- Event details will be populated here -->
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-danger" id="deleteEventBtn">Delete</button>
-                <button class="btn btn-secondary" id="closeModalBtn">Cancel</button>
-                <button class="btn btn-primary" id="saveEventBtn">Save</button>
-            </div>
+        </div>
+        <div class="sheet-body" id="modalBody">
+            <!-- Event details will be populated here -->
+        </div>
+        <div class="sheet-footer" id="modalFooter">
+            <button class="btn btn-danger" id="deleteEventBtn">Delete</button>
+            <button class="btn btn-secondary" id="closeModalBtn">Cancel</button>
+            <button class="btn btn-primary" id="saveEventBtn">Save</button>
         </div>
     </div>
 
