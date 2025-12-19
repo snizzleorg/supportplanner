@@ -156,13 +156,17 @@ async function init() {
   const searchBtn = document.getElementById('searchBtn');
   const searchInput = document.getElementById('searchInput');
   
+  const mapBtn = document.getElementById('mapBtn');
+  
   searchBtn?.addEventListener('click', () => {
     const appBarCenter = document.querySelector('.app-bar-center');
     
     if (searchInput.style.display === 'none') {
       searchInput.style.display = 'flex';
       searchInput.focus();
-      // Make zoom slider smaller when search is visible
+      // Hide map button and zoom slider when search is visible
+      if (mapBtn) mapBtn.style.display = 'none';
+      if (zoomSlider) zoomSlider.style.display = 'none';
       appBarCenter.classList.remove('search-hidden');
       appBarCenter.classList.add('search-visible');
     } else {
@@ -170,10 +174,17 @@ async function init() {
       searchInput.value = '';
       setSearchQuery('');
       render();
-      // Make zoom slider larger when search is hidden
+      // Show map button and zoom slider when search is hidden
+      if (mapBtn) mapBtn.style.display = '';
+      if (zoomSlider) zoomSlider.style.display = '';
       appBarCenter.classList.remove('search-visible');
       appBarCenter.classList.add('search-hidden');
     }
+  });
+  
+  // Map button opens map view
+  mapBtn?.addEventListener('click', () => {
+    showMapView();
   });
   
   searchInput?.addEventListener('input', (e) => {
