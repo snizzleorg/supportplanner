@@ -242,6 +242,7 @@ router.get('/search-events', requireRole('reader'), async (req, res) => {
       'uk': ['gb', 'united kingdom', 'great britain', 'england', 'scotland', 'wales', 'northern ireland'],
       'usa': ['us', 'united states', 'united states of america', 'america'],
       'uae': ['ae', 'united arab emirates'],
+      'br': ['brazil', 'brasil', 'brasilien'],
       'de': ['germany', 'deutschland'],
       'fr': ['france'],
       'es': ['spain', 'españa'],

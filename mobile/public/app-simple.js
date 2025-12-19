@@ -2051,6 +2051,7 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
           'uk': ['gb', 'united kingdom', 'great britain', 'england', 'scotland', 'wales'],
           'usa': ['us', 'united states', 'america'],
           'uae': ['ae', 'united arab emirates'],
+          'br': ['brazil', 'brasil', 'brasilien'],
           'de': ['germany', 'deutschland'],
           'fr': ['france'],
           'es': ['spain'],
