@@ -22,6 +22,10 @@ A web-based support planning tool that integrates with Nextcloud CalDAV for cale
 - Quick-zoom timeline controls (Month, Quarter)
 - OIDC login with roles (admin/editor/reader) and logout
 - Search filter with calendar-name support (type a calendar name to highlight its events)
+- **Country search aliases**: Search by country name in 14 languages (v0.11.0)
+  - "UK", "USA", "Germany", "Deutschland", "Allemagne", "西班牙", etc.
+  - Automatic geocoding enrichment with country/city metadata
+- **Optimistic UI**: Instant event create/update/delete without page reload (v0.11.0)
 - Bot authentication via bearer token for automation scripts (v0.10.0)
 - **Comprehensive Security** (v0.6.0):
   - **CSRF Protection**: Double-submit cookie pattern with automatic token management

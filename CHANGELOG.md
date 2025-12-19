@@ -4,6 +4,42 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.11.0] - 2025-12-19 🌍 LOCATION SEARCH & OPTIMISTIC UI
+
+### Added
+- **Country Search Aliases**: Search events by country name in any language
+  - Uses `i18n-iso-countries` package for multilingual country names
+  - Supports 14 languages: English, German, French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Japanese, Chinese, Korean, Arabic, Turkish
+  - Includes informal aliases: "UK", "USA", "America", "Holland", "Czechia", etc.
+  - Frontend loads static JSON for client-side filtering
+- **Geocoding Enrichment**: Events automatically get structured location metadata
+  - `locationCountry`, `locationCountryCode`, `locationCity` fields in event metadata
+  - Uses OpenStreetMap Nominatim API with `addressdetails=1`
+  - Cached with TTL to minimize API calls
+- **Single Calendar Refresh Endpoint**: `POST /api/refresh-calendar`
+  - Refreshes only the affected calendar (faster than refreshing all)
+  - Used after event create/update/delete operations
+- **Optimistic UI Updates**: Instant event operations without page reload
+  - `addEvent()`, `updateEvent()`, `removeEvent()` state helpers
+  - UI updates immediately after API success
+  - Background refresh fires asynchronously (fire-and-forget)
+
+### Changed
+- **Search Logic**: Improved country code handling to prevent false positives
+  - Short ASCII codes (2-3 chars) only match `locationCountryCode` exactly
+  - Prevents "es" (Spain) from matching "United States"
+  - Non-ASCII terms (Chinese, Korean, etc.) treated as full search terms
+  - Original search term always matches anywhere (allows "MT" to find "MT100")
+
+### Fixed
+- **Calendar Disappearing Bug**: Fixed race condition where calendar would disappear after event update
+  - Now refreshes only the affected calendar instead of all calendars
+  - No more waiting for ongoing refresh to complete
+
+### Performance
+- Event create/update/delete: **~3s → <100ms** (optimistic UI)
+- Calendar refresh after event: **~3s → ~1s** (single calendar refresh)
+
 ## [0.10.0] - 2025-12-17 🤖 API & QUALITY RELEASE
 
 ### Added
