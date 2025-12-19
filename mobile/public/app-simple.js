@@ -2222,7 +2222,7 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
     
     // Add remote icon prefix if event is remote
     if (isRemote) {
-      displayTitle = '📹 ' + displayTitle;
+      displayTitle = '🔗 ' + displayTitle;
     }
     
     // Build styling based on state
