@@ -2086,34 +2086,50 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
         // Get search terms with country aliases from loaded JSON
         const uniqueTerms = getCountrySearchTerms(query);
         
-        // Search in basic event fields
-        const basicFields = [
-          e.content,
-          e.title,
-          e.description,
-          e.location
-        ].filter(Boolean);
+        // Check if search expanded to country aliases (more terms than just the original)
+        const isCountrySearch = uniqueTerms.length > 1;
         
-        // Search in metadata fields (including structured location data from geocoding)
+        // Separate short terms (2-3 ASCII chars like country codes) from longer terms
+        // Short terms should only match location-specific fields IF this is a country search
+        // EXCEPT: the original search term should always match anywhere (user might search "MT" for "MT100")
+        // NOTE: Non-ASCII terms (Chinese, Korean, etc.) are always treated as long terms
+        const isShortAscii = (t) => t.length <= 3 && /^[a-z0-9]+$/i.test(t);
+        const shortTerms = isCountrySearch 
+          ? uniqueTerms.filter(t => isShortAscii(t) && t !== query) 
+          : [];
+        const longTerms = isCountrySearch 
+          ? uniqueTerms.filter(t => !isShortAscii(t) || t === query) 
+          : uniqueTerms;
+        
+        // Helper to check if any LONG term matches
+        const matchesLong = (text) => {
+          if (!text) return false;
+          const textLower = String(text).toLowerCase();
+          return longTerms.some(term => textLower.includes(term));
+        };
+        
+        // Search in basic event fields with LONG terms only
+        const basicFields = [e.content, e.title, e.description].filter(Boolean);
+        if (basicFields.some(f => matchesLong(f))) return true;
+        
+        // Search in non-location metadata with LONG terms
         const meta = e.meta || {};
-        const metaFields = [
-          meta.orderNumber,
-          meta.systemType,
-          meta.ticketLink,
-          meta.notes,
-          meta.locationCountry,
-          meta.locationCountryCode,
-          meta.locationCity
-        ].filter(Boolean);
+        const nonLocationMeta = [meta.orderNumber, meta.systemType, meta.ticketLink, meta.notes].filter(Boolean);
+        if (nonLocationMeta.some(f => matchesLong(f))) return true;
         
-        // Combine all searchable fields
-        const allFields = [...basicFields, ...metaFields];
+        // Search location fields with LONG terms
+        const locationFields = [e.location, meta.locationCountry, meta.locationCity].filter(Boolean);
+        if (locationFields.some(f => matchesLong(f))) return true;
         
-        // Check if any field contains any of the search terms (with aliases)
-        return allFields.some(field => {
-          const fieldLower = String(field).toLowerCase();
-          return uniqueTerms.some(term => fieldLower.includes(term));
-        });
+        // For SHORT terms (country codes), only match countryCode field exactly
+        // This prevents "es" (Spain) from matching "United States"
+        if (shortTerms.length > 0) {
+          const countryCode = (meta.locationCountryCode || '').toLowerCase();
+          
+          if (shortTerms.some(term => countryCode === term)) return true;
+        }
+        
+        return false;
       });
     }
     // If calendar matches, show all events from that calendar

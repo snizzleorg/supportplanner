@@ -240,39 +240,73 @@ router.get('/search-events', requireRole('reader'), async (req, res) => {
     
     // Get search terms with country aliases from i18n-iso-countries package
     const searchTerms = getCountrySearchTerms(searchTerm);
+    const searchLower = String(searchTerm).toLowerCase();
+    
+    // Check if search expanded to country aliases (more terms than just the original)
+    const isCountrySearch = searchTerms.length > 1;
+    
+    // Separate short terms (2-3 ASCII chars like country codes) from longer terms
+    // Short terms should only match location-specific fields IF this is a country search
+    // EXCEPT: the original search term should always match anywhere (user might search "MT" for "MT100")
+    // NOTE: Non-ASCII terms (Chinese, Korean, etc.) are always treated as long terms
+    const isShortAscii = (t) => t.length <= 3 && /^[a-z0-9]+$/i.test(t);
+    const shortTerms = isCountrySearch 
+      ? searchTerms.filter(t => isShortAscii(t) && t !== searchLower) 
+      : [];
+    const longTerms = isCountrySearch 
+      ? searchTerms.filter(t => !isShortAscii(t) || t === searchLower) 
+      : searchTerms;
     
     // Filter events by searching in multiple fields (case-insensitive, partial match)
     // Uses expanded search terms for country alias matching
     const matchingEvents = events.events.filter(event => {
-      // Helper to check if any search term matches the text
-      const matchesAny = (text) => {
+      // Helper to check if any LONG search term matches the text (substring match)
+      const matchesLong = (text) => {
         if (!text) return false;
         const textLower = String(text).toLowerCase();
-        return searchTerms.some(term => textLower.includes(term));
+        return longTerms.some(term => textLower.includes(term));
       };
       
-      // Search in title (summary)
-      if (matchesAny(event.summary)) {
+      // Helper to check if any SHORT term matches location fields
+      // For country codes (2-3 chars), require EXACT match to avoid "es" matching "United States"
+      const matchesShortInLocation = () => {
+        if (shortTerms.length === 0) return false;
+        const meta = event.meta || {};
+        const countryCode = (meta.locationCountryCode || '').toLowerCase();
+        
+        return shortTerms.some(term => {
+          // Only exact match for country code - no substring matching
+          // This prevents "es" (Spain) from matching "US" or "United States"
+          if (countryCode === term) return true;
+          return false;
+        });
+      };
+      
+      // Search in title (summary) - only long terms
+      if (matchesLong(event.summary)) {
         return true;
       }
       
-      // Search in description
-      if (matchesAny(event.description)) {
+      // Search in description - only long terms
+      if (matchesLong(event.description)) {
         return true;
       }
       
-      // Search in location (city, country, address)
-      if (matchesAny(event.location)) {
+      // Search in location (city, country, address) - long terms
+      if (matchesLong(event.location)) {
         return true;
       }
       
-      // Search in all metadata fields (orderNumber, ticketLink, systemType, locationCountry, locationCity, etc.)
+      // Search in metadata fields - long terms for all fields
       if (event.meta && typeof event.meta === 'object') {
         for (const [key, value] of Object.entries(event.meta)) {
-          if (matchesAny(value)) {
-            return true;
-          }
+          if (matchesLong(value)) return true;
         }
+      }
+      
+      // Check short terms against location fields only
+      if (matchesShortInLocation()) {
+        return true;
       }
       
       return false;
