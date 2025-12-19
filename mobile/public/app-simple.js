@@ -2648,10 +2648,33 @@ function setupKeyboardShortcuts() {
         container.scrollLeft = container.scrollWidth;
         break;
 
-      // ESC to close and clear inline search
+      // ESC to close views/modals in priority order
       case 'Escape':
+        e.preventDefault();
+        
+        // Priority 1: Close event modal (bottom sheet)
+        const eventModal = document.getElementById('eventModal');
+        if (eventModal?.classList.contains('sheet-active')) {
+          hideEventSheet(eventModal);
+          break;
+        }
+        
+        // Priority 2: Close map view
+        const mapWrapper = document.getElementById('mapViewWrapper');
+        if (mapWrapper?.classList.contains('view-active')) {
+          hideMapView();
+          break;
+        }
+        
+        // Priority 3: Close audit view (handled in audit.js)
+        const auditModal = document.getElementById('auditModal');
+        if (auditModal?.classList.contains('view-active')) {
+          // hideAuditView is called from audit.js ESC handler
+          break;
+        }
+        
+        // Priority 4: Close search
         if (searchInput && searchInput.style.display !== 'none') {
-          e.preventDefault();
           searchInput.style.display = 'none';
           searchInput.value = '';
           if (document.activeElement === searchInput) {
