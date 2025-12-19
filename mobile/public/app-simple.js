@@ -2810,6 +2810,9 @@ function createColoredMarker(lat, lon, color, event, calendarName) {
   if (systemType) {
     pillsHtml += `<span style="font-size: 10px; padding: 2px 6px; background: #e5e7eb; color: #374151; border-radius: 10px;">${escapeHtml(systemType)}</span>`;
   }
+  if (isRemote) {
+    pillsHtml += `<span style="font-size: 10px; padding: 2px 6px; background: #dbeafe; color: #1e40af; border-radius: 10px;">🔗 Remote</span>`;
+  }
   if (isUnconfirmed) {
     pillsHtml += `<span style="font-size: 10px; padding: 2px 6px; background: #fef3c7; color: #92400e; border-radius: 10px;">? Unconfirmed</span>`;
   }
@@ -2817,14 +2820,11 @@ function createColoredMarker(lat, lon, color, event, calendarName) {
     pillsHtml += `<span style="font-size: 10px; padding: 2px 6px; background: #dcfce7; color: #166534; border-radius: 10px;">✓ Booked</span>`;
   }
   
-  // Prepare display title with remote icon if applicable
-  let displayTitle = title
+  // Prepare display title (strip markers)
+  const displayTitle = title
     .replace(/\?\?\?/g, '')
     .replace(/\s*!\s*/g, '')
     .trim();
-  if (isRemote) {
-    displayTitle = '🔗 ' + displayTitle;
-  }
   
   const popupContent = `
     <div style="min-width: 180px;">
