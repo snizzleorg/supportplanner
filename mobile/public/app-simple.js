@@ -2855,14 +2855,26 @@ function createColoredMarker(lat, lon, color, event, calendarName) {
  * @param {string} eventId - Event UID or ID
  */
 function openEventFromMap(eventId) {
+  console.log('[MapView] Opening event:', eventId);
   const event = getEvents().find(e => e.uid === eventId || e.id === eventId);
+  console.log('[MapView] Found event:', event);
   if (event) {
+    // Close popup first
+    if (mapViewInstance) {
+      mapViewInstance.closePopup();
+    }
     hideMapView();
-    setTimeout(() => showEventModal(event), 100);
+    // Small delay to allow map view to hide before showing modal
+    setTimeout(() => {
+      console.log('[MapView] Showing modal for event');
+      showEventModal(event);
+    }, 150);
+  } else {
+    console.error('[MapView] Event not found:', eventId);
   }
 }
 
-// Make function globally accessible
+// Make function globally accessible immediately
 window.openEventFromMap = openEventFromMap;
 
 /**
