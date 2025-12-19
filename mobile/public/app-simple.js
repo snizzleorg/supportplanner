@@ -2710,13 +2710,16 @@ async function showMapView() {
     
     // Find calendar index to get consistent color from palette
     const calendarIndex = calendars.findIndex(c => c.id === event.group);
+    const calendar = calendarIndex >= 0 ? calendars[calendarIndex] : null;
     const color = calendarIndex >= 0 ? palette[calendarIndex % palette.length] : '#007aff';
+    const calendarName = calendar ? (calendar.content || calendar.displayName) : 'Unknown';
     
     const marker = createColoredMarker(
       coords.lat,
       coords.lon,
       color,
-      event
+      event,
+      calendarName
     );
     marker.addTo(mapViewInstance);
     mapMarkers.push({ marker, event, location: event.location, color });
@@ -2774,7 +2777,7 @@ async function geocodeLocation(location) {
  * @param {Object} event - Event object
  * @returns {L.Marker}
  */
-function createColoredMarker(lat, lon, color, event) {
+function createColoredMarker(lat, lon, color, event, calendarName) {
   const icon = L.divIcon({
     className: 'custom-marker-wrapper',
     html: `<div class="custom-marker" style="background: ${color};"></div>`,
@@ -2787,17 +2790,39 @@ function createColoredMarker(lat, lon, color, event) {
   
   // Create popup content
   const title = event.content || event.summary || 'Untitled';
+  
+  // Format date range
+  const startDate = new Date(event.start);
+  const endDate = new Date(event.end);
+  const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const dateRange = startDate.toDateString() === endDate.toDateString() ? dateStr : `${dateStr} - ${endStr}`;
+  
+  // Build status pills
+  const meta = event.meta || {};
+  const isConfirmed = meta.confirmed === true || meta.confirmed === 'true';
+  const pillStyle = isConfirmed 
+    ? 'background: #34c759; color: white;' 
+    : 'background: #ff9500; color: white;';
+  const pillText = isConfirmed ? 'Confirmed' : 'Unconfirmed';
+  
   const popupContent = `
-    <div style="min-width: 150px;">
-      <strong>${escapeHtml(title)}</strong>
-      <div style="font-size: 12px; color: #666; margin-top: 4px;">
-        ${escapeHtml(event.start)} - ${escapeHtml(event.end)}
+    <div style="min-width: 180px;">
+      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+        <span style="font-size: 10px; padding: 2px 6px; border-radius: 10px; ${pillStyle}">${pillText}</span>
       </div>
-      <div style="font-size: 12px; margin-top: 4px;">
+      <strong style="font-size: 14px;">${escapeHtml(title)}</strong>
+      <div style="font-size: 12px; color: #666; margin-top: 4px;">
+        👤 ${escapeHtml(calendarName || 'Unknown')}
+      </div>
+      <div style="font-size: 12px; color: #666; margin-top: 2px;">
+        📅 ${dateRange}
+      </div>
+      <div style="font-size: 12px; margin-top: 2px;">
         📍 ${escapeHtml(event.location)}
       </div>
       <button onclick="openEventFromMap('${event.uid || event.id}')" 
-              style="margin-top: 8px; padding: 6px 12px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+              style="margin-top: 8px; padding: 6px 12px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;">
         View Details
       </button>
     </div>
