@@ -2697,45 +2697,30 @@ async function showMapView() {
   
   console.log('[MapView] Events with locations in range:', allEvents.length);
   
-  // Group events by unique location to batch geocoding
-  const locationGroups = new Map();
-  allEvents.forEach(event => {
-    const loc = event.location.trim();
-    if (!locationGroups.has(loc)) {
-      locationGroups.set(loc, []);
-    }
-    locationGroups.get(loc).push(event);
-  });
-  
-  // Geocode locations and add markers
+  // Use pre-geocoded coordinates from backend (already cached)
   const bounds = [];
-  for (const [location, locEvents] of locationGroups) {
-    try {
-      const coords = await geocodeLocation(location);
-      if (coords) {
-        bounds.push([coords.lat, coords.lon]);
-        
-        // Add markers for each event at this location (with slight offset for multiples)
-        locEvents.forEach((event, index) => {
-          // Find calendar index to get consistent color from palette
-          const calendarIndex = calendars.findIndex(c => c.id === event.group);
-          const color = calendarIndex >= 0 ? palette[calendarIndex % palette.length] : '#007aff';
-          const offset = index * 0.0002; // Slight offset for stacked events
-          
-          const marker = createColoredMarker(
-            coords.lat + offset,
-            coords.lon + offset,
-            color,
-            event
-          );
-          marker.addTo(mapViewInstance);
-          mapMarkers.push({ marker, event, location, color });
-        });
-      }
-    } catch (err) {
-      console.warn(`Failed to geocode: ${location}`, err);
-    }
-  }
+  
+  // Events already have geocoded coordinates from the API
+  allEvents.forEach((event, index) => {
+    // Use geocoded coordinates from backend if available
+    const coords = event.geocoded;
+    if (!coords || !coords.lat || !coords.lon) return;
+    
+    bounds.push([coords.lat, coords.lon]);
+    
+    // Find calendar index to get consistent color from palette
+    const calendarIndex = calendars.findIndex(c => c.id === event.group);
+    const color = calendarIndex >= 0 ? palette[calendarIndex % palette.length] : '#007aff';
+    
+    const marker = createColoredMarker(
+      coords.lat,
+      coords.lon,
+      color,
+      event
+    );
+    marker.addTo(mapViewInstance);
+    mapMarkers.push({ marker, event, location: event.location, color });
+  });
   
   // Fit map to show all markers
   if (bounds.length > 0) {
