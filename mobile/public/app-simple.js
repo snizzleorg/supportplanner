@@ -61,7 +61,10 @@ import {
   setSearchQuery,
   setEventTypes,
   toggleCalendarSelection,
-  clearCalendarSelections
+  clearCalendarSelections,
+  addEvent,
+  updateEvent,
+  removeEvent
 } from './js/state.js';
 
 // Import API functions
@@ -997,34 +1000,39 @@ async function showCreateEventModal(calendar, clickedDate) {
       const responseData = await response.json();
       console.log('Create response data:', responseData);
       
-      // Success - close modal and show loading
+      // OPTIMISTIC UI: Add event to local state immediately
+      const targetCalendar = getCalendars().find(c => c.url === calendarUrl);
+      const newEvent = {
+        id: `${targetCalendar?.id || 'cal-1'}-${responseData.uid}`,
+        uid: responseData.uid,
+        group: targetCalendar?.id || 'cal-1',
+        content: title,
+        title: title,
+        start: start,
+        end: end,
+        description: description,
+        location: location,
+        meta: Object.keys(meta).length > 0 ? meta : {}
+      };
+      
+      addEvent(newEvent);
+      console.log('Event added to local state:', newEvent.uid);
+      
+      // Close modal and re-render immediately (no loading overlay needed)
       modal.classList.remove('active');
-      const loadingOverlay = document.getElementById('loadingOverlay');
-      const loadingText = loadingOverlay?.querySelector('p');
-      if (loadingText) loadingText.textContent = 'Saving event...';
-      loadingOverlay?.classList.remove('hidden');
+      render();
       
-      console.log('Event created successfully, triggering CalDAV refresh...');
-      
-      // Wait a moment for the event to be saved
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Trigger CalDAV cache refresh for the affected calendar only (faster)
-      if (loadingText) loadingText.textContent = 'Updating calendar...';
-      console.log('Calling refresh-calendar endpoint for:', calendarUrl);
-      try {
-        const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ calendarUrl })
-        });
-        console.log('Refresh response:', refreshResponse.status);
-      } catch (refreshError) {
-        console.error('Refresh failed (non-fatal):', refreshError);
-      }
-      
-      console.log('Reloading page...');
-      window.location.reload();
+      // Fire-and-forget: trigger background refresh (don't await)
+      console.log('Triggering background refresh for:', calendarUrl);
+      fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ calendarUrl })
+      }).then(() => {
+        console.log('Background refresh completed');
+      }).catch(err => {
+        console.warn('Background refresh failed (non-critical):', err);
+      });
       
     } catch (error) {
       console.error('Unexpected error creating event:', error);
@@ -1570,36 +1578,30 @@ async function showEventModal(event) {
       console.log('DELETE response status:', response.status);
       
       if (response.ok) {
-        modal.classList.remove('active');
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const loadingText = loadingOverlay?.querySelector('p');
-        if (loadingText) loadingText.textContent = 'Deleting event...';
-        loadingOverlay?.classList.remove('hidden');
-        
-        console.log('Event deleted successfully, triggering CalDAV refresh...');
-        
-        // Wait for backend to save
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Trigger CalDAV cache refresh for the affected calendar only (faster)
-        if (loadingText) loadingText.textContent = 'Refreshing calendar...';
+        // OPTIMISTIC UI: Remove event from local state immediately
         const eventCalendar = getCalendars().find(c => c.id === event.group);
         const calendarUrl = eventCalendar?.url;
-        try {
-          if (calendarUrl) {
-            const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ calendarUrl })
-            });
-            console.log('Refresh response:', refreshResponse.status);
-          }
-        } catch (refreshError) {
-          console.error('Refresh failed (non-fatal):', refreshError);
-        }
         
-        console.log('Reloading page after delete...');
-        window.location.reload();
+        removeEvent(event.id);
+        console.log('Event removed from local state:', event.id);
+        
+        // Close modal and re-render immediately (no loading overlay needed)
+        modal.classList.remove('active');
+        render();
+        
+        // Fire-and-forget: trigger background refresh (don't await)
+        console.log('Triggering background refresh for:', calendarUrl);
+        if (calendarUrl) {
+          fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ calendarUrl })
+          }).then(() => {
+            console.log('Background refresh completed');
+          }).catch(err => {
+            console.warn('Background refresh failed (non-critical):', err);
+          });
+        }
       } else {
         const errorText = await response.text();
         console.error('Failed to delete event:', response.status, errorText);
@@ -1786,44 +1788,56 @@ async function showEventModal(event) {
       );
       
       if (response.ok) {
-        // Close modal and show loading
-        modal.classList.remove('active');
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const loadingText = loadingOverlay?.querySelector('p');
-        if (loadingText) loadingText.textContent = 'Updating event...';
-        loadingOverlay?.classList.remove('hidden');
-        
-        console.log('Event updated successfully, triggering CalDAV refresh...');
-        
-        // Wait for backend to save
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Trigger CalDAV cache refresh for the affected calendar(s) only (faster)
-        if (loadingText) loadingText.textContent = 'Refreshing calendar...';
+        // OPTIMISTIC UI: Update event in local state immediately
         const eventCalendar = getCalendars().find(c => c.id === event.group);
         const calendarUrl = eventCalendar?.url;
-        try {
-          if (calendarUrl) {
-            const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ calendarUrl })
-            });
-            console.log('Refresh response:', refreshResponse.status);
-          }
-          // If calendar changed, also refresh the target calendar
-          if (targetCalendarUrl && targetCalendarUrl !== calendarUrl) {
-            await fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ calendarUrl: targetCalendarUrl })
-            });
-          }
-        } catch (refreshError) {
-          console.error('Refresh failed (non-fatal):', refreshError);
-        }
         
-        window.location.reload();
+        // Determine the new group if calendar changed
+        const newGroup = targetCalendarUrl 
+          ? getCalendars().find(c => c.url === targetCalendarUrl)?.id || event.group
+          : event.group;
+        
+        const updatedEvent = {
+          content: title,
+          title: title,
+          start: start,
+          end: end,
+          description: description,
+          location: location,
+          group: newGroup,
+          meta: Object.keys(meta).length > 0 ? meta : {}
+        };
+        
+        updateEvent(event.id, updatedEvent);
+        console.log('Event updated in local state:', event.id);
+        
+        // Close modal and re-render immediately (no loading overlay needed)
+        modal.classList.remove('active');
+        render();
+        
+        // Fire-and-forget: trigger background refresh (don't await)
+        console.log('Triggering background refresh for:', calendarUrl);
+        if (calendarUrl) {
+          fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ calendarUrl })
+          }).then(() => {
+            console.log('Background refresh completed');
+          }).catch(err => {
+            console.warn('Background refresh failed (non-critical):', err);
+          });
+        }
+        // If calendar changed, also refresh the target calendar
+        if (targetCalendarUrl && targetCalendarUrl !== calendarUrl) {
+          fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ calendarUrl: targetCalendarUrl })
+          }).catch(err => {
+            console.warn('Target calendar refresh failed (non-critical):', err);
+          });
+        }
       } else {
         const errorText = await response.text();
         console.error('Failed to update event:', response.status, errorText);
