@@ -40,6 +40,9 @@ import {
 // Import theme manager
 import './js/theme.js';
 
+// Import country aliases for search
+import { loadCountryAliases, getSearchTerms as getCountrySearchTerms } from './js/country-aliases.js';
+
 // Import state management
 import {
   getState,
@@ -96,6 +99,9 @@ console.log('📱 Mobile Timeline v1760277100 loaded');
  */
 async function init() {
   console.log('Initializing simple timeline...');
+  
+  // Load country aliases for search (non-blocking)
+  loadCountryAliases().catch(err => console.warn('Country aliases not loaded:', err));
   
   // Load event types configuration
   try {
@@ -2046,85 +2052,8 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
       events = events.filter(e => {
         const query = getSearchQuery();
         
-        // Country code aliases with multiple language spellings (duplicated from backend)
-        const COUNTRY_ALIASES = {
-          // Europe
-          'uk': ['gb', 'united kingdom', 'great britain', 'großbritannien', 'england', 'scotland', 'wales', 'northern ireland'],
-          'de': ['germany', 'deutschland', 'allemagne'],
-          'fr': ['france', 'frankreich', 'francia'],
-          'es': ['spain', 'spanien', 'españa'],
-          'it': ['italy', 'italien', 'italia'],
-          'nl': ['netherlands', 'niederlande', 'holland', 'nederland'],
-          'be': ['belgium', 'belgien', 'belgique', 'belgië'],
-          'at': ['austria', 'österreich', 'autriche'],
-          'ch': ['switzerland', 'schweiz', 'suisse', 'svizzera'],
-          'pl': ['poland', 'polen', 'polska'],
-          'cz': ['czech republic', 'czechia', 'tschechien', 'česko'],
-          'dk': ['denmark', 'dänemark', 'danmark'],
-          'se': ['sweden', 'schweden', 'sverige'],
-          'no': ['norway', 'norwegen', 'norge'],
-          'fi': ['finland', 'finnland', 'suomi'],
-          'pt': ['portugal'],
-          'ie': ['ireland', 'irland', 'éire'],
-          'gr': ['greece', 'griechenland', 'ελλάδα', 'hellas'],
-          'hu': ['hungary', 'ungarn', 'magyarország'],
-          'ro': ['romania', 'rumänien', 'românia'],
-          'bg': ['bulgaria', 'bulgarien', 'българия'],
-          'hr': ['croatia', 'kroatien', 'hrvatska'],
-          'sk': ['slovakia', 'slowakei', 'slovensko'],
-          'si': ['slovenia', 'slowenien', 'slovenija'],
-          'rs': ['serbia', 'serbien', 'србија'],
-          'ua': ['ukraine', 'україна'],
-          'ru': ['russia', 'russland', 'россия'],
-          'tr': ['turkey', 'türkei', 'türkiye'],
-          'lt': ['lithuania', 'litauen', 'lietuva'],
-          'lv': ['latvia', 'lettland', 'latvija'],
-          'ee': ['estonia', 'estland', 'eesti'],
-          'lu': ['luxembourg', 'luxemburg'],
-          // Americas
-          'usa': ['us', 'united states', 'united states of america', 'america', 'amerika', 'vereinigte staaten'],
-          'ca': ['canada', 'kanada'],
-          'mx': ['mexico', 'mexiko', 'méxico'],
-          'br': ['brazil', 'brasilien', 'brasil'],
-          'ar': ['argentina', 'argentinien'],
-          'cl': ['chile'],
-          'co': ['colombia', 'kolumbien'],
-          'pe': ['peru'],
-          've': ['venezuela'],
-          // Asia & Pacific
-          'cn': ['china'],
-          'jp': ['japan'],
-          'kr': ['south korea', 'korea', 'südkorea', '한국'],
-          'in': ['india', 'indien'],
-          'sg': ['singapore', 'singapur'],
-          'my': ['malaysia'],
-          'th': ['thailand'],
-          'vn': ['vietnam'],
-          'id': ['indonesia', 'indonesien'],
-          'ph': ['philippines', 'philippinen', 'pilipinas'],
-          'tw': ['taiwan'],
-          'hk': ['hong kong', 'hongkong'],
-          'au': ['australia', 'australien'],
-          'nz': ['new zealand', 'neuseeland'],
-          // Middle East & Africa
-          'uae': ['ae', 'united arab emirates', 'vereinigte arabische emirate', 'emirate'],
-          'sa': ['saudi arabia', 'saudi-arabien'],
-          'il': ['israel'],
-          'eg': ['egypt', 'ägypten'],
-          'za': ['south africa', 'südafrika'],
-          'ng': ['nigeria'],
-          'ke': ['kenya', 'kenia'],
-          'ma': ['morocco', 'marokko']
-        };
-        
-        // Build search terms including aliases
-        const searchTerms = [query];
-        for (const [code, aliases] of Object.entries(COUNTRY_ALIASES)) {
-          if (query === code || aliases.includes(query)) {
-            searchTerms.push(code, ...aliases);
-          }
-        }
-        const uniqueTerms = [...new Set(searchTerms)];
+        // Get search terms with country aliases from loaded JSON
+        const uniqueTerms = getCountrySearchTerms(query);
         
         // Search in basic event fields
         const basicFields = [

@@ -23,6 +23,7 @@ import { geocodeLocations } from '../services/geocoding.js';
 import { escapeHtml, formatErrorResponse, createLogger } from '../utils/index.js';
 import { requireRole, validate, eventValidation, uidValidation } from '../middleware/index.js';
 import { loadEventTypesConfig, getEventTypes } from '../config/index.js';
+import { getSearchTerms as getCountrySearchTerms } from '../utils/country-aliases.js';
 
 const require = createRequire(import.meta.url);
 const { version: APP_VERSION } = require('../../package.json');
@@ -237,93 +238,8 @@ router.get('/search-events', requireRole('reader'), async (req, res) => {
     // Get all events in the date range from all calendars
     const events = await calendarCache.getEvents(allCalendarUrls, startDate, endDate);
     
-    // Country code aliases with multiple language spellings (English, German, local)
-    const COUNTRY_ALIASES = {
-      // Europe
-      'uk': ['gb', 'united kingdom', 'great britain', 'großbritannien', 'england', 'scotland', 'wales', 'northern ireland'],
-      'de': ['germany', 'deutschland', 'allemagne'],
-      'fr': ['france', 'frankreich', 'francia'],
-      'es': ['spain', 'spanien', 'españa'],
-      'it': ['italy', 'italien', 'italia'],
-      'nl': ['netherlands', 'niederlande', 'holland', 'nederland'],
-      'be': ['belgium', 'belgien', 'belgique', 'belgië'],
-      'at': ['austria', 'österreich', 'autriche'],
-      'ch': ['switzerland', 'schweiz', 'suisse', 'svizzera'],
-      'pl': ['poland', 'polen', 'polska'],
-      'cz': ['czech republic', 'czechia', 'tschechien', 'česko'],
-      'dk': ['denmark', 'dänemark', 'danmark'],
-      'se': ['sweden', 'schweden', 'sverige'],
-      'no': ['norway', 'norwegen', 'norge'],
-      'fi': ['finland', 'finnland', 'suomi'],
-      'pt': ['portugal'],
-      'ie': ['ireland', 'irland', 'éire'],
-      'gr': ['greece', 'griechenland', 'ελλάδα', 'hellas'],
-      'hu': ['hungary', 'ungarn', 'magyarország'],
-      'ro': ['romania', 'rumänien', 'românia'],
-      'bg': ['bulgaria', 'bulgarien', 'българия'],
-      'hr': ['croatia', 'kroatien', 'hrvatska'],
-      'sk': ['slovakia', 'slowakei', 'slovensko'],
-      'si': ['slovenia', 'slowenien', 'slovenija'],
-      'rs': ['serbia', 'serbien', 'србија'],
-      'ua': ['ukraine', 'україна'],
-      'ru': ['russia', 'russland', 'россия'],
-      'tr': ['turkey', 'türkei', 'türkiye'],
-      'lt': ['lithuania', 'litauen', 'lietuva'],
-      'lv': ['latvia', 'lettland', 'latvija'],
-      'ee': ['estonia', 'estland', 'eesti'],
-      'lu': ['luxembourg', 'luxemburg'],
-      // Americas
-      'usa': ['us', 'united states', 'united states of america', 'america', 'amerika', 'vereinigte staaten'],
-      'ca': ['canada', 'kanada'],
-      'mx': ['mexico', 'mexiko', 'méxico'],
-      'br': ['brazil', 'brasilien', 'brasil'],
-      'ar': ['argentina', 'argentinien'],
-      'cl': ['chile'],
-      'co': ['colombia', 'kolumbien'],
-      'pe': ['peru'],
-      've': ['venezuela'],
-      // Asia & Pacific
-      'cn': ['china'],
-      'jp': ['japan'],
-      'kr': ['south korea', 'korea', 'südkorea', '한국'],
-      'in': ['india', 'indien'],
-      'sg': ['singapore', 'singapur'],
-      'my': ['malaysia'],
-      'th': ['thailand'],
-      'vn': ['vietnam'],
-      'id': ['indonesia', 'indonesien'],
-      'ph': ['philippines', 'philippinen', 'pilipinas'],
-      'tw': ['taiwan'],
-      'hk': ['hong kong', 'hongkong'],
-      'au': ['australia', 'australien'],
-      'nz': ['new zealand', 'neuseeland'],
-      // Middle East & Africa
-      'uae': ['ae', 'united arab emirates', 'vereinigte arabische emirate', 'emirate'],
-      'sa': ['saudi arabia', 'saudi-arabien'],
-      'il': ['israel'],
-      'eg': ['egypt', 'ägypten'],
-      'za': ['south africa', 'südafrika'],
-      'ng': ['nigeria'],
-      'ke': ['kenya', 'kenia'],
-      'ma': ['morocco', 'marokko']
-    };
-    
-    // Build list of search terms including aliases
-    const getSearchTerms = (term) => {
-      const lower = term.toLowerCase();
-      const terms = [lower];
-      
-      // Check if search term is a country code/name and add aliases
-      for (const [code, aliases] of Object.entries(COUNTRY_ALIASES)) {
-        if (lower === code || aliases.includes(lower)) {
-          terms.push(code, ...aliases);
-        }
-      }
-      
-      return [...new Set(terms)];
-    };
-    
-    const searchTerms = getSearchTerms(searchTerm);
+    // Get search terms with country aliases from i18n-iso-countries package
+    const searchTerms = getCountrySearchTerms(searchTerm);
     
     // Filter events by searching in multiple fields (case-insensitive, partial match)
     // Uses expanded search terms for country alias matching
