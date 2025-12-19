@@ -1687,7 +1687,8 @@ async function showEventModal(event) {
     if (orderNumber) meta.orderNumber = orderNumber;
     if (ticketLink) meta.ticketLink = ticketLink;
     if (systemType) meta.systemType = systemType;
-    if (isRemote) meta.isRemote = true;
+    // Always include isRemote to ensure false value overwrites existing true in CalDAV
+    meta.isRemote = isRemote;
     
     // Check if calendar changed - if so, we need to trigger a MOVE operation
     const originalCalendarId = event.group;
