@@ -324,6 +324,68 @@ describe('GET /api/events/search-events', () => {
     });
   });
   
+  describe('Search with country aliases', () => {
+    it('should find UK events when searching for "United Kingdom"', async () => {
+      calendarCache.getEvents.mockResolvedValue({
+        events: [{
+          uid: 'event-1',
+          summary: 'Service Visit',
+          start: '2025-01-01',
+          end: '2025-01-02',
+          location: 'London',
+          meta: { locationCountry: 'United Kingdom', locationCountryCode: 'GB' }
+        }]
+      });
+      
+      const response = await request(app)
+        .get('/api/events/search-events?query=UK')
+        .expect(200);
+      
+      expect(response.body.found).toBe(true);
+      expect(response.body.count).toBe(1);
+    });
+    
+    it('should find USA events when searching for "America"', async () => {
+      calendarCache.getEvents.mockResolvedValue({
+        events: [{
+          uid: 'event-1',
+          summary: 'Installation',
+          start: '2025-01-01',
+          end: '2025-01-02',
+          location: 'New York',
+          meta: { locationCountry: 'United States', locationCountryCode: 'US' }
+        }]
+      });
+      
+      const response = await request(app)
+        .get('/api/events/search-events?query=USA')
+        .expect(200);
+      
+      expect(response.body.found).toBe(true);
+      expect(response.body.count).toBe(1);
+    });
+    
+    it('should find German events when searching for "DE"', async () => {
+      calendarCache.getEvents.mockResolvedValue({
+        events: [{
+          uid: 'event-1',
+          summary: 'Service',
+          start: '2025-01-01',
+          end: '2025-01-02',
+          location: 'Berlin',
+          meta: { locationCountry: 'Germany', locationCountryCode: 'DE' }
+        }]
+      });
+      
+      const response = await request(app)
+        .get('/api/events/search-events?query=DE')
+        .expect(200);
+      
+      expect(response.body.found).toBe(true);
+      expect(response.body.count).toBe(1);
+    });
+  });
+  
   describe('Search in metadata', () => {
     it('should find events by order number', async () => {
       calendarCache.getEvents.mockResolvedValue({

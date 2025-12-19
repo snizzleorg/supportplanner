@@ -29,6 +29,7 @@ import YAML from 'yaml';
 import { calendarOrder, calendarExclude } from '../config/calendar-order.js';
 import { calendarColorOverrides } from '../config/calendar-colors.js';
 import { createLogger } from '../utils/index.js';
+import { geocodeLocations } from './geocoding.js';
 
 const logger = createLogger('CalendarService');
 
@@ -552,6 +553,26 @@ export class CalendarCache {
           logger.error(`[${calendar.displayName || calendar.url}] Error processing calendar object:`, error);
         }
       }));
+      
+      // Enrich events with structured location data (country, city, countryCode)
+      const uniqueLocations = [...new Set(events.map(e => e.location).filter(Boolean))];
+      if (uniqueLocations.length > 0) {
+        try {
+          const geocodeMap = await geocodeLocations(uniqueLocations);
+          for (const event of events) {
+            if (event.location && geocodeMap.has(event.location)) {
+              const geo = geocodeMap.get(event.location);
+              event.meta = event.meta || {};
+              event.meta.locationCountry = geo.country || '';
+              event.meta.locationCountryCode = geo.countryCode || '';
+              event.meta.locationCity = geo.city || '';
+            }
+          }
+          logger.debug(`[${displayName}] Enriched ${geocodeMap.size} locations with structured data`);
+        } catch (geoError) {
+          logger.warn(`[${displayName}] Failed to enrich locations (non-critical):`, geoError.message);
+        }
+      }
       
       // Update cache
       this.cache.set(cacheKey, {

@@ -237,29 +237,73 @@ router.get('/search-events', requireRole('reader'), async (req, res) => {
     // Get all events in the date range from all calendars
     const events = await calendarCache.getEvents(allCalendarUrls, startDate, endDate);
     
+    // Country code aliases for common abbreviations
+    const COUNTRY_ALIASES = {
+      'uk': ['gb', 'united kingdom', 'great britain', 'england', 'scotland', 'wales', 'northern ireland'],
+      'usa': ['us', 'united states', 'united states of america', 'america'],
+      'uae': ['ae', 'united arab emirates'],
+      'de': ['germany', 'deutschland'],
+      'fr': ['france'],
+      'es': ['spain', 'españa'],
+      'it': ['italy', 'italia'],
+      'nl': ['netherlands', 'holland'],
+      'be': ['belgium'],
+      'at': ['austria'],
+      'ch': ['switzerland'],
+      'pl': ['poland'],
+      'cz': ['czech republic', 'czechia'],
+      'dk': ['denmark'],
+      'se': ['sweden'],
+      'no': ['norway'],
+      'fi': ['finland']
+    };
+    
+    // Build list of search terms including aliases
+    const getSearchTerms = (term) => {
+      const lower = term.toLowerCase();
+      const terms = [lower];
+      
+      // Check if search term is a country code/name and add aliases
+      for (const [code, aliases] of Object.entries(COUNTRY_ALIASES)) {
+        if (lower === code || aliases.includes(lower)) {
+          terms.push(code, ...aliases);
+        }
+      }
+      
+      return [...new Set(terms)];
+    };
+    
+    const searchTerms = getSearchTerms(searchTerm);
+    
     // Filter events by searching in multiple fields (case-insensitive, partial match)
+    // Uses expanded search terms for country alias matching
     const matchingEvents = events.events.filter(event => {
-      const searchLower = String(searchTerm).toLowerCase();
+      // Helper to check if any search term matches the text
+      const matchesAny = (text) => {
+        if (!text) return false;
+        const textLower = String(text).toLowerCase();
+        return searchTerms.some(term => textLower.includes(term));
+      };
       
       // Search in title (summary)
-      if (event.summary && String(event.summary).toLowerCase().includes(searchLower)) {
+      if (matchesAny(event.summary)) {
         return true;
       }
       
       // Search in description
-      if (event.description && String(event.description).toLowerCase().includes(searchLower)) {
+      if (matchesAny(event.description)) {
         return true;
       }
       
       // Search in location (city, country, address)
-      if (event.location && String(event.location).toLowerCase().includes(searchLower)) {
+      if (matchesAny(event.location)) {
         return true;
       }
       
-      // Search in all metadata fields (orderNumber, ticketLink, systemType, etc.)
+      // Search in all metadata fields (orderNumber, ticketLink, systemType, locationCountry, locationCity, etc.)
       if (event.meta && typeof event.meta === 'object') {
         for (const [key, value] of Object.entries(event.meta)) {
-          if (value && String(value).toLowerCase().includes(searchLower)) {
+          if (matchesAny(value)) {
             return true;
           }
         }
