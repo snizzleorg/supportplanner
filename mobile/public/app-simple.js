@@ -2614,13 +2614,11 @@ async function showMapView() {
   const appBar = document.querySelector('.app-bar');
   const timelineWrapper = document.getElementById('timelineWrapper');
   
-  // IMPORTANT: Capture scroll position BEFORE hiding timeline
-  // The timeline-wrapper is the scroll container (overflow: auto)
-  const scrollContainer = document.querySelector('.timeline-wrapper');
-  const capturedScrollLeft = scrollContainer?.scrollLeft || 0;
-  const capturedViewportWidth = scrollContainer?.clientWidth || window.innerWidth;
+  // IMPORTANT: Capture visible date range from timeline header BEFORE hiding
+  const dateRangeTextEl = document.getElementById('dateRangeText');
+  const capturedDateRangeText = dateRangeTextEl?.textContent || '';
   
-  console.log('[MapView] Captured before hide - scrollLeft:', capturedScrollLeft, 'viewportWidth:', capturedViewportWidth);
+  console.log('[MapView] Captured date range text:', capturedDateRangeText);
   
   // Close menu
   if (menuOverlay) menuOverlay.classList.remove('active');
@@ -2653,45 +2651,38 @@ async function showMapView() {
     attribution: '© OpenStreetMap'
   }).addTo(mapViewInstance);
   
-  // Calculate visible date range using captured scroll position
-  const dateRange = getDateRange();
-  const timelineStart = new Date(dateRange.from);
+  // Use the captured date range text from timeline header (already shows visible range)
+  // Display it directly in the map header
+  if (dateRangeEl && capturedDateRangeText) {
+    dateRangeEl.textContent = capturedDateRangeText;
+  }
   
-  // Get current zoom (pixels per day)
-  const zoomSlider = document.getElementById('zoomSlider');
-  const pixelsPerDay = parseInt(zoomSlider?.value || 10);
-  
-  console.log('[MapView] Timeline start:', dateRange.from, '-> parsed:', timelineStart);
-  console.log('[MapView] Captured scroll:', capturedScrollLeft, 'viewport:', capturedViewportWidth, 'pxPerDay:', pixelsPerDay);
-  
-  // Calculate visible range from captured scroll position (before timeline was hidden)
+  // Parse the date range for filtering events
+  // Format is typically "Dec 2025 - Feb 2026" or similar
   let startDate, endDate;
-  if (pixelsPerDay > 0) {
-    const labelWidth = 100; // Account for calendar labels
+  const dateRange = getDateRange();
+  
+  // Try to parse the captured text, fallback to full range
+  const dateMatch = capturedDateRangeText.match(/(\w+)\s+(\d{4})\s*-\s*(\w+)\s+(\d{4})/);
+  if (dateMatch) {
+    const [, startMonth, startYear, endMonth, endYear] = dateMatch;
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const startMonthIdx = monthNames.findIndex(m => startMonth.startsWith(m));
+    const endMonthIdx = monthNames.findIndex(m => endMonth.startsWith(m));
     
-    // Days from timeline start to left edge of viewport
-    const daysToLeftEdge = Math.floor(capturedScrollLeft / pixelsPerDay);
-    // Days visible in viewport
-    const daysVisible = Math.ceil((capturedViewportWidth - labelWidth) / pixelsPerDay);
-    
-    console.log('[MapView] daysToLeftEdge:', daysToLeftEdge, 'daysVisible:', daysVisible);
-    
-    // Create new date by adding days (use getTime to avoid mutation issues)
-    startDate = new Date(timelineStart.getTime() + daysToLeftEdge * 24 * 60 * 60 * 1000);
-    endDate = new Date(startDate.getTime() + daysVisible * 24 * 60 * 60 * 1000);
-    
-    console.log('[MapView] Calculated range:', startDate, 'to', endDate);
-  } else {
-    // Fallback to full range
-    startDate = timelineStart;
+    if (startMonthIdx >= 0 && endMonthIdx >= 0) {
+      startDate = new Date(parseInt(startYear), startMonthIdx, 1);
+      endDate = new Date(parseInt(endYear), endMonthIdx + 1, 0); // Last day of end month
+    }
+  }
+  
+  // Fallback to full range if parsing failed
+  if (!startDate || !endDate) {
+    startDate = new Date(dateRange.from);
     endDate = new Date(dateRange.to);
   }
   
-  // Display date range
-  const formatDate = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  if (dateRangeEl) {
-    dateRangeEl.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
-  }
+  console.log('[MapView] Parsed visible range:', startDate, 'to', endDate);
   
   // Get calendars and event types
   const calendars = getCalendars();
