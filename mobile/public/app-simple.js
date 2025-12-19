@@ -2651,18 +2651,19 @@ async function showMapView() {
     attribution: '© OpenStreetMap'
   }).addTo(mapViewInstance);
   
-  // Use full date range for now (visible range calculation was problematic)
+  // Use today as start, end of timeline as end (shows upcoming events)
   const dateRange = getDateRange();
-  const startDate = new Date(dateRange.from);
+  const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
   const endDate = new Date(dateRange.to);
   
   // Display date range in map header
-  const formatDate = (d) => d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  const formatDate = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   if (dateRangeEl) {
     dateRangeEl.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
   }
   
-  console.log('[MapView] Using full range:', startDate, 'to', endDate);
+  console.log('[MapView] Using range from today:', startDate, 'to', endDate);
   
   // Get calendars and event types
   const calendars = getCalendars();
