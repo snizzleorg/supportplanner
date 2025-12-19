@@ -2544,10 +2544,17 @@ function setupKeyboardShortcuts() {
           render();
         }
         break;
+      
+      // Toggle map view with M
+      case 'KeyM':
+      case 'm':
+        e.preventDefault();
+        toggleMapView();
+        break;
     }
   });
   
-  console.log('[Keyboard] Shortcuts enabled: 1/2/3 (zoom presets), +/- or ↑/↓ (zoom ±10), ←/→ (scroll), Home/T (today), End (end), Ctrl/Cmd+F (search), ESC (close search)');
+  console.log('[Keyboard] Shortcuts enabled: 1/2/3 (zoom presets), +/- or ↑/↓ (zoom ±10), ←/→ (scroll), Home/T (today), End (end), Ctrl/Cmd+F (search), ESC (close search), M (map toggle)');
 }
 
 /**
@@ -2863,12 +2870,8 @@ function openEventFromMap(eventId) {
     if (mapViewInstance) {
       mapViewInstance.closePopup();
     }
-    hideMapView();
-    // Small delay to allow map view to hide before showing modal
-    setTimeout(() => {
-      console.log('[MapView] Showing modal for event');
-      showEventModal(event);
-    }, 150);
+    // Show modal on top of map view (don't hide map)
+    showEventModal(event);
   } else {
     console.error('[MapView] Event not found:', eventId);
   }
@@ -2886,6 +2889,20 @@ document.addEventListener('click', (e) => {
     }
   }
 });
+
+/**
+ * Toggle between map view and timeline view
+ */
+function toggleMapView() {
+  const mapWrapper = document.getElementById('mapViewWrapper');
+  const isMapVisible = mapWrapper && mapWrapper.style.display !== 'none';
+  
+  if (isMapVisible) {
+    hideMapView();
+  } else {
+    showMapView();
+  }
+}
 
 /**
  * Hide the map view
