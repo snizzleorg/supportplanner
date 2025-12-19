@@ -556,9 +556,11 @@ export class CalendarCache {
       
       // Enrich events with structured location data (country, city, countryCode)
       const uniqueLocations = [...new Set(events.map(e => e.location).filter(Boolean))];
+      logger.info(`[${displayName}] Found ${uniqueLocations.length} unique locations to enrich`);
       if (uniqueLocations.length > 0) {
         try {
           const geocodeMap = await geocodeLocations(uniqueLocations);
+          let enrichedCount = 0;
           for (const event of events) {
             if (event.location && geocodeMap.has(event.location)) {
               const geo = geocodeMap.get(event.location);
@@ -566,9 +568,10 @@ export class CalendarCache {
               event.meta.locationCountry = geo.country || '';
               event.meta.locationCountryCode = geo.countryCode || '';
               event.meta.locationCity = geo.city || '';
+              enrichedCount++;
             }
           }
-          logger.debug(`[${displayName}] Enriched ${geocodeMap.size} locations with structured data`);
+          logger.info(`[${displayName}] Enriched ${enrichedCount} events with location data from ${geocodeMap.size} geocoded locations`);
         } catch (geoError) {
           logger.warn(`[${displayName}] Failed to enrich locations (non-critical):`, geoError.message);
         }
