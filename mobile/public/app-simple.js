@@ -2635,8 +2635,16 @@ async function showMapView() {
   if (appBar) appBar.style.display = 'none';
   if (timelineWrapper) timelineWrapper.style.display = 'none';
   
-  // Show map view
+  // Show map view with slide-in animation
   mapWrapper.style.display = 'flex';
+  mapWrapper.classList.add('view-entering');
+  
+  // Trigger reflow for animation
+  mapWrapper.offsetHeight;
+  
+  // Start slide-in
+  mapWrapper.classList.remove('view-entering');
+  mapWrapper.classList.add('view-active');
   
   // Clear previous map if exists
   if (mapViewInstance) {
@@ -2895,7 +2903,7 @@ document.addEventListener('click', (e) => {
  */
 function toggleMapView() {
   const mapWrapper = document.getElementById('mapViewWrapper');
-  const isMapVisible = mapWrapper && mapWrapper.style.display !== 'none';
+  const isMapVisible = mapWrapper && mapWrapper.classList.contains('view-active');
   
   if (isMapVisible) {
     hideMapView();
@@ -2905,24 +2913,34 @@ function toggleMapView() {
 }
 
 /**
- * Hide the map view
+ * Hide the map view with slide-out transition
  */
 function hideMapView() {
   const mapWrapper = document.getElementById('mapViewWrapper');
   const appBar = document.querySelector('.app-bar');
   const timelineWrapper = document.getElementById('timelineWrapper');
   
-  mapWrapper.style.display = 'none';
+  if (!mapWrapper) return;
+  
+  // Start slide-out animation
+  mapWrapper.classList.remove('view-active');
+  mapWrapper.classList.add('view-exiting');
+  
+  setTimeout(() => {
+    mapWrapper.style.display = 'none';
+    mapWrapper.classList.remove('view-exiting');
+    
+    // Clean up map instance
+    if (mapViewInstance) {
+      mapViewInstance.remove();
+      mapViewInstance = null;
+    }
+    mapMarkers = [];
+  }, 300);
   
   // Restore timeline and app bar
   if (appBar) appBar.style.display = '';
   if (timelineWrapper) timelineWrapper.style.display = '';
-  
-  if (mapViewInstance) {
-    mapViewInstance.remove();
-    mapViewInstance = null;
-  }
-  mapMarkers = [];
 }
 
 /**
