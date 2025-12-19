@@ -134,10 +134,11 @@
     <!-- Map View -->
     <div class="map-view-wrapper" id="mapViewWrapper" style="display: none;">
         <div class="map-view-header">
-            <input type="text" id="mapSearchInput" class="map-search-input" placeholder="Search events...">
             <button class="icon-btn" id="closeMapView" title="Back to Timeline">
-                <span class="material-icons">close</span>
+                <span class="material-icons">arrow_back</span>
             </button>
+            <input type="text" id="mapSearchInput" class="map-search-input" placeholder="Search events...">
+            <span id="mapDateRange" class="map-date-range"></span>
         </div>
         <div class="map-view-container" id="mapViewContainer">
             <!-- Map will be initialized here -->

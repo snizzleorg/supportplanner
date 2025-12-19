@@ -2608,12 +2608,19 @@ async function showMapView() {
   const mapWrapper = document.getElementById('mapViewWrapper');
   const mapContainer = document.getElementById('mapViewContainer');
   const legendContainer = document.getElementById('mapViewLegend');
+  const dateRangeEl = document.getElementById('mapDateRange');
   const menuOverlay = document.getElementById('menuOverlay');
   const menuBackdrop = document.getElementById('menuBackdrop');
+  const appBar = document.querySelector('.app-bar');
+  const timelineWrapper = document.getElementById('timelineWrapper');
   
   // Close menu
   if (menuOverlay) menuOverlay.classList.remove('active');
   if (menuBackdrop) menuBackdrop.classList.remove('active');
+  
+  // Hide timeline and app bar
+  if (appBar) appBar.style.display = 'none';
+  if (timelineWrapper) timelineWrapper.style.display = 'none';
   
   // Show map view
   mapWrapper.style.display = 'flex';
@@ -2638,21 +2645,46 @@ async function showMapView() {
     attribution: '© OpenStreetMap'
   }).addTo(mapViewInstance);
   
-  // Build legend
-  const calendars = getCalendars();
-  legendContainer.innerHTML = calendars.map(cal => `
-    <div class="legend-item">
-      <div class="legend-color" style="background: ${cal.color || '#007aff'}"></div>
-      <span>${escapeHtml(cal.content || cal.displayName)}</span>
-    </div>
-  `).join('');
+  // Get date range from timeline
+  const dateRange = getDateRange();
+  const startDate = new Date(dateRange.start);
+  const endDate = new Date(dateRange.end);
   
-  // Get all events with locations
-  const events = getEvents().filter(e => e.location && e.location.trim());
+  // Display date range
+  const formatDate = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  if (dateRangeEl) {
+    dateRangeEl.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+  }
+  
+  // Get calendars and event types
+  const calendars = getCalendars();
+  const eventTypes = getEventTypes();
+  
+  // Build legend with calendar colors
+  legendContainer.innerHTML = calendars.map(cal => {
+    // Get a sample color for this calendar (use event type default or calendar color)
+    const calColor = cal.color || '#007aff';
+    return `
+      <div class="legend-item">
+        <div class="legend-color" style="background: ${calColor}"></div>
+        <span>${escapeHtml(cal.content || cal.displayName)}</span>
+      </div>
+    `;
+  }).join('');
+  
+  // Get events with locations within the visible date range
+  const allEvents = getEvents().filter(e => {
+    if (!e.location || !e.location.trim()) return false;
+    
+    // Filter by date range
+    const eventStart = new Date(e.start);
+    const eventEnd = new Date(e.end);
+    return eventStart <= endDate && eventEnd >= startDate;
+  });
   
   // Group events by unique location to batch geocoding
   const locationGroups = new Map();
-  events.forEach(event => {
+  allEvents.forEach(event => {
     const loc = event.location.trim();
     if (!locationGroups.has(loc)) {
       locationGroups.set(loc, []);
@@ -2671,8 +2703,9 @@ async function showMapView() {
         // Add markers for each event at this location (with slight offset for multiples)
         locEvents.forEach((event, index) => {
           const calendar = calendars.find(c => c.id === event.group);
-          const color = calendar?.color || '#007aff';
-          const offset = index * 0.0001; // Slight offset for stacked events
+          // Use getEventColor for proper color matching
+          const color = getEventColor(event, calendar, eventTypes);
+          const offset = index * 0.0002; // Slight offset for stacked events
           
           const marker = createColoredMarker(
             coords.lat + offset,
@@ -2681,7 +2714,7 @@ async function showMapView() {
             event
           );
           marker.addTo(mapViewInstance);
-          mapMarkers.push({ marker, event, location });
+          mapMarkers.push({ marker, event, location, color });
         });
       }
     } catch (err) {
@@ -2794,7 +2827,14 @@ window.openEventFromMap = openEventFromMap;
  */
 function hideMapView() {
   const mapWrapper = document.getElementById('mapViewWrapper');
+  const appBar = document.querySelector('.app-bar');
+  const timelineWrapper = document.getElementById('timelineWrapper');
+  
   mapWrapper.style.display = 'none';
+  
+  // Restore timeline and app bar
+  if (appBar) appBar.style.display = '';
+  if (timelineWrapper) timelineWrapper.style.display = '';
   
   if (mapViewInstance) {
     mapViewInstance.remove();
@@ -2810,17 +2850,36 @@ function hideMapView() {
 function filterMapMarkers(query) {
   const searchTerm = query.toLowerCase().trim();
   
+  let matchingBounds = [];
+  
   mapMarkers.forEach(({ marker, event, location }) => {
     const title = (event.content || event.summary || '').toLowerCase();
     const loc = location.toLowerCase();
-    const matches = !searchTerm || title.includes(searchTerm) || loc.includes(searchTerm);
+    const description = (event.description || '').toLowerCase();
+    const orderNumber = (event.meta?.orderNumber || '').toLowerCase();
+    const systemType = (event.meta?.systemType || '').toLowerCase();
+    
+    const matches = !searchTerm || 
+      title.includes(searchTerm) || 
+      loc.includes(searchTerm) ||
+      description.includes(searchTerm) ||
+      orderNumber.includes(searchTerm) ||
+      systemType.includes(searchTerm);
     
     if (matches) {
       marker.setOpacity(1);
+      if (searchTerm) {
+        matchingBounds.push(marker.getLatLng());
+      }
     } else {
-      marker.setOpacity(0.2);
+      marker.setOpacity(0.15);
     }
   });
+  
+  // Fit to matching markers if searching
+  if (searchTerm && matchingBounds.length > 0 && mapViewInstance) {
+    mapViewInstance.fitBounds(matchingBounds, { padding: [50, 50], maxZoom: 10 });
+  }
 }
 
 /**
