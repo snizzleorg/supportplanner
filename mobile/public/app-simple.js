@@ -1244,8 +1244,9 @@ async function showEventModal(event) {
   const location = event.location || '';
   const orderNumber = metadata.orderNumber || '';
   const ticketLink = metadata.ticketLink || '';
+  const isRemote = metadata.isRemote || false;
   
-  console.log('Form values - orderNumber:', orderNumber, 'ticketLink:', ticketLink, 'systemType:', systemType);
+  console.log('Form values - orderNumber:', orderNumber, 'ticketLink:', ticketLink, 'systemType:', systemType, 'isRemote:', isRemote);
   console.log('=== End Debug ===');
   
   // Check if desktop (wider than 768px)
@@ -1305,6 +1306,12 @@ async function showEventModal(event) {
           <div style="margin-bottom: 12px;">
             <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">System Type</label>
             <input type="text" id="eventSystemType" value="${escapeHtml(systemType)}" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; cursor: pointer;">
+              <input type="checkbox" id="eventIsRemote" ${isRemote ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+              Remote (Zoom/Online)
+            </label>
           </div>
           
           <!-- Map preview -->
@@ -1369,6 +1376,12 @@ async function showEventModal(event) {
       <div style="margin-bottom: 15px;">
         <label style="display: block; font-weight: 600; margin-bottom: 5px;">System Type:</label>
         <input type="text" id="eventSystemType" value="${escapeHtml(systemType)}" placeholder="e.g., Laser Q-Switch" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: flex; align-items: center; gap: 10px; font-weight: 600; cursor: pointer;">
+          <input type="checkbox" id="eventIsRemote" ${isRemote ? 'checked' : ''} style="width: 20px; height: 20px; cursor: pointer;">
+          Remote (Zoom/Online)
+        </label>
       </div>
       <div style="margin-bottom: 15px;">
         <label style="display: block; font-weight: 600; margin-bottom: 5px;">Calendar:</label>
@@ -1656,6 +1669,7 @@ async function showEventModal(event) {
     const orderNumber = document.getElementById('eventOrderNumber').value;
     const ticketLink = document.getElementById('eventTicketLink').value;
     const systemType = document.getElementById('eventSystemType').value;
+    const isRemote = document.getElementById('eventIsRemote').checked;
     
     if (!title || !start || !end) {
       alert('Please fill in title, start date, and end date');
@@ -1673,6 +1687,7 @@ async function showEventModal(event) {
     if (orderNumber) meta.orderNumber = orderNumber;
     if (ticketLink) meta.ticketLink = ticketLink;
     if (systemType) meta.systemType = systemType;
+    if (isRemote) meta.isRemote = true;
     
     // Check if calendar changed - if so, we need to trigger a MOVE operation
     const originalCalendarId = event.group;

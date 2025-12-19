@@ -61,6 +61,7 @@ export const eventValidation = [
   body('meta.ticketLink').optional({ checkFalsy: false }).if(body('meta').isObject()).trim().isURL().withMessage('Ticket link must be a valid URL'),
   body('meta.systemType').optional({ checkFalsy: false }).if(body('meta').isObject()).trim().isLength({ max: 200 }).withMessage('System type must be max 200 characters'),
   body('meta.notes').optional({ checkFalsy: false }).if(body('meta').isObject()).trim().isLength({ max: 5000 }).withMessage('Notes must be max 5000 characters'),
+  body('meta.isRemote').optional({ checkFalsy: false }).if(body('meta').isObject()).isBoolean().withMessage('isRemote must be a boolean'),
 ];
 
 /**
