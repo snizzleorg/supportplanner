@@ -35,34 +35,6 @@ export let currentSearch = '';
 function itemMatchesQuery(item, q) {
   if (!q) return true;
   
-  // Country code aliases for common abbreviations
-  const COUNTRY_ALIASES = {
-    'uk': ['gb', 'united kingdom', 'great britain', 'england', 'scotland', 'wales'],
-    'usa': ['us', 'united states', 'america'],
-    'uae': ['ae', 'united arab emirates'],
-    'de': ['germany', 'deutschland'],
-    'fr': ['france'],
-    'es': ['spain'],
-    'it': ['italy'],
-    'nl': ['netherlands', 'holland'],
-    'ch': ['switzerland'],
-    'at': ['austria'],
-    'pl': ['poland'],
-    'dk': ['denmark'],
-    'se': ['sweden'],
-    'no': ['norway'],
-    'fi': ['finland']
-  };
-  
-  // Build search terms including aliases
-  const searchTerms = [q];
-  for (const [code, aliases] of Object.entries(COUNTRY_ALIASES)) {
-    if (q === code || aliases.includes(q)) {
-      searchTerms.push(code, ...aliases);
-    }
-  }
-  const uniqueTerms = [...new Set(searchTerms)];
-  
   const hay = [item.content, item.title, item.description, item.location, item.calendarName, item.calendarUrl];
   const meta = item.meta || {};
   hay.push(meta.orderNumber, meta.systemType, meta.ticketLink, meta.locationCountry, meta.locationCountryCode, meta.locationCity);
@@ -78,10 +50,7 @@ function itemMatchesQuery(item, q) {
       }
     }
   } catch (_) {}
-  return hay.filter(Boolean).some(v => {
-    const vLower = String(v).toLowerCase();
-    return uniqueTerms.some(term => vLower.includes(term));
-  });
+  return hay.filter(Boolean).some(v => String(v).toLowerCase().includes(q));
 }
 
 /**
