@@ -25,23 +25,22 @@ export function initAuditModal() {
   const operationFilter = document.getElementById('auditOperationFilter');
   const timeFilter = document.getElementById('auditTimeFilter');
 
-  // Open modal
+  // Open modal with slide-in transition
   historyBtn?.addEventListener('click', () => {
-    auditModal?.classList.add('active');
-    loadAuditHistory();
+    showAuditView();
   });
 
-  // Close modal
+  // Close modal with slide-out transition
   closeAuditModal?.addEventListener('click', () => {
-    auditModal?.classList.remove('active');
+    hideAuditView();
   });
 
-  // Close on background click
-  auditModal?.addEventListener('click', (e) => {
-    if (e.target === auditModal) {
-      auditModal.classList.remove('active');
-    }
-  });
+  // Close on background click (disabled for fullscreen view)
+  // auditModal?.addEventListener('click', (e) => {
+  //   if (e.target === auditModal) {
+  //     hideAuditView();
+  //   }
+  // });
 
   // Filter changes
   operationFilter?.addEventListener('change', (e) => {
@@ -56,6 +55,75 @@ export function initAuditModal() {
 
   // Init undo modal
   initUndoModal();
+  
+  // Listen for ESC key to close
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const auditModal = document.getElementById('auditModal');
+      if (auditModal?.classList.contains('view-active')) {
+        hideAuditView();
+      }
+    }
+  });
+}
+
+/**
+ * Show audit view with slide-in transition
+ */
+export function showAuditView() {
+  const auditModal = document.getElementById('auditModal');
+  const appBar = document.querySelector('.app-bar');
+  const timelineWrapper = document.getElementById('timelineWrapper');
+  const menuOverlay = document.getElementById('menuOverlay');
+  const menuBackdrop = document.getElementById('menuBackdrop');
+  
+  if (!auditModal) return;
+  
+  // Close menu if open
+  menuOverlay?.classList.remove('active');
+  menuBackdrop?.classList.remove('active');
+  
+  // Hide timeline and app bar
+  if (appBar) appBar.style.display = 'none';
+  if (timelineWrapper) timelineWrapper.style.display = 'none';
+  
+  // Show with slide-in animation
+  auditModal.style.display = 'flex';
+  auditModal.classList.add('view-entering');
+  
+  // Trigger reflow
+  auditModal.offsetHeight;
+  
+  // Start slide-in
+  auditModal.classList.remove('view-entering');
+  auditModal.classList.add('view-active');
+  
+  // Load data
+  loadAuditHistory();
+}
+
+/**
+ * Hide audit view with slide-out transition
+ */
+export function hideAuditView() {
+  const auditModal = document.getElementById('auditModal');
+  const appBar = document.querySelector('.app-bar');
+  const timelineWrapper = document.getElementById('timelineWrapper');
+  
+  if (!auditModal) return;
+  
+  // Start slide-out animation
+  auditModal.classList.remove('view-active');
+  auditModal.classList.add('view-exiting');
+  
+  setTimeout(() => {
+    auditModal.style.display = 'none';
+    auditModal.classList.remove('view-exiting');
+  }, 300);
+  
+  // Restore timeline and app bar
+  if (appBar) appBar.style.display = '';
+  if (timelineWrapper) timelineWrapper.style.display = '';
 }
 
 /**
@@ -670,7 +738,7 @@ async function performUndo(entry) {
     
     // Close modals
     modal?.classList.remove('active');
-    document.getElementById('auditModal')?.classList.remove('active');
+    hideAuditView();
     
     // Show success message
     if (statusBar) {

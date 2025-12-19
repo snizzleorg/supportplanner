@@ -1196,12 +1196,51 @@ body {
 }
 
 /* ============================================
-   AUDIT HISTORY MODAL
+   AUDIT HISTORY MODAL (Fullscreen View)
    ============================================ */
 
+#auditModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    background: var(--bg-color);
+    display: none;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#auditModal.view-entering {
+    transform: translateX(100%);
+}
+
+#auditModal.view-active {
+    transform: translateX(0);
+}
+
+#auditModal.view-exiting {
+    transform: translateX(100%);
+}
+
+#auditModal .modal-content {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    margin: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+}
+
 .audit-modal-content {
-    max-width: 800px;
-    max-height: 90vh;
+    max-width: 100%;
+    max-height: 100%;
+    height: 100%;
 }
 
 .audit-filters {
@@ -1777,17 +1816,7 @@ input[type="range"]::-moz-range-thumb {
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
-    /* Ensure audit modal aligns to bottom on mobile like editing modal */
-    #auditModal {
-        align-items: flex-end;
-    }
-    
-    .audit-modal-content {
-        max-width: 100%;
-        max-height: 90vh;
-        border-radius: 12px 12px 0 0;
-        animation: slideUp 0.3s ease-out;
-    }
+    /* Audit modal is now fullscreen on all devices - no special mobile styles needed */
     
     /* Undo modal should also slide from bottom on mobile */
     #undoModal {
