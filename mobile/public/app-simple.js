@@ -2645,10 +2645,10 @@ async function showMapView() {
     attribution: '© OpenStreetMap'
   }).addTo(mapViewInstance);
   
-  // Get date range from timeline
+  // Get date range from timeline (uses from/to properties)
   const dateRange = getDateRange();
-  const startDate = new Date(dateRange.start);
-  const endDate = new Date(dateRange.end);
+  const startDate = new Date(dateRange.from);
+  const endDate = new Date(dateRange.to);
   
   // Display date range
   const formatDate = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -2659,11 +2659,11 @@ async function showMapView() {
   // Get calendars and event types
   const calendars = getCalendars();
   const eventTypes = getEventTypes();
+  const palette = getLabelPalette();
   
-  // Build legend with calendar colors
-  legendContainer.innerHTML = calendars.map(cal => {
-    // Get a sample color for this calendar (use event type default or calendar color)
-    const calColor = cal.color || '#007aff';
+  // Build legend with calendar colors (using same palette as timeline)
+  legendContainer.innerHTML = calendars.map((cal, index) => {
+    const calColor = palette[index % palette.length];
     return `
       <div class="legend-item">
         <div class="legend-color" style="background: ${calColor}"></div>
@@ -2673,7 +2673,11 @@ async function showMapView() {
   }).join('');
   
   // Get events with locations within the visible date range
-  const allEvents = getEvents().filter(e => {
+  const allEventsRaw = getEvents();
+  console.log('[MapView] Total events:', allEventsRaw.length);
+  console.log('[MapView] Date range:', startDate, 'to', endDate);
+  
+  const allEvents = allEventsRaw.filter(e => {
     if (!e.location || !e.location.trim()) return false;
     
     // Filter by date range
@@ -2681,6 +2685,8 @@ async function showMapView() {
     const eventEnd = new Date(e.end);
     return eventStart <= endDate && eventEnd >= startDate;
   });
+  
+  console.log('[MapView] Events with locations in range:', allEvents.length);
   
   // Group events by unique location to batch geocoding
   const locationGroups = new Map();
@@ -2702,9 +2708,9 @@ async function showMapView() {
         
         // Add markers for each event at this location (with slight offset for multiples)
         locEvents.forEach((event, index) => {
-          const calendar = calendars.find(c => c.id === event.group);
-          // Use getEventColor for proper color matching
-          const color = getEventColor(event, calendar, eventTypes);
+          // Find calendar index to get consistent color from palette
+          const calendarIndex = calendars.findIndex(c => c.id === event.group);
+          const color = calendarIndex >= 0 ? palette[calendarIndex % palette.length] : '#007aff';
           const offset = index * 0.0002; // Slight offset for stacked events
           
           const marker = createColoredMarker(
