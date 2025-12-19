@@ -29,6 +29,7 @@ import YAML from 'yaml';
 import { calendarOrder, calendarExclude } from '../config/calendar-order.js';
 import { calendarColorOverrides } from '../config/calendar-colors.js';
 import { createLogger } from '../utils/index.js';
+import { geocodeLocations } from './geocoding.js';
 
 const logger = createLogger('CalendarService');
 
@@ -553,6 +554,26 @@ export class CalendarCache {
         }
       }));
       
+      // Enrich events with structured location data (country, city, countryCode)
+      const uniqueLocations = [...new Set(events.map(e => e.location).filter(Boolean))];
+      if (uniqueLocations.length > 0) {
+        try {
+          const geocodeMap = await geocodeLocations(uniqueLocations);
+          for (const event of events) {
+            if (event.location && geocodeMap.has(event.location)) {
+              const geo = geocodeMap.get(event.location);
+              event.meta = event.meta || {};
+              event.meta.locationCountry = geo.country || '';
+              event.meta.locationCountryCode = geo.countryCode || '';
+              event.meta.locationCity = geo.city || '';
+            }
+          }
+          logger.debug(`[${displayName}] Enriched ${geocodeMap.size} locations with structured data`);
+        } catch (geoError) {
+          logger.warn(`[${displayName}] Failed to enrich locations (non-critical):`, geoError.message);
+        }
+      }
+      
       // Update cache
       this.cache.set(cacheKey, {
         events,
@@ -570,6 +591,32 @@ export class CalendarCache {
     } catch (error) {
       logger.error(`Failed to refresh calendar ${calendar.displayName || calendar.url}:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Refresh a single calendar by URL
+   * 
+   * More efficient than refreshAllCalendars when only one calendar changed.
+   * Used after event create/update/delete operations.
+   * 
+   * @param {string} calendarUrl - Calendar URL to refresh
+   * @returns {Promise<boolean>} True if calendar was found and refreshed
+   */
+  async refreshSingleCalendar(calendarUrl) {
+    const calendar = this.calendars.find(c => c.url === calendarUrl);
+    if (!calendar) {
+      logger.warn(`Calendar not found for refresh: ${calendarUrl}`);
+      return false;
+    }
+    
+    try {
+      await this.refreshCalendar(calendar);
+      logger.info(`Single calendar refreshed: ${calendar.displayName || calendarUrl}`);
+      return true;
+    } catch (error) {
+      logger.error(`Failed to refresh single calendar: ${calendarUrl}`, error);
+      return false;
     }
   }
 

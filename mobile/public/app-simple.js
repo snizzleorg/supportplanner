@@ -40,6 +40,9 @@ import {
 // Import theme manager
 import './js/theme.js';
 
+// Import country aliases for search
+import { loadCountryAliases, getSearchTerms as getCountrySearchTerms } from './js/country-aliases.js';
+
 // Import state management
 import {
   getState,
@@ -58,7 +61,10 @@ import {
   setSearchQuery,
   setEventTypes,
   toggleCalendarSelection,
-  clearCalendarSelections
+  clearCalendarSelections,
+  addEvent,
+  updateEvent,
+  removeEvent
 } from './js/state.js';
 
 // Import API functions
@@ -96,6 +102,9 @@ console.log('📱 Mobile Timeline v1760277100 loaded');
  */
 async function init() {
   console.log('Initializing simple timeline...');
+  
+  // Load country aliases for search (non-blocking)
+  loadCountryAliases().catch(err => console.warn('Country aliases not loaded:', err));
   
   // Load event types configuration
   try {
@@ -991,35 +1000,39 @@ async function showCreateEventModal(calendar, clickedDate) {
       const responseData = await response.json();
       console.log('Create response data:', responseData);
       
-      // Success - close modal and show loading
+      // OPTIMISTIC UI: Add event to local state immediately
+      const targetCalendar = getCalendars().find(c => c.url === calendarUrl);
+      const newEvent = {
+        id: `${targetCalendar?.id || 'cal-1'}-${responseData.uid}`,
+        uid: responseData.uid,
+        group: targetCalendar?.id || 'cal-1',
+        content: title,
+        title: title,
+        start: start,
+        end: end,
+        description: description,
+        location: location,
+        meta: Object.keys(meta).length > 0 ? meta : {}
+      };
+      
+      addEvent(newEvent);
+      console.log('Event added to local state:', newEvent.uid);
+      
+      // Close modal and re-render immediately (no loading overlay needed)
       modal.classList.remove('active');
-      const loadingOverlay = document.getElementById('loadingOverlay');
-      const loadingText = loadingOverlay?.querySelector('p');
-      if (loadingText) loadingText.textContent = 'Saving event...';
-      loadingOverlay?.classList.remove('hidden');
+      render();
       
-      console.log('Event created successfully, triggering CalDAV refresh...');
-      
-      // Wait a moment for the event to be saved
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Trigger CalDAV cache refresh
-      if (loadingText) loadingText.textContent = 'Updating calendar...';
-      console.log('Calling refresh-caldav endpoint...');
-      try {
-        const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
-          method: 'POST'
-        });
-        console.log('Refresh response:', refreshResponse.status);
-      } catch (refreshError) {
-        console.error('Refresh failed (non-fatal):', refreshError);
-      }
-      
-      // Wait another moment for refresh to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log('Reloading page...');
-      window.location.reload();
+      // Fire-and-forget: trigger background refresh (don't await)
+      console.log('Triggering background refresh for:', calendarUrl);
+      fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ calendarUrl })
+      }).then(() => {
+        console.log('Background refresh completed');
+      }).catch(err => {
+        console.warn('Background refresh failed (non-critical):', err);
+      });
       
     } catch (error) {
       console.error('Unexpected error creating event:', error);
@@ -1565,31 +1578,30 @@ async function showEventModal(event) {
       console.log('DELETE response status:', response.status);
       
       if (response.ok) {
+        // OPTIMISTIC UI: Remove event from local state immediately
+        const eventCalendar = getCalendars().find(c => c.id === event.group);
+        const calendarUrl = eventCalendar?.url;
+        
+        removeEvent(event.id);
+        console.log('Event removed from local state:', event.id);
+        
+        // Close modal and re-render immediately (no loading overlay needed)
         modal.classList.remove('active');
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const loadingText = loadingOverlay?.querySelector('p');
-        if (loadingText) loadingText.textContent = 'Deleting event...';
-        loadingOverlay?.classList.remove('hidden');
+        render();
         
-        console.log('Event deleted successfully, triggering CalDAV refresh...');
-        
-        // Wait for backend to save
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Trigger CalDAV cache refresh
-        if (loadingText) loadingText.textContent = 'Refreshing calendar...';
-        try {
-          const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
-            method: 'POST'
+        // Fire-and-forget: trigger background refresh (don't await)
+        console.log('Triggering background refresh for:', calendarUrl);
+        if (calendarUrl) {
+          fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ calendarUrl })
+          }).then(() => {
+            console.log('Background refresh completed');
+          }).catch(err => {
+            console.warn('Background refresh failed (non-critical):', err);
           });
-          console.log('Refresh response:', refreshResponse.status);
-        } catch (refreshError) {
-          console.error('Refresh failed (non-fatal):', refreshError);
         }
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        console.log('Reloading page after delete...');
-        window.location.reload();
       } else {
         const errorText = await response.text();
         console.error('Failed to delete event:', response.status, errorText);
@@ -1776,31 +1788,56 @@ async function showEventModal(event) {
       );
       
       if (response.ok) {
-        // Close modal and show loading
+        // OPTIMISTIC UI: Update event in local state immediately
+        const eventCalendar = getCalendars().find(c => c.id === event.group);
+        const calendarUrl = eventCalendar?.url;
+        
+        // Determine the new group if calendar changed
+        const newGroup = targetCalendarUrl 
+          ? getCalendars().find(c => c.url === targetCalendarUrl)?.id || event.group
+          : event.group;
+        
+        const updatedEvent = {
+          content: title,
+          title: title,
+          start: start,
+          end: end,
+          description: description,
+          location: location,
+          group: newGroup,
+          meta: Object.keys(meta).length > 0 ? meta : {}
+        };
+        
+        updateEvent(event.id, updatedEvent);
+        console.log('Event updated in local state:', event.id);
+        
+        // Close modal and re-render immediately (no loading overlay needed)
         modal.classList.remove('active');
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const loadingText = loadingOverlay?.querySelector('p');
-        if (loadingText) loadingText.textContent = 'Updating event...';
-        loadingOverlay?.classList.remove('hidden');
+        render();
         
-        console.log('Event updated successfully, triggering CalDAV refresh...');
-        
-        // Wait for backend to save
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Trigger CalDAV cache refresh
-        if (loadingText) loadingText.textContent = 'Refreshing calendar...';
-        try {
-          const refreshResponse = await fetchWithRetry(`${API_BASE}/api/refresh-caldav`, {
-            method: 'POST'
+        // Fire-and-forget: trigger background refresh (don't await)
+        console.log('Triggering background refresh for:', calendarUrl);
+        if (calendarUrl) {
+          fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ calendarUrl })
+          }).then(() => {
+            console.log('Background refresh completed');
+          }).catch(err => {
+            console.warn('Background refresh failed (non-critical):', err);
           });
-          console.log('Refresh response:', refreshResponse.status);
-        } catch (refreshError) {
-          console.error('Refresh failed (non-fatal):', refreshError);
         }
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        window.location.reload();
+        // If calendar changed, also refresh the target calendar
+        if (targetCalendarUrl && targetCalendarUrl !== calendarUrl) {
+          fetchWithRetry(`${API_BASE}/api/refresh-calendar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ calendarUrl: targetCalendarUrl })
+          }).catch(err => {
+            console.warn('Target calendar refresh failed (non-critical):', err);
+          });
+        }
       } else {
         const errorText = await response.text();
         console.error('Failed to update event:', response.status, errorText);
@@ -2046,30 +2083,53 @@ function renderEventsForCalendar(calendarId, pixelsPerDay) {
       events = events.filter(e => {
         const query = getSearchQuery();
         
-        // Search in basic event fields
-        const basicFields = [
-          e.content,
-          e.title,
-          e.description,
-          e.location
-        ].filter(Boolean);
+        // Get search terms with country aliases from loaded JSON
+        const uniqueTerms = getCountrySearchTerms(query);
         
-        // Search in metadata fields
+        // Check if search expanded to country aliases (more terms than just the original)
+        const isCountrySearch = uniqueTerms.length > 1;
+        
+        // Separate short terms (2-3 ASCII chars like country codes) from longer terms
+        // Short terms should only match location-specific fields IF this is a country search
+        // EXCEPT: the original search term should always match anywhere (user might search "MT" for "MT100")
+        // NOTE: Non-ASCII terms (Chinese, Korean, etc.) are always treated as long terms
+        const isShortAscii = (t) => t.length <= 3 && /^[a-z0-9]+$/i.test(t);
+        const shortTerms = isCountrySearch 
+          ? uniqueTerms.filter(t => isShortAscii(t) && t !== query) 
+          : [];
+        const longTerms = isCountrySearch 
+          ? uniqueTerms.filter(t => !isShortAscii(t) || t === query) 
+          : uniqueTerms;
+        
+        // Helper to check if any LONG term matches
+        const matchesLong = (text) => {
+          if (!text) return false;
+          const textLower = String(text).toLowerCase();
+          return longTerms.some(term => textLower.includes(term));
+        };
+        
+        // Search in basic event fields with LONG terms only
+        const basicFields = [e.content, e.title, e.description].filter(Boolean);
+        if (basicFields.some(f => matchesLong(f))) return true;
+        
+        // Search in non-location metadata with LONG terms
         const meta = e.meta || {};
-        const metaFields = [
-          meta.orderNumber,
-          meta.systemType,
-          meta.ticketLink,
-          meta.notes
-        ].filter(Boolean);
+        const nonLocationMeta = [meta.orderNumber, meta.systemType, meta.ticketLink, meta.notes].filter(Boolean);
+        if (nonLocationMeta.some(f => matchesLong(f))) return true;
         
-        // Combine all searchable fields
-        const allFields = [...basicFields, ...metaFields];
+        // Search location fields with LONG terms
+        const locationFields = [e.location, meta.locationCountry, meta.locationCity].filter(Boolean);
+        if (locationFields.some(f => matchesLong(f))) return true;
         
-        // Check if any field contains the search query
-        return allFields.some(field => 
-          String(field).toLowerCase().includes(query)
-        );
+        // For SHORT terms (country codes), only match countryCode field exactly
+        // This prevents "es" (Spain) from matching "United States"
+        if (shortTerms.length > 0) {
+          const countryCode = (meta.locationCountryCode || '').toLowerCase();
+          
+          if (shortTerms.some(term => countryCode === term)) return true;
+        }
+        
+        return false;
       });
     }
     // If calendar matches, show all events from that calendar

@@ -34,9 +34,10 @@ export let currentSearch = '';
  */
 function itemMatchesQuery(item, q) {
   if (!q) return true;
+  
   const hay = [item.content, item.title, item.description, item.location, item.calendarName, item.calendarUrl];
   const meta = item.meta || {};
-  hay.push(meta.orderNumber, meta.systemType, meta.ticketLink);
+  hay.push(meta.orderNumber, meta.systemType, meta.ticketLink, meta.locationCountry, meta.locationCountryCode, meta.locationCity);
   // Also include calendar name and url via group lookup
   try {
     if (groupsRef && item && item.group) {

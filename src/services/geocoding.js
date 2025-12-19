@@ -26,7 +26,7 @@ const CACHE_FILE = path.join(__dirname, '../../data/geocode-cache.json');
 
 /**
  * In-memory cache for geocoded locations
- * @type {Map<string, {lat: number, lon: number, timestamp: number}>}
+ * @type {Map<string, {lat: number, lon: number, country: string, countryCode: string, city: string, timestamp: number}>}
  */
 let geocodeCache = new Map();
 
@@ -147,7 +147,7 @@ async function geocodeWithNominatim(address) {
   }
   
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q=${encodeURIComponent(address)}`;
     const response = await fetch(url, {
       headers: {
         'Accept': 'application/json',
@@ -169,9 +169,17 @@ async function geocodeWithNominatim(address) {
     }
     
     const result = data[0];
+    const addr = result.address || {};
+    
+    // Extract city from various address fields (Nominatim uses different fields depending on location)
+    const city = addr.city || addr.town || addr.village || addr.municipality || addr.county || '';
+    
     return {
       lat: parseFloat(result.lat),
-      lon: parseFloat(result.lon)
+      lon: parseFloat(result.lon),
+      country: addr.country || '',
+      countryCode: (addr.country_code || '').toUpperCase(),
+      city: city
     };
   } catch (err) {
     logger.error(`Error geocoding "${address}":`, err.message);
@@ -184,7 +192,7 @@ async function geocodeWithNominatim(address) {
  * Uses cache and only geocodes if not cached
  * 
  * @param {string} locationStr - Location string (coordinates or address)
- * @returns {Promise<{lat: number, lon: number}|null>} Geocoded coordinates or null
+ * @returns {Promise<{lat: number, lon: number, country?: string, countryCode?: string, city?: string}|null>} Geocoded location or null
  */
 export async function geocodeLocation(locationStr) {
   if (!locationStr) return null;
@@ -204,9 +212,22 @@ export async function geocodeLocation(locationStr) {
     const cached = geocodeCache.get(cacheKey);
     const age = Date.now() - (cached.timestamp || 0);
     
-    if (age < CACHE_TTL) {
-      // Cache hit and not expired
-      return { lat: cached.lat, lon: cached.lon };
+    // Re-geocode if cache entry is missing structured location data (migration from old cache format)
+    const hasMissingStructuredData = !cached.country && !cached.countryCode && !cached.city;
+    
+    if (age < CACHE_TTL && !hasMissingStructuredData) {
+      // Cache hit, not expired, and has structured data
+      return {
+        lat: cached.lat,
+        lon: cached.lon,
+        country: cached.country || '',
+        countryCode: cached.countryCode || '',
+        city: cached.city || ''
+      };
+    } else if (hasMissingStructuredData) {
+      // Cache entry missing structured data - needs re-geocoding
+      logger.debug(`Cache entry for "${locationStr}" missing structured data, re-geocoding`);
+      geocodeCache.delete(cacheKey);
     } else {
       // Cache expired - remove it
       logger.debug(`Cache expired for "${locationStr}" (age: ${Math.round(age / (24 * 60 * 60 * 1000))} days)`);
@@ -219,10 +240,13 @@ export async function geocodeLocation(locationStr) {
   const result = await geocodeWithNominatim(locationStr);
   
   if (result) {
-    // Cache the result
+    // Cache the result with structured location data
     geocodeCache.set(cacheKey, {
       lat: result.lat,
       lon: result.lon,
+      country: result.country || '',
+      countryCode: result.countryCode || '',
+      city: result.city || '',
       timestamp: Date.now()
     });
     
@@ -235,10 +259,10 @@ export async function geocodeLocation(locationStr) {
 
 /**
  * Geocodes multiple locations in batch
- * Returns a map of location strings to coordinates
+ * Returns a map of location strings to structured location data
  * 
  * @param {string[]} locations - Array of location strings
- * @returns {Promise<Map<string, {lat: number, lon: number}>>} Map of locations to coordinates
+ * @returns {Promise<Map<string, {lat: number, lon: number, country?: string, countryCode?: string, city?: string}>>} Map of locations to geocoded data
  */
 export async function geocodeLocations(locations) {
   await loadCache();
@@ -261,8 +285,20 @@ export async function geocodeLocations(locations) {
     const cacheKey = String(loc).trim().toLowerCase();
     if (geocodeCache.has(cacheKey)) {
       const cached = geocodeCache.get(cacheKey);
-      results.set(loc, { lat: cached.lat, lon: cached.lon });
-      continue;
+      // Check if cache entry has structured data (migration from old cache format)
+      const hasMissingStructuredData = !cached.country && !cached.countryCode && !cached.city;
+      if (!hasMissingStructuredData) {
+        results.set(loc, {
+          lat: cached.lat,
+          lon: cached.lon,
+          country: cached.country || '',
+          countryCode: cached.countryCode || '',
+          city: cached.city || ''
+        });
+        continue;
+      }
+      // Missing structured data - needs re-geocoding
+      geocodeCache.delete(cacheKey);
     }
     
     // Need to geocode

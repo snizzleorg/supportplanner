@@ -217,3 +217,44 @@ export function resetState() {
   state.selectedCalendars = new Set();
   state.eventTypes = null;
 }
+
+// ============================================
+// OPTIMISTIC UPDATE HELPERS
+// ============================================
+
+/**
+ * Add a single event to local state (optimistic create)
+ * @param {Object} event - Event object to add
+ */
+export function addEvent(event) {
+  state.events.push(event);
+}
+
+/**
+ * Update a single event in local state (optimistic update)
+ * @param {string} eventId - Event ID to update
+ * @param {Object} updates - Object with updated properties
+ * @returns {boolean} True if event was found and updated
+ */
+export function updateEvent(eventId, updates) {
+  const index = state.events.findIndex(e => e.id === eventId || e.uid === eventId);
+  if (index !== -1) {
+    state.events[index] = { ...state.events[index], ...updates };
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Remove a single event from local state (optimistic delete)
+ * @param {string} eventId - Event ID to remove
+ * @returns {boolean} True if event was found and removed
+ */
+export function removeEvent(eventId) {
+  const index = state.events.findIndex(e => e.id === eventId || e.uid === eventId);
+  if (index !== -1) {
+    state.events.splice(index, 1);
+    return true;
+  }
+  return false;
+}

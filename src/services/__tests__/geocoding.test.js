@@ -74,7 +74,7 @@ describe('geocoding service', () => {
       });
 
       const result = await geocodeLocation('Berlin, Germany');
-      expect(result).toEqual({ lat: 52.52, lon: 13.405 });
+      expect(result).toEqual({ lat: 52.52, lon: 13.405, country: '', countryCode: '', city: '' });
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('Berlin%2C%20Germany'),
         expect.objectContaining({
@@ -132,8 +132,8 @@ describe('geocoding service', () => {
       const results = await geocodeLocations(locations);
 
       expect(results.size).toBe(2);
-      expect(results.get('New York, USA')).toEqual({ lat: 40.7128, lon: -74.006 });
-      expect(results.get('Los Angeles, USA')).toEqual({ lat: 34.0522, lon: -118.2437 });
+      expect(results.get('New York, USA')).toEqual({ lat: 40.7128, lon: -74.006, country: '', countryCode: '', city: '' });
+      expect(results.get('Los Angeles, USA')).toEqual({ lat: 34.0522, lon: -118.2437, country: '', countryCode: '', city: '' });
     });
 
     it('should handle mixed coordinates and addresses', async () => {
@@ -147,7 +147,7 @@ describe('geocoding service', () => {
 
       expect(results.size).toBe(2);
       expect(results.get('48.8566, 2.3522')).toEqual({ lat: 48.8566, lon: 2.3522 });
-      expect(results.get('Berlin, Germany')).toEqual({ lat: 52.52, lon: 13.405 });
+      expect(results.get('Berlin, Germany')).toEqual({ lat: 52.52, lon: 13.405, country: '', countryCode: '', city: '' });
     });
 
     it('should skip null/empty locations', async () => {
