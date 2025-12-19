@@ -59,6 +59,10 @@
         <div class="menu-overlay-body">
             <div class="menu-section">
                 <h4>View</h4>
+                <button class="menu-item" id="mapViewBtn" title="Map View">
+                    <span class="material-icons">map</span>
+                    <span>Map View</span>
+                </button>
                 <button class="menu-item" id="helpBtn" title="System Experts">
                     <span class="material-icons">groups</span>
                     <span>System Experts</span>
@@ -121,9 +125,25 @@
     </div>
 
     <!-- Timeline -->
-    <div class="timeline-wrapper">
+    <div class="timeline-wrapper" id="timelineWrapper">
         <div class="timeline-container" id="timelineContainer">
             <!-- Timeline content populated by JS -->
+        </div>
+    </div>
+
+    <!-- Map View -->
+    <div class="map-view-wrapper" id="mapViewWrapper" style="display: none;">
+        <div class="map-view-header">
+            <input type="text" id="mapSearchInput" class="map-search-input" placeholder="Search events...">
+            <button class="icon-btn" id="closeMapView" title="Back to Timeline">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        <div class="map-view-container" id="mapViewContainer">
+            <!-- Map will be initialized here -->
+        </div>
+        <div class="map-view-legend" id="mapViewLegend">
+            <!-- Calendar color legend -->
         </div>
     </div>
 

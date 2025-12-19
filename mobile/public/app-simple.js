@@ -2593,6 +2593,259 @@ async function updateHistoryBadge() {
 window.loadData = loadData;
 window.updateHistoryBadge = updateHistoryBadge;
 
+// ============================================
+// MAP VIEW FUNCTIONALITY
+// ============================================
+
+let mapViewInstance = null;
+let mapMarkers = [];
+let geocodeCache = new Map();
+
+/**
+ * Show the map view with all events that have locations
+ */
+async function showMapView() {
+  const mapWrapper = document.getElementById('mapViewWrapper');
+  const mapContainer = document.getElementById('mapViewContainer');
+  const legendContainer = document.getElementById('mapViewLegend');
+  const menuOverlay = document.getElementById('menuOverlay');
+  const menuBackdrop = document.getElementById('menuBackdrop');
+  
+  // Close menu
+  if (menuOverlay) menuOverlay.classList.remove('active');
+  if (menuBackdrop) menuBackdrop.classList.remove('active');
+  
+  // Show map view
+  mapWrapper.style.display = 'flex';
+  
+  // Clear previous map if exists
+  if (mapViewInstance) {
+    mapViewInstance.remove();
+    mapViewInstance = null;
+  }
+  mapMarkers = [];
+  
+  // Initialize map centered on Europe
+  mapViewInstance = L.map(mapContainer, {
+    center: [48.8566, 10.3522],
+    zoom: 4,
+    zoomControl: true
+  });
+  
+  // Add tile layer
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+  }).addTo(mapViewInstance);
+  
+  // Build legend
+  const calendars = getCalendars();
+  legendContainer.innerHTML = calendars.map(cal => `
+    <div class="legend-item">
+      <div class="legend-color" style="background: ${cal.color || '#007aff'}"></div>
+      <span>${escapeHtml(cal.content || cal.displayName)}</span>
+    </div>
+  `).join('');
+  
+  // Get all events with locations
+  const events = getEvents().filter(e => e.location && e.location.trim());
+  
+  // Group events by unique location to batch geocoding
+  const locationGroups = new Map();
+  events.forEach(event => {
+    const loc = event.location.trim();
+    if (!locationGroups.has(loc)) {
+      locationGroups.set(loc, []);
+    }
+    locationGroups.get(loc).push(event);
+  });
+  
+  // Geocode locations and add markers
+  const bounds = [];
+  for (const [location, locEvents] of locationGroups) {
+    try {
+      const coords = await geocodeLocation(location);
+      if (coords) {
+        bounds.push([coords.lat, coords.lon]);
+        
+        // Add markers for each event at this location (with slight offset for multiples)
+        locEvents.forEach((event, index) => {
+          const calendar = calendars.find(c => c.id === event.group);
+          const color = calendar?.color || '#007aff';
+          const offset = index * 0.0001; // Slight offset for stacked events
+          
+          const marker = createColoredMarker(
+            coords.lat + offset,
+            coords.lon + offset,
+            color,
+            event
+          );
+          marker.addTo(mapViewInstance);
+          mapMarkers.push({ marker, event, location });
+        });
+      }
+    } catch (err) {
+      console.warn(`Failed to geocode: ${location}`, err);
+    }
+  }
+  
+  // Fit map to show all markers
+  if (bounds.length > 0) {
+    mapViewInstance.fitBounds(bounds, { padding: [50, 50] });
+  }
+  
+  // Invalidate size after render
+  setTimeout(() => mapViewInstance.invalidateSize(), 100);
+}
+
+/**
+ * Geocode a location string to coordinates
+ * @param {string} location - Location string
+ * @returns {Promise<{lat: number, lon: number}|null>}
+ */
+async function geocodeLocation(location) {
+  // Check cache first
+  if (geocodeCache.has(location)) {
+    return geocodeCache.get(location);
+  }
+  
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`,
+      { headers: { 'User-Agent': 'SupportPlanner/1.0' } }
+    );
+    const results = await response.json();
+    
+    if (results && results.length > 0) {
+      const coords = {
+        lat: parseFloat(results[0].lat),
+        lon: parseFloat(results[0].lon),
+        displayName: results[0].display_name
+      };
+      geocodeCache.set(location, coords);
+      return coords;
+    }
+  } catch (err) {
+    console.error('Geocoding error:', err);
+  }
+  
+  geocodeCache.set(location, null);
+  return null;
+}
+
+/**
+ * Create a colored marker for an event
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @param {string} color - Marker color (hex)
+ * @param {Object} event - Event object
+ * @returns {L.Marker}
+ */
+function createColoredMarker(lat, lon, color, event) {
+  const icon = L.divIcon({
+    className: 'custom-marker-wrapper',
+    html: `<div class="custom-marker" style="background: ${color};"></div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12]
+  });
+  
+  const marker = L.marker([lat, lon], { icon });
+  
+  // Create popup content
+  const title = event.content || event.summary || 'Untitled';
+  const popupContent = `
+    <div style="min-width: 150px;">
+      <strong>${escapeHtml(title)}</strong>
+      <div style="font-size: 12px; color: #666; margin-top: 4px;">
+        ${escapeHtml(event.start)} - ${escapeHtml(event.end)}
+      </div>
+      <div style="font-size: 12px; margin-top: 4px;">
+        📍 ${escapeHtml(event.location)}
+      </div>
+      <button onclick="openEventFromMap('${event.uid || event.id}')" 
+              style="margin-top: 8px; padding: 6px 12px; background: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+        View Details
+      </button>
+    </div>
+  `;
+  
+  marker.bindPopup(popupContent);
+  return marker;
+}
+
+/**
+ * Open event details from map popup
+ * @param {string} eventId - Event UID or ID
+ */
+function openEventFromMap(eventId) {
+  const event = getEvents().find(e => e.uid === eventId || e.id === eventId);
+  if (event) {
+    hideMapView();
+    setTimeout(() => showEventModal(event), 100);
+  }
+}
+
+// Make function globally accessible
+window.openEventFromMap = openEventFromMap;
+
+/**
+ * Hide the map view
+ */
+function hideMapView() {
+  const mapWrapper = document.getElementById('mapViewWrapper');
+  mapWrapper.style.display = 'none';
+  
+  if (mapViewInstance) {
+    mapViewInstance.remove();
+    mapViewInstance = null;
+  }
+  mapMarkers = [];
+}
+
+/**
+ * Filter map markers based on search query
+ * @param {string} query - Search query
+ */
+function filterMapMarkers(query) {
+  const searchTerm = query.toLowerCase().trim();
+  
+  mapMarkers.forEach(({ marker, event, location }) => {
+    const title = (event.content || event.summary || '').toLowerCase();
+    const loc = location.toLowerCase();
+    const matches = !searchTerm || title.includes(searchTerm) || loc.includes(searchTerm);
+    
+    if (matches) {
+      marker.setOpacity(1);
+    } else {
+      marker.setOpacity(0.2);
+    }
+  });
+}
+
+/**
+ * Setup map view event handlers
+ */
+function setupMapViewHandlers() {
+  const mapViewBtn = document.getElementById('mapViewBtn');
+  const closeMapView = document.getElementById('closeMapView');
+  const mapSearchInput = document.getElementById('mapSearchInput');
+  
+  if (mapViewBtn) {
+    mapViewBtn.addEventListener('click', showMapView);
+  }
+  
+  if (closeMapView) {
+    closeMapView.addEventListener('click', hideMapView);
+  }
+  
+  if (mapSearchInput) {
+    mapSearchInput.addEventListener('input', (e) => {
+      filterMapMarkers(e.target.value);
+    });
+  }
+}
+
 // Start the application
 init().then(() => {
   // Start auto-refresh after initial load
@@ -2600,4 +2853,7 @@ init().then(() => {
   
   // Setup keyboard shortcuts
   setupKeyboardShortcuts();
+  
+  // Setup map view handlers
+  setupMapViewHandlers();
 });
