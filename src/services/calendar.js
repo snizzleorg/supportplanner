@@ -395,9 +395,22 @@ export class CalendarCache {
    * @returns {Promise<void>}
    */
   async refreshAllCalendars() {
+    // If refresh is already in progress, wait for it to complete instead of skipping
     if (this.refreshInProgress) {
-      logger.debug('Refresh already in progress, skipping');
-      return;
+      logger.debug('Refresh already in progress, waiting for it to complete...');
+      const maxWait = 30000;
+      const pollInterval = 100;
+      let waited = 0;
+      while (this.refreshInProgress && waited < maxWait) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        waited += pollInterval;
+      }
+      if (this.refreshInProgress) {
+        logger.warn('Refresh wait timeout, proceeding anyway');
+      } else {
+        logger.debug('Previous refresh completed, returning');
+        return;
+      }
     }
     
     this.refreshInProgress = true;
