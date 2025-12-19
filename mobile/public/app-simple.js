@@ -2670,28 +2670,37 @@ function setupKeyboardShortcuts() {
           break;
         }
         
-        // Priority 2: Close map view
+        // Priority 2: Close menu
+        const menuOverlay = document.getElementById('menuOverlay');
+        const menuBackdrop = document.getElementById('menuBackdrop');
+        if (menuOverlay?.classList.contains('active')) {
+          menuOverlay.classList.remove('active');
+          menuBackdrop?.classList.remove('active');
+          break;
+        }
+        
+        // Priority 3: Close map view
         const mapWrapper = document.getElementById('mapViewWrapper');
         if (mapWrapper?.classList.contains('view-active')) {
           hideMapView();
           break;
         }
         
-        // Priority 3: Close experts overlay
+        // Priority 4: Close experts overlay
         const helpOverlay = document.getElementById('helpOverlay');
         if (helpOverlay?.classList.contains('active')) {
           helpOverlay.classList.remove('active');
           break;
         }
         
-        // Priority 4: Close audit view (handled in audit.js)
+        // Priority 5: Close audit view (handled in audit.js)
         const auditModal = document.getElementById('auditModal');
         if (auditModal?.classList.contains('view-active')) {
           // hideAuditView is called from audit.js ESC handler
           break;
         }
         
-        // Priority 5: Close search
+        // Priority 6: Close search
         if (searchInput && searchInput.style.display !== 'none') {
           searchInput.style.display = 'none';
           searchInput.value = '';
