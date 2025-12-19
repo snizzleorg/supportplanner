@@ -2798,19 +2798,27 @@ function createColoredMarker(lat, lon, color, event, calendarName) {
   const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const dateRange = startDate.toDateString() === endDate.toDateString() ? dateStr : `${dateStr} - ${endStr}`;
   
-  // Build status pills
-  const meta = event.meta || {};
-  const isConfirmed = meta.confirmed === true || meta.confirmed === 'true';
-  const pillStyle = isConfirmed 
-    ? 'background: #34c759; color: white;' 
-    : 'background: #ff9500; color: white;';
-  const pillText = isConfirmed ? 'Confirmed' : 'Unconfirmed';
+  // Build status pills - use same logic as modal (EVENT_STATES markers in title)
+  const eventTitle = event.content || event.summary || '';
+  const isUnconfirmed = eventTitle.includes(EVENT_STATES.UNCONFIRMED.marker);
+  const isBooked = eventTitle.includes(EVENT_STATES.BOOKED.marker);
+  const systemType = (event.meta || {}).systemType || '';
+  
+  // Build pills HTML matching modal style
+  let pillsHtml = '';
+  if (systemType) {
+    pillsHtml += `<span style="font-size: 10px; padding: 2px 6px; background: #e5e7eb; color: #374151; border-radius: 10px;">${escapeHtml(systemType)}</span>`;
+  }
+  if (isUnconfirmed) {
+    pillsHtml += `<span style="font-size: 10px; padding: 2px 6px; background: #fef3c7; color: #92400e; border-radius: 10px;">? Unconfirmed</span>`;
+  }
+  if (isBooked) {
+    pillsHtml += `<span style="font-size: 10px; padding: 2px 6px; background: #dcfce7; color: #166534; border-radius: 10px;">✓ Booked</span>`;
+  }
   
   const popupContent = `
     <div style="min-width: 180px;">
-      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-        <span style="font-size: 10px; padding: 2px 6px; border-radius: 10px; ${pillStyle}">${pillText}</span>
-      </div>
+      ${pillsHtml ? `<div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;">${pillsHtml}</div>` : ''}
       <strong style="font-size: 14px;">${escapeHtml(title)}</strong>
       <div style="font-size: 12px; color: #666; margin-top: 4px;">
         👤 ${escapeHtml(calendarName || 'Unknown')}
