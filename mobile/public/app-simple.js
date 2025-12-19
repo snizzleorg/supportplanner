@@ -2802,6 +2802,7 @@ function createColoredMarker(lat, lon, color, event, calendarName) {
   const eventTitle = event.content || event.summary || '';
   const isUnconfirmed = eventTitle.includes(EVENT_STATES.UNCONFIRMED.marker);
   const isBooked = eventTitle.includes(EVENT_STATES.BOOKED.marker);
+  const isRemote = event.meta?.isRemote === true;
   const systemType = (event.meta || {}).systemType || '';
   
   // Build pills HTML matching modal style
@@ -2816,10 +2817,19 @@ function createColoredMarker(lat, lon, color, event, calendarName) {
     pillsHtml += `<span style="font-size: 10px; padding: 2px 6px; background: #dcfce7; color: #166534; border-radius: 10px;">✓ Booked</span>`;
   }
   
+  // Prepare display title with remote icon if applicable
+  let displayTitle = title
+    .replace(/\?\?\?/g, '')
+    .replace(/\s*!\s*/g, '')
+    .trim();
+  if (isRemote) {
+    displayTitle = '🔗 ' + displayTitle;
+  }
+  
   const popupContent = `
     <div style="min-width: 180px;">
       ${pillsHtml ? `<div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;">${pillsHtml}</div>` : ''}
-      <strong style="font-size: 14px;">${escapeHtml(title)}</strong>
+      <strong style="font-size: 14px;">${escapeHtml(displayTitle)}</strong>
       <div style="font-size: 12px; color: #666; margin-top: 4px;">
         👤 ${escapeHtml(calendarName || 'Unknown')}
       </div>
