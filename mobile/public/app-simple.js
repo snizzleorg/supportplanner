@@ -190,6 +190,17 @@ async function init() {
   searchInput?.addEventListener('input', (e) => {
     setSearchQuery(e.target.value.toLowerCase());
     render();
+    
+    // If exactly one event matches, scroll to it
+    const matchingEvents = getMatchingEvents();
+    console.log(`[Search] Query: "${getSearchQuery()}", Found ${matchingEvents.length} matches`, matchingEvents);
+    if (matchingEvents.length === 1) {
+      console.log('[Search] Single match found, scrolling to:', matchingEvents[0]);
+      // Small delay to allow DOM to update
+      setTimeout(() => {
+        scrollToEvent(matchingEvents[0]);
+      }, 100);
+    }
   });
   
   // Setup help overlay dropdown
@@ -2198,6 +2209,84 @@ function renderDayNumbers(pixelsPerDay) {
   }
   
   return html;
+}
+
+/**
+ * Get all events matching the current search query
+ * Used to determine if we should jump to a single match
+ * @returns {Array} Array of matching events
+ */
+function getMatchingEvents() {
+  const query = getSearchQuery();
+  if (!query) return [];
+  
+  const allEvents = getEvents();
+  const uniqueTerms = getCountrySearchTerms(query);
+  const isCountrySearch = uniqueTerms.length > 1;
+  const isShortAscii = (t) => t.length <= 3 && /^[a-z0-9]+$/i.test(t);
+  const shortTerms = isCountrySearch 
+    ? uniqueTerms.filter(t => isShortAscii(t) && t !== query) 
+    : [];
+  const longTerms = isCountrySearch 
+    ? uniqueTerms.filter(t => !isShortAscii(t) || t === query) 
+    : uniqueTerms;
+  
+  const matchesLong = (text) => {
+    if (!text) return false;
+    const textLower = String(text).toLowerCase();
+    return longTerms.some(term => textLower.includes(term));
+  };
+  
+  return allEvents.filter(e => {
+    // Check if calendar name matches (all events from that calendar match)
+    const calendar = getCalendars().find(c => c.id === e.group);
+    const calendarName = (calendar?.content || calendar?.displayName || '').toLowerCase();
+    if (calendarName.includes(query)) return true;
+    
+    // Search in basic event fields
+    const basicFields = [e.content, e.title, e.description].filter(Boolean);
+    if (basicFields.some(f => matchesLong(f))) return true;
+    
+    // Search in metadata
+    const meta = e.meta || {};
+    const nonLocationMeta = [meta.orderNumber, meta.systemType, meta.ticketLink, meta.notes].filter(Boolean);
+    if (nonLocationMeta.some(f => matchesLong(f))) return true;
+    
+    // Search location fields
+    const locationFields = [e.location, meta.locationCountry, meta.locationCity].filter(Boolean);
+    if (locationFields.some(f => matchesLong(f))) return true;
+    
+    // Short terms match country code exactly
+    if (shortTerms.length > 0) {
+      const countryCode = (meta.locationCountryCode || '').toLowerCase();
+      if (shortTerms.some(term => countryCode === term)) return true;
+    }
+    
+    return false;
+  });
+}
+
+/**
+ * Scroll timeline to show a specific event
+ * @param {Object} event - Event to scroll to
+ */
+function scrollToEvent(event) {
+  const container = document.getElementById('timelineContainer');
+  if (!container || !event) return;
+  
+  // Find the event element
+  const eventEl = container.querySelector(`[data-event-id="${event.id}"]`);
+  if (eventEl) {
+    // Scroll event into view with some padding
+    eventEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    
+    // Highlight the event briefly
+    eventEl.style.transition = 'box-shadow 0.3s ease';
+    eventEl.style.boxShadow = '0 0 0 3px #007aff, 0 0 10px rgba(0,122,255,0.5)';
+    setTimeout(() => {
+      eventEl.style.boxShadow = '';
+    }, 2000);
+  }
 }
 
 /**
