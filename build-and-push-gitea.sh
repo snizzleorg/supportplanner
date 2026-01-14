@@ -65,68 +65,110 @@ else
     docker login "${GITEA_REGISTRY}" -u "${GITEA_USERNAME}"
 fi
 
-# Ensure Buildx is available and a builder is selected
-if ! docker buildx version > /dev/null 2>&1; then
-    echo "❌ Error: Docker Buildx is not available. Please update Docker and try again."
-    exit 1
-fi
+if [ "${SINGLE_ARCH:-}" = "true" ]; then
+    # Single-arch fallback (original behavior): builds for the current machine architecture only.
+    echo ""
+    echo "🏗️  Building and pushing single-arch Docker image (current platform)..."
+    echo ""
 
-BUILDER_NAME="supportplanner-multiarch"
+    if [ "${VERSION}" != "latest" ]; then
+        docker build \
+            --tag "${FULL_IMAGE_NAME}:${VERSION}" \
+            --tag "${FULL_IMAGE_NAME}:latest" \
+            .
 
-BUILDKIT_CONFIG=""
-CONFIG_ARG=""
-if [ "${GITEA_INSECURE_TLS:-true}" = "true" ]; then
-    BUILDKIT_CONFIG="$(mktemp)"
-    trap 'rm -f "${BUILDKIT_CONFIG}"' EXIT
-    cat > "${BUILDKIT_CONFIG}" <<EOF
+        echo ""
+        echo "📤 Pushing to Gitea..."
+        docker push "${FULL_IMAGE_NAME}:${VERSION}"
+        docker push "${FULL_IMAGE_NAME}:latest"
+
+        echo ""
+        echo "✅ Successfully pushed to Gitea!"
+        echo ""
+        echo "Images pushed:"
+        echo "  - ${FULL_IMAGE_NAME}:${VERSION}"
+        echo "  - ${FULL_IMAGE_NAME}:latest"
+    else
+        docker build \
+            --tag "${FULL_IMAGE_NAME}:latest" \
+            .
+
+        echo ""
+        echo "📤 Pushing to Gitea..."
+        docker push "${FULL_IMAGE_NAME}:latest"
+
+        echo ""
+        echo "✅ Successfully pushed to Gitea!"
+        echo ""
+        echo "Images pushed:"
+        echo "  - ${FULL_IMAGE_NAME}:latest"
+    fi
+else
+    # Ensure Buildx is available and a builder is selected
+    if ! docker buildx version > /dev/null 2>&1; then
+        echo "❌ Error: Docker Buildx is not available. Please update Docker and try again."
+        exit 1
+    fi
+
+    BUILDER_NAME="supportplanner-multiarch"
+
+    BUILDKIT_CONFIG=""
+    CONFIG_ARG=""
+    if [ "${GITEA_INSECURE_TLS:-true}" = "true" ]; then
+        BUILDKIT_CONFIG="$(mktemp)"
+        trap 'rm -f "${BUILDKIT_CONFIG}"' EXIT
+        cat > "${BUILDKIT_CONFIG}" <<EOF
 [registry."${GITEA_REGISTRY}"]
   insecure = true
+  [registry."${GITEA_REGISTRY}".tls]
+    insecure_skip_verify = true
 EOF
-    CONFIG_ARG="--config ${BUILDKIT_CONFIG}"
-    docker buildx rm "${BUILDER_NAME}" > /dev/null 2>&1 || true
-fi
+        CONFIG_ARG="--config ${BUILDKIT_CONFIG}"
+        docker buildx rm "${BUILDER_NAME}" > /dev/null 2>&1 || true
+    fi
 
-# Multi-platform builds require a builder that is NOT using the plain 'docker' driver
-# (Docker Desktop typically needs 'docker-container' driver).
-if ! docker buildx use "${BUILDER_NAME}" > /dev/null 2>&1; then
-    docker buildx create --name "${BUILDER_NAME}" --driver docker-container ${CONFIG_ARG} --use > /dev/null
-else
-    docker buildx use "${BUILDER_NAME}" > /dev/null
-fi
+    # Multi-platform builds require a builder that is NOT using the plain 'docker' driver
+    # (Docker Desktop typically needs 'docker-container' driver).
+    if ! docker buildx use "${BUILDER_NAME}" > /dev/null 2>&1; then
+        docker buildx create --name "${BUILDER_NAME}" --driver docker-container ${CONFIG_ARG} --use > /dev/null
+    else
+        docker buildx use "${BUILDER_NAME}" > /dev/null
+    fi
 
-docker buildx inspect --bootstrap > /dev/null
+    docker buildx inspect --bootstrap > /dev/null
 
-# Build and push multi-arch image
-echo ""
-echo "🏗️  Building and pushing multi-arch Docker image..."
-echo ""
+    # Build and push multi-arch image
+    echo ""
+    echo "🏗️  Building and pushing multi-arch Docker image..."
+    echo ""
 
-if [ "${VERSION}" != "latest" ]; then
-    docker buildx build \
-        --platform linux/amd64,linux/arm64 \
-        --tag "${FULL_IMAGE_NAME}:${VERSION}" \
-        --tag "${FULL_IMAGE_NAME}:latest" \
-        --push \
-        .
-    
-    echo ""
-    echo "✅ Successfully pushed to Gitea!"
-    echo ""
-    echo "Images pushed:"
-    echo "  - ${FULL_IMAGE_NAME}:${VERSION}"
-    echo "  - ${FULL_IMAGE_NAME}:latest"
-else
-    docker buildx build \
-        --platform linux/amd64,linux/arm64 \
-        --tag "${FULL_IMAGE_NAME}:latest" \
-        --push \
-        .
-    
-    echo ""
-    echo "✅ Successfully pushed to Gitea!"
-    echo ""
-    echo "Images pushed:"
-    echo "  - ${FULL_IMAGE_NAME}:latest"
+    if [ "${VERSION}" != "latest" ]; then
+        docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag "${FULL_IMAGE_NAME}:${VERSION}" \
+            --tag "${FULL_IMAGE_NAME}:latest" \
+            --push \
+            .
+
+        echo ""
+        echo "✅ Successfully pushed to Gitea!"
+        echo ""
+        echo "Images pushed:"
+        echo "  - ${FULL_IMAGE_NAME}:${VERSION}"
+        echo "  - ${FULL_IMAGE_NAME}:latest"
+    else
+        docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag "${FULL_IMAGE_NAME}:latest" \
+            --push \
+            .
+
+        echo ""
+        echo "✅ Successfully pushed to Gitea!"
+        echo ""
+        echo "Images pushed:"
+        echo "  - ${FULL_IMAGE_NAME}:latest"
+    fi
 fi
 
 echo ""
