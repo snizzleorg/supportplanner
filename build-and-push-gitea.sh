@@ -73,10 +73,23 @@ fi
 
 BUILDER_NAME="supportplanner-multiarch"
 
+BUILDKIT_CONFIG=""
+CONFIG_ARG=""
+if [ "${GITEA_INSECURE_TLS:-true}" = "true" ]; then
+    BUILDKIT_CONFIG="$(mktemp)"
+    trap 'rm -f "${BUILDKIT_CONFIG}"' EXIT
+    cat > "${BUILDKIT_CONFIG}" <<EOF
+[registry."${GITEA_REGISTRY}"]
+  insecure = true
+EOF
+    CONFIG_ARG="--config ${BUILDKIT_CONFIG}"
+    docker buildx rm "${BUILDER_NAME}" > /dev/null 2>&1 || true
+fi
+
 # Multi-platform builds require a builder that is NOT using the plain 'docker' driver
 # (Docker Desktop typically needs 'docker-container' driver).
 if ! docker buildx use "${BUILDER_NAME}" > /dev/null 2>&1; then
-    docker buildx create --name "${BUILDER_NAME}" --driver docker-container --use > /dev/null
+    docker buildx create --name "${BUILDER_NAME}" --driver docker-container ${CONFIG_ARG} --use > /dev/null
 else
     docker buildx use "${BUILDER_NAME}" > /dev/null
 fi
