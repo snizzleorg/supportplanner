@@ -3,7 +3,7 @@ set -e
 
 # Build and Push Script for Support Planner - Gitea Registry
 # This script builds Docker images and pushes to Gitea
-# Note: Builds for current platform only (no multi-arch due to Gitea SSL certificate limitations)
+# Note: Uses Docker Buildx to build and push a multi-arch image (AMD64 + ARM64)
 # Usage: 
 #   ./build-and-push-gitea.sh           # Uses version from package.json
 #   ./build-and-push-gitea.sh v1.0.0    # Uses specified version
@@ -65,21 +65,36 @@ else
     docker login "${GITEA_REGISTRY}" -u "${GITEA_USERNAME}"
 fi
 
-# Build image for current platform
+# Ensure Buildx is available and a builder is selected
+if ! docker buildx version > /dev/null 2>&1; then
+    echo "❌ Error: Docker Buildx is not available. Please update Docker and try again."
+    exit 1
+fi
+
+BUILDER_NAME="supportplanner-multiarch"
+
+# Multi-platform builds require a builder that is NOT using the plain 'docker' driver
+# (Docker Desktop typically needs 'docker-container' driver).
+if ! docker buildx use "${BUILDER_NAME}" > /dev/null 2>&1; then
+    docker buildx create --name "${BUILDER_NAME}" --driver docker-container --use > /dev/null
+else
+    docker buildx use "${BUILDER_NAME}" > /dev/null
+fi
+
+docker buildx inspect --bootstrap > /dev/null
+
+# Build and push multi-arch image
 echo ""
-echo "� Building Docker image..."
+echo "🏗️  Building and pushing multi-arch Docker image..."
 echo ""
 
 if [ "${VERSION}" != "latest" ]; then
-    docker build \
+    docker buildx build \
+        --platform linux/amd64,linux/arm64 \
         --tag "${FULL_IMAGE_NAME}:${VERSION}" \
         --tag "${FULL_IMAGE_NAME}:latest" \
+        --push \
         .
-    
-    echo ""
-    echo "📤 Pushing to Gitea..."
-    docker push "${FULL_IMAGE_NAME}:${VERSION}"
-    docker push "${FULL_IMAGE_NAME}:latest"
     
     echo ""
     echo "✅ Successfully pushed to Gitea!"
@@ -88,13 +103,11 @@ if [ "${VERSION}" != "latest" ]; then
     echo "  - ${FULL_IMAGE_NAME}:${VERSION}"
     echo "  - ${FULL_IMAGE_NAME}:latest"
 else
-    docker build \
+    docker buildx build \
+        --platform linux/amd64,linux/arm64 \
         --tag "${FULL_IMAGE_NAME}:latest" \
+        --push \
         .
-    
-    echo ""
-    echo "📤 Pushing to Gitea..."
-    docker push "${FULL_IMAGE_NAME}:latest"
     
     echo ""
     echo "✅ Successfully pushed to Gitea!"

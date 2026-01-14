@@ -6,7 +6,7 @@
 services:
   support-planner:
     image: git.b.picoquant.com/ruettinger/support-planner:latest
-    container_name: support-planner
+    container_name: support-planner2
     # Environment variables will be set via Portainer web interface
     # Go to: Stacks > [Your Stack] > Environment variables
     environment:
